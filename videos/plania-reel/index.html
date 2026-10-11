@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="he">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "Rubik";
+        src: url("assets/fonts/rubik-hebrew.woff2") format("woff2");
+        font-weight: 300 900;
+        unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+      }
+      @font-face {
+        font-family: "Rubik";
+        src: url("assets/fonts/rubik-latin.woff2") format("woff2");
+        font-weight: 300 900;
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2190-2199, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+      :root {
+        --beige: #e7dacf;
+        --beige-deep: #dccabc;
+        --wine: #5c1519;
+        --wine-soft: #7a2a2f;
+        --ink: #2a1012;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: var(--beige); }
+      #root {
+        position: relative; width: 100%; height: 100%; overflow: hidden;
+        font-family: "Rubik", sans-serif; background: var(--beige); direction: rtl;
+      }
+
+      /* ---------- app scene background ---------- */
+      .bg-glow { position: absolute; border-radius: 50%; filter: blur(40px); }
+      #glow-a { width: 900px; height: 900px; left: -260px; top: 260px; background: radial-gradient(circle, rgba(255,246,240,0.9), rgba(255,246,240,0) 70%); }
+      #glow-b { width: 800px; height: 800px; right: -300px; bottom: -120px; background: radial-gradient(circle, rgba(92,21,25,0.16), rgba(92,21,25,0) 70%); }
+      #ghost { position: absolute; left: 50%; top: 1500px; width: 1500px; margin-left: -750px; opacity: 0.06; }
+
+      /* ---------- phone ---------- */
+      #phone-pos { position: absolute; left: 50%; top: 470px; width: 632px; height: 1336px; margin-left: -316px; }
+      #phone {
+        width: 632px; height: 1336px; border-radius: 78px; background: #1c0e10; padding: 16px;
+        box-shadow: 0 50px 90px rgba(60, 14, 18, 0.35), 0 0 0 3px #3b2023 inset;
+      }
+      #screen { position: relative; width: 600px; height: 1304px; border-radius: 62px; overflow: hidden; background: #fbf6f6; }
+      #zoom-outer, #zoom-inner { position: absolute; inset: 0; transform-origin: 50% 50%; }
+      .app-vid { position: absolute; left: 0; top: 0; width: 600px; height: 1304px; object-fit: cover; }
+      #redact {
+        position: absolute; left: 186px; top: 311px; width: 278px; height: 38px; border-radius: 19px;
+        background: rgba(246, 236, 238, 0.82); backdrop-filter: blur(8px);
+      }
+
+      /* ---------- captions over the app ---------- */
+      .cap { position: absolute; left: 0; right: 0; top: 200px; height: 220px; display: flex; align-items: center; justify-content: center; }
+      .cap span {
+        display: block; font-weight: 800; font-size: 84px; line-height: 1.1; color: var(--wine);
+        text-align: center; letter-spacing: -1px; padding: 0 60px;
+      }
+
+      /* ---------- WhatsApp chaos ---------- */
+      #chat { position: absolute; inset: 0; overflow: hidden; }
+      #chat-shake { position: absolute; inset: 0; background: #efeae2; }
+      #wa-pattern {
+        position: absolute; inset: 0; opacity: 0.5;
+        background-image: radial-gradient(rgba(120,100,80,0.18) 2px, transparent 2.5px);
+        background-size: 46px 46px;
+      }
+      #wa-head {
+        position: absolute; left: 0; right: 0; top: 0; height: 250px; background: #008069; color: #fff;
+        display: flex; align-items: flex-end; padding: 0 44px 34px; gap: 26px; z-index: 3;
+      }
+      #wa-avatar { width: 112px; height: 112px; border-radius: 50%; background: #d7c4b5; color: var(--wine); font-weight: 800; font-size: 50px; display: flex; align-items: center; justify-content: center; }
+      #wa-title { flex: 1; }
+      #wa-title b { display: block; font-size: 52px; font-weight: 700; }
+      #wa-title i { display: block; font-style: normal; font-size: 32px; opacity: 0.85; margin-top: 6px; }
+      #wa-badge {
+        min-width: 150px; height: 84px; border-radius: 42px; background: #25d366; color: #0b3d22;
+        font-weight: 800; font-size: 48px; display: flex; align-items: center; justify-content: center; padding: 0 22px;
+        font-variant-numeric: tabular-nums;
+      }
+      #wa-list { position: absolute; left: 0; right: 0; top: 0; height: 2600px; }
+      .bub {
+        position: absolute; right: 40px; max-width: 860px; height: 128px; padding: 16px 30px 0 120px; border-radius: 26px 6px 26px 26px;
+        background: #fff; box-shadow: 0 2px 2px rgba(0,0,0,0.08); transform-origin: 100% 0%;
+      }
+      .bub.out { right: auto; left: 40px; background: #d9fdd3; border-radius: 6px 26px 26px 26px; transform-origin: 0% 0%; }
+      .bub .who { display: block; font-size: 28px; font-weight: 700; height: 36px; }
+      .bub .txt { display: block; font-size: 42px; color: #111b21; white-space: nowrap; }
+      .bub .tm { position: absolute; left: 22px; bottom: 10px; font-size: 22px; color: #667781; }
+      #wa-top {
+        position: absolute; left: 60px; right: 60px; top: 330px; z-index: 4; display: flex; justify-content: center;
+      }
+      #wa-top span {
+        display: block; background: var(--wine); color: #fff; font-weight: 800; font-size: 60px; line-height: 1.2;
+        padding: 26px 46px; border-radius: 34px; text-align: center; box-shadow: 0 20px 50px rgba(60,10,14,0.35);
+      }
+      #wa-dim { position: absolute; inset: 0; background: rgba(20, 6, 8, 0.55); z-index: 5; }
+      #stamp { position: absolute; left: 70px; right: 70px; top: 760px; z-index: 6; display: flex; justify-content: center; }
+      #stamp span {
+        display: block; background: #fff4ee; color: var(--wine); border: 8px solid var(--wine); border-radius: 36px;
+        font-weight: 900; font-size: 92px; line-height: 1.12; text-align: center; padding: 36px 40px;
+      }
+
+      /* ---------- CTA ---------- */
+      #cta { position: absolute; inset: 0; }
+      #logo { position: absolute; left: 50%; top: 640px; width: 800px; margin-left: -400px; }
+      #cta-1, #cta-2 { position: absolute; left: 70px; right: 70px; top: 1010px; display: flex; justify-content: center; }
+      #cta-1 span { display: block; font-size: 70px; font-weight: 700; color: var(--ink); text-align: center; line-height: 1.25; }
+      #cta-1 em { display: block; font-style: normal; }
+      #cta-1 b { color: var(--wine); font-weight: 900; }
+      #cta-2 { flex-direction: column; align-items: center; gap: 46px; }
+      #cta-2 .q { display: block; font-size: 84px; font-weight: 900; color: var(--wine); text-align: center; }
+      #cta-2 .pill {
+        display: block; background: var(--wine); color: #fff4ee; font-size: 56px; font-weight: 700;
+        padding: 30px 60px; border-radius: 80px; box-shadow: 0 24px 60px rgba(92,21,25,0.35); text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="14.5" data-width="1080" data-height="1920">
+      <!-- ===== App scene backdrop (persistent) ===== -->
+      <div id="app-bg" class="clip" data-start="2.9" data-duration="11.6" data-track-index="0">
+        <div id="glow-a" class="bg-glow"></div>
+        <div id="glow-b" class="bg-glow"></div>
+        <img id="ghost" src="assets/logo.png" alt="" />
+      </div>
+
+      <!-- ===== Phone with the client's app recording ===== -->
+      <div id="phone-pos">
+        <div id="phone-move">
+          <div id="phone">
+            <div id="screen">
+              <div id="zoom-outer">
+                <div id="zoom-inner">
+                  <!-- home → water tracker -->
+                  <video id="v1" class="app-vid" src="assets/app.mp4" muted playsinline data-start="3.0" data-duration="2.45" data-media-start="0" data-track-index="1"></video>
+                  <!-- lessons -->
+                  <video id="v2" class="app-vid" src="assets/app.mp4" muted playsinline data-start="5.45" data-duration="0.45" data-media-start="4.75" data-track-index="1"></video>
+                  <!-- recipes -->
+                  <video id="v3" class="app-vid" src="assets/app.mp4" muted playsinline data-start="5.9" data-duration="0.5" data-media-start="5.7" data-track-index="1"></video>
+                  <!-- AI chat -->
+                  <video id="v4" class="app-vid" src="assets/app.mp4" muted playsinline data-start="6.4" data-duration="0.75" data-media-start="6.25" data-track-index="1"></video>
+                  <!-- personal area: goal weight -->
+                  <video id="v5" class="app-vid" src="assets/app.mp4" muted playsinline data-start="7.15" data-duration="0.75" data-media-start="7.0" data-track-index="1"></video>
+                  <!-- tracking history -->
+                  <video id="v6" class="app-vid" src="assets/app.mp4" muted playsinline data-start="7.9" data-duration="0.4" data-media-start="8.2" data-track-index="1"></video>
+                  <!-- plan + weekly stats -->
+                  <video id="v7" class="app-vid" src="assets/app.mp4" muted playsinline data-start="8.3" data-duration="1.45" data-media-start="9.8" data-track-index="1"></video>
+                  <!-- privacy: cover the email under the profile name -->
+                  <div id="redact" class="clip" data-start="7.15" data-duration="0.75" data-track-index="2"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Captions over the app ===== -->
+      <div id="c1" class="cap clip" data-start="3.2" data-duration="1.3" data-track-index="3"><span>הכול במקום אחד</span></div>
+      <div id="c2" class="cap clip" data-start="4.5" data-duration="0.95" data-track-index="3"><span>מעקב יומי אוטומטי</span></div>
+      <div id="c3" class="cap clip" data-start="5.45" data-duration="0.95" data-track-index="3"><span>שיעורים, תפריט ומתכונים</span></div>
+      <div id="c4" class="cap clip" data-start="6.4" data-duration="0.75" data-track-index="3"><span>עוזרת AI זמינה 24/7</span></div>
+      <div id="c5" class="cap clip" data-start="7.15" data-duration="1.15" data-track-index="3"><span>המדדים מתעדכנים לבד</span></div>
+      <div id="c6" class="cap clip" data-start="8.3" data-duration="1.05" data-track-index="3"><span>בלי לרדוף אחרי אף אחד</span></div>
+
+      <!-- ===== WhatsApp chaos (0–3.4s) ===== -->
+      <div id="chat" class="clip" data-start="0" data-duration="3.4" data-track-index="4">
+        <div id="chat-shake">
+          <div id="wa-pattern"></div>
+          <div id="wa-list"></div>
+          <div id="wa-head" data-layout-allow-occlusion>
+            <div id="wa-avatar">ל</div>
+            <div id="wa-title"><b>מתאמנות | ליווי</b><i>מיכל, דנה, שירן ועוד 21 מקלידות...</i></div>
+            <div id="wa-badge"><span id="wa-count">3</span></div>
+          </div>
+          <div id="wa-top" data-layout-allow-occlusion><span>עוד יום רגיל של ליווי לקוחות 😵‍💫</span></div>
+          <div id="wa-dim"></div>
+          <div id="stamp" data-layout-allow-occlusion><span>איפה המדדים של שבוע שעבר?! 🤯</span></div>
+        </div>
+      </div>
+
+      <!-- ===== Close: logo + CTA ===== -->
+      <div id="cta" class="clip" data-start="9.55" data-duration="4.95" data-track-index="5">
+        <img id="logo" src="assets/logo.png" alt="Plania's" />
+        <div id="cta-1"><span><em>מהכאוס בוואטסאפ ←</em><em>לאפליקציה <b>משלך</b></em></span></div>
+        <div id="cta-2">
+          <span class="q">רוצה כזאת לעסק שלך?</span>
+          <span class="pill">כתבי לי ״אפליקציה״ בתגובות 👇</span>
+        </div>
+      </div>
+
+      <audio id="sfx" src="assets/sfx.wav" data-start="0" data-duration="14.5" data-track-index="6" data-volume="0.9"></audio>
+    </div>
+
+    <script>
+      // ---- build WhatsApp bubbles (deterministic, fixed geometry) ----
+      const MSGS = [
+        ["מיכל", "#c2185b", "שלחתי לך אתמול את המשקל, ראית?"],
+        ["דנה", "#1e88e5", "כמה חלבון אני צריכה היום?"],
+        ["שירן", "#6d4c41", "איפה התפריט שלי?? 😩"],
+        ["רוני", "#00897b", "צריכה מתכון לארוחת ערב"],
+        [null, null, "רגע, בודקת ומחזירה לך 🙏"],
+        ["מיכל", "#c2185b", "מתי השיעור הבא?"],
+        ["נועה", "#8e24aa", "שוב שכחתי למדוד מותניים"],
+        ["דנה", "#1e88e5", "🎤 הודעה קולית  0:47"],
+        ["ליה", "#ef6c00", "תזכירי לי מה היעד שלי?"],
+        ["שירן", "#6d4c41", "שלחתי תמונה של הצלחת 📷"],
+        [null, null, "עונה לכולן עוד שנייה..."],
+        ["רוני", "#00897b", "אפשר להחליף ארוחת ביניים?"],
+        ["נועה", "#8e24aa", "??? 😅"],
+        ["ליה", "#ef6c00", "היי? את פה?"],
+      ];
+      const ROW = 148, START_Y = 300, STEP = 0.17, T0 = 0.15;
+      const list = document.getElementById("wa-list");
+      MSGS.forEach((m, i) => {
+        const b = document.createElement("div");
+        b.className = "bub" + (m[0] ? "" : " out");
+        b.id = "bub-" + i;
+        b.style.top = START_Y + i * ROW + "px";
+        const mins = String(2 + i).padStart(2, "0");
+        b.innerHTML = (m[0] ? `<span class="who" style="color:${m[1]}">${m[0]}</span>` : `<span class="who"></span>`) +
+          `<span class="txt">${m[2]}</span><span class="tm">21:${mins}</span>`;
+        list.appendChild(b);
+      });
+
+      const tl = gsap.timeline({ paused: true });
+
+      // ===== Scene A: chaos =====
+      const VISIBLE = 9; // rows that fit under the header before the list must scroll
+      MSGS.forEach((m, i) => {
+        const t = T0 + i * STEP;
+        tl.fromTo("#bub-" + i, { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.14, ease: "back.out(2.2)" }, t);
+        if (i >= VISIBLE) {
+          tl.fromTo("#wa-list", { y: -(i - 1 - VISIBLE + 1) * ROW }, { y: -(i - VISIBLE + 1) * ROW, duration: 0.12, ease: "power2.out", immediateRender: false }, t);
+        }
+      });
+      // unread counter racing up
+      const counter = { v: 3 };
+      const countEl = document.getElementById("wa-count");
+      tl.fromTo(counter, { v: 3 }, {
+        v: 127, duration: 2.2, ease: "power1.in",
+        onUpdate: () => { countEl.textContent = Math.round(counter.v); },
+      }, 0.15);
+      tl.fromTo("#wa-badge", { scale: 1 }, { scale: 1.12, duration: 0.11, yoyo: true, repeat: 9, ease: "sine.inOut" }, 0.2);
+      tl.fromTo("#wa-top span", { y: -40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3, ease: "power3.out" }, 0.2);
+      tl.to("#wa-top span", { opacity: 0, duration: 0.15 }, 2.3);
+      // freeze + shake + stamp
+      tl.fromTo("#wa-dim", { opacity: 0 }, { opacity: 1, duration: 0.12 }, 2.38);
+      tl.fromTo("#stamp span", { scale: 2.2, rotation: -9, opacity: 0 }, { scale: 1, rotation: -4, opacity: 1, duration: 0.22, ease: "power4.in" }, 2.3);
+      const SHAKE = [[-18, 8], [16, -10], [-12, 6], [9, -5], [-5, 3], [0, 0]];
+      SHAKE.forEach(([x, y], k) => tl.to("#chat-shake", { x, y, duration: 0.05, ease: "none" }, 2.52 + k * 0.05));
+
+      // ===== Whip transition =====
+      tl.fromTo("#chat-shake", { xPercent: 0, filter: "blur(0px)" }, { xPercent: 105, filter: "blur(18px)", duration: 0.35, ease: "power3.in", immediateRender: false }, 2.95);
+      tl.fromTo("#phone-move", { x: -1150, rotation: -6, filter: "blur(16px)" }, { x: 0, rotation: 0, filter: "blur(0px)", duration: 0.45, ease: "power3.out" }, 3.0);
+
+      // ===== Scene B: the app =====
+      tl.fromTo("#glow-a", { scale: 1 }, { scale: 1.15, duration: 3, yoyo: true, repeat: 2, ease: "sine.inOut" }, 3);
+      tl.fromTo("#glow-b", { scale: 1.1 }, { scale: 0.95, duration: 3.5, yoyo: true, repeat: 1, ease: "sine.inOut" }, 3);
+      tl.fromTo("#ghost", { x: 60 }, { x: -60, duration: 11, ease: "none" }, 3);
+
+      // captions: rise in, quick exit
+      ["#c1", "#c2", "#c3", "#c4", "#c5", "#c6"].forEach((id, k) => {
+        const el = document.querySelector(id);
+        const s = parseFloat(el.dataset.start), d = parseFloat(el.dataset.duration);
+        tl.fromTo(id + " span", { y: 50, opacity: 0, scale: 0.94 }, { y: 0, opacity: 1, scale: 1, duration: 0.25, ease: "power3.out" }, s + (k === 0 ? 0.15 : 0));
+        tl.to(id + " span", { y: -30, opacity: 0, duration: 0.14, ease: "power2.in" }, s + d - 0.14);
+      });
+
+      // zoom 1: protein card (sits at screen centre)
+      tl.fromTo("#zoom-outer", { scale: 1 }, { scale: 1.28, duration: 0.6, ease: "power2.inOut" }, 3.45);
+      tl.to("#zoom-outer", { scale: 1, duration: 0.45, ease: "power2.inOut" }, 4.35);
+      // zoom 2: goal-weight card (above centre → counter-translate down)
+      tl.fromTo("#zoom-inner", { y: 0 }, { y: 150, duration: 0.4, ease: "power2.inOut" }, 7.2);
+      tl.to("#zoom-outer", { scale: 1.35, duration: 0.4, ease: "power2.inOut" }, 7.2);
+      tl.to("#zoom-inner", { y: 0, duration: 0.25, ease: "power2.inOut" }, 7.65);
+      tl.to("#zoom-outer", { scale: 1, duration: 0.25, ease: "power2.inOut" }, 7.65);
+      // zoom 3: gentle push on plan + weekly stats
+      tl.to("#zoom-outer", { scale: 1.12, duration: 1.0, ease: "power1.inOut" }, 8.35);
+
+      // phone recedes for the close
+      tl.to("#phone-move", { scale: 0.35, y: 260, opacity: 0, duration: 0.45, ease: "power3.in" }, 9.3);
+
+      // ===== Scene C: logo + CTA =====
+      tl.fromTo("#logo", { scale: 0.6, opacity: 0, y: 40 }, { scale: 1, opacity: 1, y: 0, duration: 0.5, ease: "back.out(1.8)" }, 9.75);
+      tl.fromTo("#cta-1 span", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: "power3.out" }, 10.25);
+      tl.to("#cta-1 span", { y: -30, opacity: 0, duration: 0.2, ease: "power2.in" }, 11.95);
+      tl.to("#logo", { y: -120, duration: 0.4, ease: "power2.inOut" }, 11.95);
+      tl.fromTo("#cta-2 .q", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: "power3.out" }, 12.2);
+      tl.fromTo("#cta-2 .pill", { scale: 0.7, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: "back.out(2)" }, 12.45);
+      tl.fromTo("#cta-2 .pill", { scale: 1 }, { scale: 1.05, duration: 0.35, yoyo: true, repeat: 3, ease: "sine.inOut", immediateRender: false }, 12.9);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
