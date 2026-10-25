@@ -6,7 +6,7 @@ English only. No prices, no savings numbers, no "Now open".
 | File | Length | Idea |
 |---|---|---|
 | `out/reel1-430.mp4` | 25.6s | 4:30 PM and the "what's for dinner?" texts, then plan once, one tap, 48 ingredients |
-| `out/reel2-built.mp4` | 21.7s | "I got tired of what's for dinner, so I built an app": 4 real features |
+| `out/reel2-built.mp4` | 21.7s | "I got tired of what's for dinner, so I built a digital planning tool": 4 real features |
 | `out/reel3-saves.mp4` | 16.8s | Saved recipes on Instagram vs. actually cooked, then import from Instagram/TikTok |
 | `out/reel4-poll.mp4` | 14s | "1 or 2" poll for comments |
 | `out/reel5-leaks.mp4` | 24.5s | Where grocery money leaks (5 leaks, no numbers), then plan first and shop from the list |
@@ -24,7 +24,7 @@ Copy as is. The first line is the hook (it's what shows before "more").
 **Reel 1 (4:30)**
 ```
 4:30 PM. Three texts. One question. 🙃
-I'm building an app so dinner is decided before anyone asks: plan the week once, and the grocery list builds itself.
+I'm building a digital planning tool so dinner is decided before anyone asks: plan the week once, and the grocery list builds itself.
 Opening soon. Follow so you're here on launch day.
 What time does "what's for dinner?" hit at your house?
 #mealplanning #workingmom #dinnerideas #mentalload #momlife
@@ -32,7 +32,7 @@ What time does "what's for dinner?" hit at your house?
 
 **Reel 2 (I built it)**
 ```
-I got tired of "what's for dinner?" so I built an app.
+I got tired of "what's for dinner?" so I built a digital planning tool.
 1. It plans my week
 2. One tap turns it into a grocery list, sorted by aisle
 3. Out of ideas? It suggests meals
