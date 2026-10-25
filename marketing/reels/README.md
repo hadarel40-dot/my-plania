@@ -19,55 +19,55 @@ Every reel ends on "Opening soon." + "Follow for launch day".
 - Cover frame: pick the first line of text (Instagram's "Choose cover").
 
 ## Post captions
-Copy as is. The first line is the hook (it's what shows before "more").
+Copy as is. No hashtags: the search keywords are written into the text itself
+(meal planning, weekly meal plan, grocery list, dinner ideas, and so on), which is what Instagram search reads.
+The first line is the hook (it's what shows before "more").
 
 **Reel 1 (4:30)**
 ```
-4:30 PM. Three texts. One question. 🙃
-I'm building a digital planning tool so dinner is decided before anyone asks: plan the week once, and the grocery list builds itself.
+4:30 PM. Three texts. One question: what's for dinner? 🙃
+If you're a working mom carrying the mental load of meal planning on top of your actual job, I see you.
+I'm building a digital planning tool for exactly this: make your weekly meal plan once, and your grocery list builds itself.
 Opening soon. Follow so you're here on launch day.
 What time does "what's for dinner?" hit at your house?
-#mealplanning #workingmom #dinnerideas #mentalload #momlife
 ```
 
 **Reel 2 (I built it)**
 ```
 I got tired of "what's for dinner?" so I built a digital planning tool.
-1. It plans my week
-2. One tap turns it into a grocery list, sorted by aisle
-3. Out of ideas? It suggests meals
+1. It plans my weekly meal plan
+2. One tap turns the meal plan into a grocery list, sorted by aisle
+3. Out of dinner ideas? It suggests easy family meals
 4. It saves recipes straight from Instagram and TikTok
+Meal planning for busy moms, all in one place.
 Opening soon. Follow for launch day.
 Which one would you use first?
-#mealplanning #buildinpublic #momsinbusiness #weeklymealplan #dinnerideas
 ```
 
 **Reel 3 (saved recipes)**
 ```
 Be honest: how many saved recipes have you actually cooked? 👀
-Soon you'll be able to import them from Instagram or TikTok and drop them straight into your week.
+Your Instagram and TikTok recipes deserve better than a saved folder.
+Soon you'll be able to import any recipe reel and add it straight to your weekly meal plan, so those easy dinner ideas finally make it to the table.
 Opening soon. Follow for launch day.
 Comment your saved-to-cooked ratio.
-#recipesaves #mealplanning #dinnerideas #easyrecipes #weeknightdinner
 ```
 
 **Reel 4 (poll)**
 ```
 Comment 1 or 2 👇
-1: deciding what to cook
-2: remembering what to buy
-I'm making the next video from your answers.
-#mealplanning #momlife #dinnertime #mentalload
+1: deciding what to cook for dinner
+2: remembering what to buy at the grocery store
+Meal planning has two jobs, and most moms are stuck on one of them. I'm making the next video from your answers.
 ```
 
 **Reel 5 (money leaks)**
 ```
 Your grocery budget isn't the problem. The leaks are.
-Doubles of what's already in the fridge, "while I'm here" extras, food that goes bad, the second trip, 4:30 takeout.
-Plan the week first, then shop only from the list.
+Buying doubles of what's already in the fridge, "while I'm here" extras, food waste from things that go bad, the second grocery trip, and 4:30 takeout when there's no dinner plan.
+The fix is simple meal planning: plan the week first, then shop only from your grocery list.
 Opening soon. Follow for launch day.
 Which leak is yours? Comment the number.
-#grocerybudget #mealplanning #budgetingtips #foodwaste #momlife
 ```
 
 ## Rebuilding
