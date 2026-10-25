@@ -9,37 +9,66 @@ English only. No prices, no savings numbers, no "Now open".
 | `out/reel2-built.mp4` | 21.7s | "I got tired of what's for dinner, so I built an app": 4 real features |
 | `out/reel3-saves.mp4` | 16.8s | Saved recipes on Instagram vs. actually cooked, then import from Instagram/TikTok |
 | `out/reel4-poll.mp4` | 14s | "1 or 2" poll for comments |
+| `out/reel5-leaks.mp4` | 24.5s | Where grocery money leaks (5 leaks, no numbers), then plan first and shop from the list |
 
 Every reel ends on "Opening soon." + "Follow for launch day".
 
 ## Before posting
 - Sound effects are built in (message pings, transition whooshes, taps, pops). No music. If you add a track from Instagram's audio library, keep it low so the effects still come through.
-- Post order: 4 (poll, wakes up the account) -> 1 -> 3 -> 2, every 2-3 days.
+- Post order: 4 (poll, wakes up the account) -> 1 -> 5 -> 3 -> 2, every 2-3 days.
 - Cover frame: pick the first line of text (Instagram's "Choose cover").
 
 ## Post captions
+Copy as is. The first line is the hook (it's what shows before "more").
 
 **Reel 1 (4:30)**
-It's 4:30 and the texts start coming in. I'm building something so dinner is decided before anyone asks.
-Opening soon. Follow so you don't miss launch day.
-#mealplanning #workingmom #momlife #dinnerideas #grocerylist #mentalload
+```
+4:30 PM. Three texts. One question. 🙃
+I'm building an app so dinner is decided before anyone asks: plan the week once, and the grocery list builds itself.
+Opening soon. Follow so you're here on launch day.
+What time does "what's for dinner?" hit at your house?
+#mealplanning #workingmom #dinnerideas #mentalload #momlife
+```
 
 **Reel 2 (I built it)**
-I got tired of answering "what's for dinner?" every single day, so I built the app I wanted. Plan the week, one tap for groceries, ideas when you're stuck, and your saved reels in one place.
+```
+I got tired of "what's for dinner?" so I built an app.
+1. It plans my week
+2. One tap turns it into a grocery list, sorted by aisle
+3. Out of ideas? It suggests meals
+4. It saves recipes straight from Instagram and TikTok
 Opening soon. Follow for launch day.
+Which one would you use first?
 #mealplanning #buildinpublic #momsinbusiness #weeklymealplan #dinnerideas
+```
 
 **Reel 3 (saved recipes)**
-Be honest: how many saved recipes have you actually cooked? Soon you'll be able to drop them straight into your week.
+```
+Be honest: how many saved recipes have you actually cooked? 👀
+Soon you'll be able to import them from Instagram or TikTok and drop them straight into your week.
 Opening soon. Follow for launch day.
+Comment your saved-to-cooked ratio.
 #recipesaves #mealplanning #dinnerideas #easyrecipes #weeknightdinner
+```
 
 **Reel 4 (poll)**
-Comment 1 or 2.
+```
+Comment 1 or 2 👇
 1: deciding what to cook
 2: remembering what to buy
-I'm building the next video from your answers.
+I'm making the next video from your answers.
 #mealplanning #momlife #dinnertime #mentalload
+```
+
+**Reel 5 (money leaks)**
+```
+Your grocery budget isn't the problem. The leaks are.
+Doubles of what's already in the fridge, "while I'm here" extras, food that goes bad, the second trip, 4:30 takeout.
+Plan the week first, then shop only from the list.
+Opening soon. Follow for launch day.
+Which leak is yours? Comment the number.
+#grocerybudget #mealplanning #budgetingtips #foodwaste #momlife
+```
 
 ## Rebuilding
 1. `./prep-assets.sh <screen-recording.mp4> <weekly.png> <meals.png> <suggestions.png> <guide.png>`

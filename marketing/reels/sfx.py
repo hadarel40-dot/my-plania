@@ -88,13 +88,22 @@ def thud():
     return 0.6 * np.sin(phase) * env(n, 0.002, 16)
 
 
+def drip():
+    # Water drop: a fast upward pitch blip.
+    n = int(0.12 * SR)
+    t = np.arange(n) / SR
+    freq = 500 + 1300 * (1 - np.exp(-t * 60))
+    phase = 2 * np.pi * np.cumsum(freq) / SR
+    return 0.4 * np.sin(phase) * env(n, 0.001, 32)
+
+
 def ding():
     return 0.20 * tone(1320, 0.9, 5.5, ((1, 1.0), (2.01, 0.35), (3.02, 0.12)))
 
 
 SOUNDS = {name: fn() for name, fn in {
     'ping': ping, 'whoosh': whoosh, 'pop': pop, 'tap': tap,
-    'tick': tick, 'thud': thud, 'ding': ding,
+    'tick': tick, 'thud': thud, 'ding': ding, 'drip': drip,
 }.items()}
 
 

@@ -1,0 +1,73 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Reel 5 - Money leaks</title><link rel="stylesheet" href="engine.css"></head>
+<body><div id="stage"></div>
+<script src="engine.js"></script>
+<script>
+// Reel 5: where grocery money leaks, and how planning first plugs it. No savings numbers on purpose.
+
+E.scene(0, 2.4, { bg: 'green' }, (root, api) => {
+  const box = api.el(root, 'div', 'center');
+  api.words(box, 'Where your grocery money', 'lg', 0, 0.13);
+  api.words(box, '*actually* goes:', 'xl', 0.7, 0.18);
+  api.sfx('pop', 0.7);
+});
+
+const LEAKS = [
+  "Buying what's already in your fridge",
+  'The "while I\'m here" extras',
+  'Food that goes bad before you use it',
+  'A second trip for the one thing you forgot',
+  "Takeout at 4:30, because nothing's planned",
+];
+
+E.scene(2.4, 10.6, { bg: 'cream', drift: 0.04 }, (root, api) => {
+  const list = api.el(root, 'div', 'leaks');
+  LEAKS.forEach((text, i) => {
+    const card = api.el(list, 'div', 'opt leak', `<div class="num">${i + 1}</div><div class="opt-text">${text}</div>`);
+    const at = 0.2 + i * 1.45;
+    api.anim(card, at, 'pop', 0.35);
+    api.sfx('drip', at);
+  });
+});
+
+E.scene(10.6, 12.8, { bg: 'ink' }, (root, api) => {
+  const box = api.el(root, 'div', 'center');
+  api.words(box, "It's not your budget.", 'lg', 0, 0.14);
+  api.words(box, "It's *no* *plan.*", 'xl', 0.75, 0.18);
+  api.sfx('thud', 0.75, 0.8);
+});
+
+E.scene(12.8, 15.5, { bg: 'green', drift: 0.02 }, (root, api) => {
+  captions(api, root, [['Plan the week *first.*', 0]]);
+  const p = shot(api, api.el(root, 'div', 'phone-slot'), 'weekly.jpg', 60);
+  api.anim(p.wrap, 0, 'up', 0.45);
+  highlight(api, p, [14, 266, 568, 72], 0.8);
+  return p.update;
+});
+
+E.scene(15.5, 18.4, { bg: 'green', drift: 0.02 }, (root, api) => {
+  captions(api, root, [["Buy *only* what's on the menu.", 0]]);
+  const p = clip(api, api.el(root, 'div', 'phone-slot'), 'clip-tap', 81, 0.1);
+  api.sfx('tap', 0.1);
+  api.sfx('ding', 1.6, 0.7);
+  return p.update;
+});
+
+E.scene(18.4, 19.9, { bg: 'green', drift: 0.02 }, (root, api) => {
+  captions(api, root, [['Nothing *forgotten.*', 0]]);
+  return clip(api, api.el(root, 'div', 'phone-slot'), 'clip-list', 44).update;
+});
+
+E.scene(19.9, 22.3, { bg: 'cream' }, (root, api) => {
+  const box = api.el(root, 'div', 'center');
+  api.words(box, 'Plan first.', 'lg', 0, 0.14);
+  api.words(box, 'Then shop.', 'lg', 0.5, 0.14);
+  const l = api.el(box, 'div', 'xl', '<span class="mark">Plug the leaks.</span>');
+  api.anim(l, 1.0, 'up', 0.35);
+  api.anim(l.querySelector('.mark'), 1.3, 'mark', 0.45);
+  api.sfx('pop', 1.3, 0.8);
+});
+
+endCard(22.3, 24.5);
+seek(0);
+</script></body></html>
