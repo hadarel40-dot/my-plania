@@ -1,0 +1,62 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Reel 2 - I built it</title><link rel="stylesheet" href="engine.css"></head>
+<body><div id="stage"></div>
+<script src="engine.js"></script>
+<script>
+// Reel 2: "I built an app for the 4:30 question" - four real features, numbered.
+
+E.scene(0, 2.4, { bg: 'green' }, (root, api) => {
+  const box = api.el(root, 'div', 'center');
+  api.words(box, 'I got tired of', 'lg', 0, 0.14);
+  api.words(box, '*"what\'s* *for* *dinner?"*', 'xl', 0.45, 0.18);
+});
+
+E.scene(2.4, 4.3, { bg: 'cream' }, (root, api) => {
+  const box = api.el(root, 'div', 'center');
+  api.words(box, 'So I built', 'lg', 0, 0.14);
+  api.words(box, 'an *app.*', 'xxl', 0.4, 0.2);
+});
+
+E.scene(4.3, 7.3, { bg: 'green', drift: 0.02 }, (root, api) => {
+  captions(api, root, [['*1.* It plans my week.', 0]]);
+  const p = shot(api, api.el(root, 'div', 'phone-slot'), 'weekly.jpg', 60);
+  api.anim(p.wrap, 0, 'up', 0.45);
+  highlight(api, p, [14, 266, 568, 72], 0.9);
+  return p.update;
+});
+
+E.scene(7.3, 10.2, { bg: 'green', drift: 0.02 }, (root, api) => {
+  captions(api, root, [['*2.* One tap: groceries.', 0]]);
+  const p = clip(api, api.el(root, 'div', 'phone-slot'), 'clip-tap', 81, 0.1);
+  return p.update;
+});
+
+E.scene(10.2, 11.7, { bg: 'green', drift: 0.02 }, (root, api) => {
+  captions(api, root, [['Sorted by *aisle.*', 0]]);
+  const p = clip(api, api.el(root, 'div', 'phone-slot'), 'clip-list', 44);
+  return p.update;
+});
+
+E.scene(11.7, 14.6, { bg: 'green', drift: 0.02 }, (root, api) => {
+  captions(api, root, [['*3.* Out of ideas? It suggests.', 0]]);
+  const p = shot(api, api.el(root, 'div', 'phone-slot'), 'suggestions.jpg', 160);
+  highlight(api, p, [14, 210, 568, 72], 0.7);
+  return p.update;
+});
+
+E.scene(14.6, 17.5, { bg: 'green', drift: 0.02 }, (root, api) => {
+  captions(api, root, [['*4.* Saves recipes from reels.', 0]]);
+  const p = shot(api, api.el(root, 'div', 'phone-slot'), 'meals.jpg', 0);
+  highlight(api, p, [16, 296, 564, 76], 0.6);
+  return p.update;
+});
+
+E.scene(17.5, 19.5, { bg: 'ink' }, (root, api) => {
+  const box = api.el(root, 'div', 'center');
+  api.anim(api.el(box, 'div', 'wordmark', 'Plania'), 0, 'pop', 0.4);
+  api.words(box, 'Planning made *pretty.*', 'md', 0.5, 0.14);
+});
+
+endCard(19.5, 21.7);
+seek(0);
+</script></body></html>

@@ -1,0 +1,96 @@
+@import url('fonts/fonts.css');
+
+:root {
+  --green: #3d6b52;
+  --ink: #1f3d2e;
+  --pink: #e8a0b4;
+  --cream: #f0e8df;
+  --paper: #f8f3ec;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--cream); }
+body { font-family: 'Poppins', sans-serif; -webkit-font-smoothing: antialiased; }
+
+#stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; }
+
+/* Captions stay out of the top 15% (288px) and bottom 20% (384px). */
+.scene { position: absolute; inset: 0; display: none; }
+.scene .inner {
+  position: absolute; inset: 0; padding: 300px 90px 400px;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  transform-origin: 50% 45%;
+}
+.scene.cream { background: var(--cream); color: var(--ink); }
+.scene.green { background: var(--green); color: var(--cream); }
+.scene.ink { background: var(--ink); color: var(--cream); }
+
+.center { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 36px; }
+
+.line { display: flex; flex-wrap: wrap; justify-content: center; column-gap: 0.26em; text-align: center; line-height: 1.12; }
+.w { display: inline-block; opacity: 0; }
+.em { font-family: 'Fraunces', serif; font-style: italic; font-weight: 600; color: var(--pink); padding-right: 0.1em; }
+.cream .em { color: var(--green); }
+
+.xxl { font-size: 200px; font-weight: 800; letter-spacing: -0.04em; }
+.xl  { font-size: 108px; font-weight: 700; letter-spacing: -0.025em; }
+.lg  { font-size: 84px;  font-weight: 700; letter-spacing: -0.02em; }
+.md  { font-size: 62px;  font-weight: 600; letter-spacing: -0.01em; }
+.sm  { font-size: 44px;  font-weight: 500; opacity: 0.85; }
+.caps { font-size: 38px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; }
+
+.pill {
+  display: inline-block; opacity: 0;
+  background: var(--green); color: var(--cream);
+  font-size: 56px; font-weight: 600; padding: 26px 60px; border-radius: 999px;
+}
+.green .pill, .ink .pill { background: var(--pink); color: var(--ink); }
+
+/* Pink marker highlight drawn left to right. */
+.mark {
+  background-image: linear-gradient(var(--pink), var(--pink));
+  background-repeat: no-repeat; background-position: 0 88%; background-size: 0% 38%;
+  padding: 0 6px;
+}
+.strike-wrap { position: relative; display: inline-block; }
+.strike { position: absolute; left: -2%; right: -2%; top: 52%; height: 12px; background: var(--pink); transform-origin: left; transform: scaleX(0); border-radius: 6px; }
+
+/* Text-message bubbles */
+.bubbles { width: 100%; display: flex; flex-direction: column; gap: 34px; }
+.bubble-row { display: flex; flex-direction: column; align-items: flex-start; opacity: 0; }
+.sender { font-size: 30px; font-weight: 500; opacity: 0.7; margin: 0 0 10px 28px; }
+.bubble { background: #e9e9eb; color: #111; font-size: 56px; font-weight: 500; padding: 26px 44px; border-radius: 52px; border-bottom-left-radius: 14px; max-width: 860px; }
+.bubble.loud { background: var(--pink); color: var(--ink); font-weight: 700; }
+
+/* Phone + app chrome (styled after the Plania app) */
+.phone {
+  width: 640px; height: 1180px; border-radius: 92px; background: #17241d; padding: 22px;
+  box-shadow: 0 50px 120px rgba(0,0,0,0.35);
+}
+.screen { position: relative; width: 100%; height: 100%; border-radius: 72px; background: var(--paper); overflow: hidden; color: var(--ink); display: flex; flex-direction: column; }
+.statusbar { display: flex; justify-content: space-between; padding: 30px 54px 8px; font-size: 26px; font-weight: 600; background: #3e554a; color: var(--cream); flex: none; }
+.statusbar .dots { font-size: 14px; letter-spacing: 4px; }
+.view { position: relative; flex: 1; overflow: hidden; }
+.scroller { position: relative; }
+.shot { display: block; width: 100%; }
+.hl-box { position: absolute; border: 6px solid var(--pink); border-radius: 26px; opacity: 0; box-shadow: 0 0 0 8px rgba(232,160,180,0.35), 0 0 40px rgba(232,160,180,0.8); }
+
+.caption-top { position: absolute; top: 300px; left: 90px; right: 90px; display: flex; justify-content: center; z-index: 2; }
+.phone-slot { position: absolute; top: 430px; left: 50%; transform: translateX(-50%) scale(0.92); transform-origin: top center; }
+
+/* Thought chips for the mental-load reel */
+.chips { position: absolute; inset: 300px 60px 400px; }
+.chip { position: absolute; opacity: 0; background: #fff; color: var(--ink); font-size: 46px; font-weight: 600; padding: 22px 36px; border-radius: 26px; box-shadow: 0 10px 30px rgba(31,61,46,0.12); white-space: nowrap; }
+.chip.work { background: var(--ink); color: var(--cream); }
+.chip.big { background: var(--pink); font-size: 72px; font-weight: 800; }
+
+/* Poll cards */
+.opt { width: 100%; display: flex; align-items: center; gap: 40px; background: #fff; border-radius: 40px; padding: 46px 50px; opacity: 0; box-shadow: 0 16px 40px rgba(31,61,46,0.10); }
+.num { width: 120px; height: 120px; flex: none; border-radius: 50%; background: var(--green); color: var(--cream); display: flex; align-items: center; justify-content: center; font-size: 72px; font-weight: 800; }
+.opt.two .num { background: var(--pink); color: var(--ink); }
+.opt-text { text-align: left; font-size: 48px; font-weight: 700; line-height: 1.1; }
+.or { font-family: 'Fraunces', serif; font-style: italic; font-size: 60px; color: var(--green); opacity: 0; }
+
+.wordmark { font-size: 190px; font-weight: 800; letter-spacing: -0.045em; }
+.clock { font-size: 300px; font-weight: 800; letter-spacing: -0.05em; line-height: 1; font-variant-numeric: tabular-nums; }
+.clock small { font-size: 90px; font-weight: 600; letter-spacing: 0; margin-left: 20px; }

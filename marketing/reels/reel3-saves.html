@@ -1,0 +1,55 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Reel 3 - Saved recipes</title><link rel="stylesheet" href="engine.css"></head>
+<body><div id="stage"></div>
+<script src="engine.js"></script>
+<script>
+// Reel 3: all those saved recipe reels, finally on the dinner plan.
+
+E.scene(0, 2.4, { bg: 'green' }, (root, api) => {
+  const box = api.el(root, 'div', 'center');
+  api.words(box, 'Recipes you saved', 'lg', 0, 0.14);
+  api.words(box, 'on *Instagram:*', 'xl', 0.45, 0.18);
+  const n = api.el(box, 'div', 'clock', '0');
+  api.anim(n, 0.9, 'pop', 0.3);
+  return (lt) => { n.textContent = Math.round(214 * E.easeOut(E.prog(lt, 0.9, 1.2))); };
+});
+
+E.scene(2.4, 4.4, { bg: 'cream' }, (root, api) => {
+  const box = api.el(root, 'div', 'center');
+  api.words(box, 'Recipes you actually', 'lg', 0, 0.14);
+  api.words(box, '*cooked:*', 'xl', 0.45, 0.18);
+  api.anim(api.el(box, 'div', 'clock', '0'), 1.0, 'pop', 0.3);
+});
+
+E.scene(4.4, 6.7, { bg: 'ink' }, (root, api) => {
+  const box = api.el(root, 'div', 'center');
+  api.words(box, 'What if your saves', 'lg', 0, 0.14);
+  api.words(box, 'went *straight* into your week?', 'lg', 0.6, 0.15);
+});
+
+E.scene(6.7, 10.0, { bg: 'green', drift: 0.02 }, (root, api) => {
+  captions(api, root, [['From *Instagram* or *TikTok.*', 0]]);
+  const p = shot(api, api.el(root, 'div', 'phone-slot'), 'meals.jpg', 0);
+  api.anim(p.wrap, 0, 'up', 0.45);
+  highlight(api, p, [16, 296, 564, 76], 0.9);
+  return p.update;
+});
+
+E.scene(10.0, 12.6, { bg: 'green', drift: 0.03 }, (root, api) => {
+  captions(api, root, [['Then add it to your *week.*', 0]]);
+  const p = shot(api, api.el(root, 'div', 'phone-slot'), 'meals.jpg', 0);
+  highlight(api, p, [46, 828, 504, 66], 0.5);
+  return p.update;
+});
+
+E.scene(12.6, 14.6, { bg: 'cream' }, (root, api) => {
+  const box = api.el(root, 'div', 'center');
+  api.words(box, 'Your saves,', 'lg', 0, 0.14);
+  const l = api.el(box, 'div', 'xl', '<span class="mark">finally cooked.</span>');
+  api.anim(l, 0.4, 'up', 0.35);
+  api.anim(l.querySelector('.mark'), 0.75, 'mark', 0.45);
+});
+
+endCard(14.6, 16.8);
+seek(0);
+</script></body></html>

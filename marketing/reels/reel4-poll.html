@@ -1,0 +1,48 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Reel 4 - 1 or 2</title><link rel="stylesheet" href="engine.css"></head>
+<body><div id="stage"></div>
+<script src="engine.js"></script>
+<script>
+// Reel 4: comment-bait poll, "1 or 2".
+
+E.scene(0, 1.9, { bg: 'green' }, (root, api) => {
+  const box = api.el(root, 'div', 'center');
+  api.words(box, 'Be *honest.*', 'xxl', 0, 0.2);
+});
+
+E.scene(1.9, 3.9, { bg: 'cream' }, (root, api) => {
+  const box = api.el(root, 'div', 'center');
+  api.words(box, 'Which one', 'lg', 0, 0.14);
+  api.words(box, 'drains you *more?*', 'xl', 0.35, 0.16);
+});
+
+E.scene(3.9, 9.6, { bg: 'cream', drift: 0.03 }, (root, api) => {
+  const box = api.el(root, 'div', 'center');
+  box.style.width = '100%';
+  const o1 = api.el(box, 'div', 'opt', '<div class="num">1</div><div class="opt-text">Deciding what to cook</div>');
+  const or = api.el(box, 'div', 'or', 'or');
+  const o2 = api.el(box, 'div', 'opt two', '<div class="num">2</div><div class="opt-text">Remembering what to buy</div>');
+  api.anim(o1, 0.2, 'pop', 0.35);
+  api.anim(or, 1.1, 'fade', 0.3);
+  api.anim(o2, 1.5, 'pop', 0.35);
+  const cta = api.el(box, 'div', 'pill', 'Comment 1 or 2');
+  cta.style.marginTop = '40px';
+  api.anim(cta, 3.0, 'pop', 0.4);
+  // Gentle alternating pulse keeps the frame alive while people read.
+  return (lt) => {
+    if (lt < 2.2) return;
+    const k = Math.sin((lt - 2.2) * Math.PI * 1.2);
+    o1.style.transform = `scale(${1 + 0.025 * Math.max(0, k)})`;
+    o2.style.transform = `scale(${1 + 0.025 * Math.max(0, -k)})`;
+  };
+});
+
+E.scene(9.6, 11.8, { bg: 'ink' }, (root, api) => {
+  const box = api.el(root, 'div', 'center');
+  api.words(box, "I'm making the next video", 'lg', 0, 0.13);
+  api.words(box, 'from *your* *answers.*', 'xl', 0.7, 0.17);
+});
+
+endCard(11.8, 14.0);
+seek(0);
+</script></body></html>
