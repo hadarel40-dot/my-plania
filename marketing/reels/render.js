@@ -29,7 +29,9 @@ const WORKERS = 4;
     return;
   }
 
-  const dur = await (await open()).evaluate(() => REEL_DURATION());
+  const first = await open();
+  const dur = await first.evaluate(() => REEL_DURATION());
+  const cues = await first.evaluate(() => SFX_CUES);
   const total = Math.round(dur * FPS);
   const dir = fs.mkdtempSync(path.join(process.env.TMPDIR || '/tmp', 'frames-'));
   const pages = await Promise.all(Array.from({ length: WORKERS }, open));
@@ -40,10 +42,12 @@ const WORKERS = 4;
     }
   }));
   await browser.close();
+  fs.writeFileSync(path.join(dir, 'cues.json'), JSON.stringify(cues));
+  execFileSync('python3', [path.join(__dirname, 'sfx.py'), path.join(dir, 'cues.json'), String(dur), path.join(dir, 'sfx.wav')]);
   execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', path.join(dir, 'f%05d.jpg'),
-    '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo', '-shortest',
+    '-i', path.join(dir, 'sfx.wav'), '-shortest',
     '-c:v', 'libx264', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-crf', '18', '-preset', 'slow', '-r', String(FPS),
     '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', out]);
   fs.rmSync(dir, { recursive: true, force: true });
-  console.log(`${out}: ${total} frames, ${dur}s`);
+  console.log(`${out}: ${total} frames, ${dur}s, ${cues.length} sound cues`);
 })();

@@ -13,7 +13,7 @@ English only. No prices, no savings numbers, no "Now open".
 Every reel ends on "Opening soon." + "Follow for launch day".
 
 ## Before posting
-- The videos have no music. Add a quiet track from Instagram's own audio library when you post (better reach, and the license is covered).
+- Sound effects are built in (message pings, transition whooshes, taps, pops). No music. If you add a track from Instagram's audio library, keep it low so the effects still come through.
 - Post order: 4 (poll, wakes up the account) -> 1 -> 3 -> 2, every 2-3 days.
 - Cover frame: pick the first line of text (Instagram's "Choose cover").
 
@@ -44,5 +44,6 @@ I'm building the next video from your answers.
 ## Rebuilding
 1. `./prep-assets.sh <screen-recording.mp4> <weekly.png> <meals.png> <suggestions.png> <guide.png>`
    cuts the real app footage, crops the status bar, and blurs the estimated-price column.
-2. `node render.js reel1-430.html out/reel1-430.mp4` (needs Playwright + ffmpeg).
+2. `node render.js reel1-430.html out/reel1-430.mp4` (needs Playwright, ffmpeg, and Python with numpy).
+   Sound cues come from `api.sfx(...)` calls in each reel; `sfx.py` synthesizes and mixes them.
    `node render.js reel1-430.html /tmp/r1 --stills 3,10` saves single frames for checking.

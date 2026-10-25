@@ -3,6 +3,7 @@
 (function () {
   const stage = document.getElementById('stage');
   const scenes = [];
+  const cues = []; // sound effects: {t, name, gain}
   const clamp = (x) => Math.max(0, Math.min(1, x));
   const easeOut = (x) => 1 - Math.pow(1 - x, 3);
   const easeBack = (x) => { const c = 1.7; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
@@ -43,7 +44,9 @@
     const root = el(stage, 'div', 'scene ' + (opts.bg || 'cream'));
     const inner = el(root, 'div', 'inner');
     const anims = [];
+    if (t0 > 0) cues.push({ t: Math.max(0, t0 - 0.12), name: 'whoosh', gain: 0.8 });
     const api = {
+      sfx: (name, at = 0, gain = 1) => cues.push({ t: t0 + at, name, gain }),
       el: (parent, tag, cls, html) => el(parent || inner, tag, cls, html),
       anim: (node, start, type = 'up', dur = 0.4) => { anims.push({ node, start, dur, type }); return node; },
       // Word-by-word line. Wrap emphasis in *stars* for the serif accent.
@@ -80,6 +83,7 @@
 
   window.E = { scene, el, prog, clamp, easeOut, easeBack };
   window.REEL_DURATION = () => Math.max(...scenes.map((s) => s.t1));
+  window.SFX_CUES = cues;
 })();
 
 // ---------- shared building blocks ----------
@@ -123,6 +127,7 @@ function highlight(api, p, box, start) {
   const h = api.el(p.scroller, 'div', 'hl-box');
   Object.assign(h.style, { left: box[0] + 'px', top: box[1] + 'px', width: box[2] + 'px', height: box[3] + 'px' });
   api.anim(h, start, 'pop', 0.35);
+  api.sfx('pop', start);
   return h;
 }
 
@@ -142,5 +147,6 @@ function endCard(t0, t1) {
     const box = api.el(root, 'div', 'center');
     api.words(box, 'Opening soon.', 'xl', 0.0, 0.14);
     api.anim(api.el(box, 'div', 'pill', 'Follow for launch day'), 0.45, 'pop', 0.4);
+    api.sfx('ding', 0.45);
   });
 }

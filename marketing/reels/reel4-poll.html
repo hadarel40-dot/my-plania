@@ -8,6 +8,7 @@
 E.scene(0, 1.9, { bg: 'green' }, (root, api) => {
   const box = api.el(root, 'div', 'center');
   api.words(box, 'Be *honest.*', 'xxl', 0, 0.2);
+  api.sfx('pop', 0.2);
 });
 
 E.scene(1.9, 3.9, { bg: 'cream' }, (root, api) => {
@@ -23,11 +24,14 @@ E.scene(3.9, 9.6, { bg: 'cream', drift: 0.03 }, (root, api) => {
   const or = api.el(box, 'div', 'or', 'or');
   const o2 = api.el(box, 'div', 'opt two', '<div class="num">2</div><div class="opt-text">Remembering what to buy</div>');
   api.anim(o1, 0.2, 'pop', 0.35);
+  api.sfx('pop', 0.2);
   api.anim(or, 1.1, 'fade', 0.3);
   api.anim(o2, 1.5, 'pop', 0.35);
+  api.sfx('pop', 1.5);
   const cta = api.el(box, 'div', 'pill', 'Comment 1 or 2');
   cta.style.marginTop = '40px';
   api.anim(cta, 3.0, 'pop', 0.4);
+  api.sfx('ping', 3.0);
   // Gentle alternating pulse keeps the frame alive while people read.
   return (lt) => {
     if (lt < 2.2) return;

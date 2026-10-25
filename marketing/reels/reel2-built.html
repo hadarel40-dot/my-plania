@@ -15,6 +15,7 @@ E.scene(2.4, 4.3, { bg: 'cream' }, (root, api) => {
   const box = api.el(root, 'div', 'center');
   api.words(box, 'So I built', 'lg', 0, 0.14);
   api.words(box, 'an *app.*', 'xxl', 0.4, 0.2);
+  api.sfx('pop', 0.6);
 });
 
 E.scene(4.3, 7.3, { bg: 'green', drift: 0.02 }, (root, api) => {
@@ -28,6 +29,8 @@ E.scene(4.3, 7.3, { bg: 'green', drift: 0.02 }, (root, api) => {
 E.scene(7.3, 10.2, { bg: 'green', drift: 0.02 }, (root, api) => {
   captions(api, root, [['*2.* One tap: groceries.', 0]]);
   const p = clip(api, api.el(root, 'div', 'phone-slot'), 'clip-tap', 81, 0.1);
+  api.sfx('tap', 0.1);
+  api.sfx('ding', 1.6, 0.7);
   return p.update;
 });
 
@@ -54,6 +57,7 @@ E.scene(14.6, 17.5, { bg: 'green', drift: 0.02 }, (root, api) => {
 E.scene(17.5, 19.5, { bg: 'ink' }, (root, api) => {
   const box = api.el(root, 'div', 'center');
   api.anim(api.el(box, 'div', 'wordmark', 'Plania'), 0, 'pop', 0.4);
+  api.sfx('pop', 0);
   api.words(box, 'Planning made *pretty.*', 'md', 0.5, 0.14);
 });
 
