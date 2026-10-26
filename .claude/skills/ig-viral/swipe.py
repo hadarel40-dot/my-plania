@@ -26,6 +26,7 @@ Usage
 """
 
 import argparse
+import datetime
 import json
 import os
 import re
@@ -34,7 +35,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 HOOKS = os.path.join(HERE, "..", "ig-reel", "hooks.json")
-WORD_RE = re.compile(r"[A-Za-z0-9$%'’-]+")
+WORD_RE = re.compile(r"[A-Za-z0-9\u0590-\u05FF$%'’\"-]+")      # Hebrew too
 
 try:                                              # optional: score the hooks too
     sys.path.insert(0, os.path.join(HERE, "..", "ig-reel"))
@@ -198,8 +199,14 @@ def main():
     if args.out:
         path = os.path.expanduser(args.out)
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        open(path, "w", encoding="utf-8").write(to_markdown(a))
-        print(f"wrote {path}", file=sys.stderr)
+        if os.path.exists(path):                  # swipe file only grows: append, never overwrite
+            section = to_markdown(a).replace("# Swipe file", f"## Swipe {datetime.date.today()}", 1)
+            section = section.replace("\n## ", "\n### ")
+            open(path, "a", encoding="utf-8").write("\n" + section)
+            print(f"appended to {path}", file=sys.stderr)
+        else:
+            open(path, "w", encoding="utf-8").write(to_markdown(a))
+            print(f"wrote {path}", file=sys.stderr)
 
 
 if __name__ == "__main__":
