@@ -2,7 +2,7 @@
 import { useRef, useState } from "react";
 import { Film, Loader2, Plus, Upload } from "lucide-react";
 import { useEditor } from "@/stores/editor-store";
-import { importLocalFile } from "@/lib/media/local-upload";
+import { importFile } from "@/lib/media/import";
 import { formatTime } from "@/lib/editor/timeline-utils";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +20,7 @@ export function MediaBin() {
     await Promise.all([...files].map(async (file) => {
       setUploads((u) => [...u, { name: file.name, progress: 0 }]);
       try {
-        const asset = await importLocalFile(file, (progress) =>
+        const asset = await importFile(file, (progress) =>
           setUploads((u) => u.map((x) => (x.name === file.name ? { ...x, progress } : x))));
         addAsset(asset);
       } catch (e) {
@@ -66,7 +66,9 @@ export function MediaBin() {
             <div className="min-w-0 flex-1 text-xs">
               <p className="truncate font-medium">{a.name}</p>
               <p className="text-zinc-500" dir="ltr">{formatTime(a.duration).slice(0, 5)} · {a.width}×{a.height}</p>
-              <p className="text-[10px] text-zinc-600">{a.origin === "sample" ? "דוגמה" : "מקומי"}</p>
+              <p className="text-[10px] text-zinc-600">
+                {a.origin === "sample" ? "דוגמה" : a.origin === "ai_variant" ? "נוצר ב-AI" : a.storagePath ? "בענן" : "מקומי"}
+              </p>
             </div>
             <button onClick={() => addClip(a.id)} title="הוסף לסוף ציר הזמן" aria-label="הוסף לציר הזמן"
               className="self-center rounded p-1 text-zinc-500 opacity-0 hover:bg-zinc-700 hover:text-white group-hover:opacity-100">

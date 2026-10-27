@@ -20,6 +20,8 @@ export interface MediaAsset {
   origin: "sample" | "upload" | "ai_variant";
   /** כתובת ציבורית בענן (למשל fal storage), כדי שמודלים יוכלו לקרוא את הקובץ */
   remoteUrl?: string;
+  /** נתיב הקובץ ב-Supabase Storage (bucket media). כתובת הצפייה נחתמת מחדש בכל טעינה */
+  storagePath?: string;
 }
 
 /** עיבוד ויזואלי שמוחל בזמן התצוגה. בדמו כך "מייצרים" וריאציות בלי ענן */
@@ -90,3 +92,11 @@ export type Selection =
   | { kind: "clip"; id: string }
   | { kind: "caption"; id: string }
   | null;
+
+/** הפרויקט כפי שהוא נשמר (בדפדפן או בטבלת projects) */
+export interface SavedProject {
+  title: string;
+  timeline: Timeline;
+  assets: Record<string, MediaAsset>;
+  variants: Record<string, Variant>;
+}

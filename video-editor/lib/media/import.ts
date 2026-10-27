@@ -1,21 +1,18 @@
 import type { MediaAsset } from "@/lib/editor/types";
 import { uid } from "@/lib/editor/timeline-utils";
-import { saveFile } from "@/lib/persistence";
+import { getBackend } from "@/lib/backend";
 
 /**
- * מצב מקומי: הקובץ נשאר בדפדפן (blob URL, ונשמר ב-IndexedDB כדי לשרוד רענון).
- * בענן, הפונקציה הזו מוחלפת בהעלאה ישירה ל-Storage (Mux Direct Upload / S3 multipart)
- * ובהמתנה ל-webhook שה-proxy וה-thumbnails מוכנים.
+ * מייבא קובץ וידאו: מנגנים אותו מיד מהדפדפן (blob URL), ובמקביל שומרים אותו
+ * ב-backend הפעיל: IndexedDB במצב מקומי, או העלאה resumable ל-Supabase Storage.
  */
-export async function importLocalFile(file: File, onProgress?: (p: number) => void): Promise<MediaAsset> {
+export async function importFile(file: File, onProgress?: (p: number) => void): Promise<MediaAsset> {
   if (!file.type.startsWith("video/")) throw new Error("רק קבצי וידאו נתמכים כרגע");
   const url = URL.createObjectURL(file);
-  onProgress?.(30);
   const asset = await probeVideo(url, { name: file.name, origin: "upload" });
-  onProgress?.(80);
-  await saveFile(asset.id, file);
-  onProgress?.(100);
-  return asset;
+  onProgress?.(5);
+  const stored = await getBackend().storeFile(asset.id, file, (p) => onProgress?.(5 + Math.round(p * 0.95)));
+  return { ...asset, ...stored };
 }
 
 /** מודד וידאו בדפדפן (משך, מידות) ומייצר תמונה ממוזערת. עובד גם על כתובות מהענן */

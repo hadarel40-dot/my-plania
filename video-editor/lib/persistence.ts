@@ -1,20 +1,13 @@
-import type { MediaAsset, Timeline, Variant } from "@/lib/editor/types";
+import type { SavedProject } from "@/lib/editor/types";
 
 /**
  * שמירה מקומית: ה"מתכון" ב-localStorage, וקבצי הווידאו שהועלו ב-IndexedDB.
- * בשלב Supabase זה יוחלף ב-edit_projects.timeline ובקבצים ב-Storage.
+ * כשמוגדר Supabase משתמשים במקום זה ב-lib/backend/cloud.ts.
  */
 
 const PROJECT_KEY = "ai-video-editor:project:v1";
 const DB_NAME = "ai-video-editor";
 const FILES = "files";
-
-export interface SavedProject {
-  title: string;
-  timeline: Timeline;
-  assets: Record<string, MediaAsset>;
-  variants: Record<string, Variant>;
-}
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -42,15 +35,20 @@ const loadFile = (assetId: string) =>
 
 const clearFiles = () => withStore("readwrite", (s) => s.clear()).catch(() => undefined);
 
-export function saveProject(project: SavedProject) {
-  // כתובות blob: לא שורדות רענון; הן נבנות מחדש מ-IndexedDB בטעינה
+/** מכין פרויקט לשמירה: בלי כתובות זמניות ובלי jobs שעדיין רצים */
+export function toStorable(project: SavedProject): SavedProject {
+  // כתובות blob: וכתובות חתומות לא שורדות רענון; הן נבנות מחדש בטעינה
   const assets = Object.fromEntries(Object.entries(project.assets).map(([id, a]) =>
-    [id, a.url.startsWith("blob:") ? { ...a, url: "" } : a]));
+    [id, a.url.startsWith("blob:") || a.storagePath ? { ...a, url: "" } : a]));
   // jobs שעדיין רצים לא ימשיכו אחרי רענון, אז לא שומרים אותם
   const variants = Object.fromEntries(Object.entries(project.variants).filter(([, v]) =>
     v.status === "succeeded" || v.status === "failed"));
+  return { ...project, assets, variants };
+}
+
+export function saveProject(project: SavedProject) {
   try {
-    localStorage.setItem(PROJECT_KEY, JSON.stringify({ ...project, assets, variants }));
+    localStorage.setItem(PROJECT_KEY, JSON.stringify(toStorable(project)));
     return true;
   } catch {
     return false;

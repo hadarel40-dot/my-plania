@@ -1,6 +1,7 @@
 "use client";
 import { useEffect } from "react";
-import { AlertTriangle, Check, Clapperboard, Cloud, Download, FilePlus2, Loader2, X } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, Check, ChevronRight, Clapperboard, Cloud, Download, FilePlus2, Loader2, LogOut, X } from "lucide-react";
 import { redo, undo, useEditor, type AiMode } from "@/stores/editor-store";
 import { usePlayback } from "@/stores/playback-store";
 import { MediaBin } from "./media-bin";
@@ -10,21 +11,38 @@ import { VariantsPanel } from "./variants-panel";
 import { CaptionInspector } from "./caption-inspector";
 import { useProjectBootstrap, type SaveState } from "./use-project-bootstrap";
 import { clearProject } from "@/lib/persistence";
+import type { ProjectBackend } from "@/lib/backend";
 import { cn } from "@/lib/utils";
 
-export function Editor() {
+export interface EditorProps {
+  backend: ProjectBackend;
+  /** במצב ענן: המשתמש המחובר */
+  account?: { email: string };
+}
+
+export function Editor({ backend, account }: EditorProps) {
   useShortcuts();
-  const { ready, saveState } = useProjectBootstrap();
+  const { ready, loadError, saveState } = useProjectBootstrap(backend);
   const caption = useEditor((s) =>
     s.selection?.kind === "caption" ? s.timeline.captions.find((c) => c.id === s.selection!.id) ?? null : null);
 
+  if (loadError) {
+    return (
+      <div className="grid h-screen place-items-center text-center text-sm">
+        <div className="space-y-3">
+          <p className="text-red-300">{loadError}</p>
+          {account && <Link href="/" className="text-zinc-400 underline">חזרה לפרויקטים</Link>}
+        </div>
+      </div>
+    );
+  }
   if (!ready) {
     return <div className="grid h-screen place-items-center text-sm text-zinc-500">טוען פרויקט…</div>;
   }
 
   return (
     <div className="flex h-screen flex-col bg-zinc-950 text-zinc-100">
-      <TopBar saveState={saveState} />
+      <TopBar saveState={saveState} cloudSave={backend.kind === "cloud"} account={account} />
       <ErrorBar />
       <div className="flex min-h-0 flex-1">
         <MediaBin />
@@ -38,7 +56,9 @@ export function Editor() {
   );
 }
 
-function TopBar({ saveState }: { saveState: SaveState }) {
+function TopBar({ saveState, cloudSave, account }: {
+  saveState: SaveState; cloudSave: boolean; account?: { email: string };
+}) {
   const title = useEditor((s) => s.title);
   const setTitle = useEditor((s) => s.setTitle);
 
@@ -62,17 +82,32 @@ function TopBar({ saveState }: { saveState: SaveState }) {
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-3 border-b border-zinc-800 px-4">
-      <Clapperboard className="size-5 text-violet-400" />
+      {account ? (
+        <Link href="/" title="הפרויקטים שלי" className="flex items-center gap-1 rounded px-1 py-0.5 text-zinc-400 hover:bg-zinc-900 hover:text-white">
+          <ChevronRight className="size-4" /><Clapperboard className="size-5 text-violet-400" />
+        </Link>
+      ) : (
+        <Clapperboard className="size-5 text-violet-400" />
+      )}
       <input value={title} onChange={(e) => setTitle(e.target.value)} aria-label="שם הפרויקט"
         className="w-56 rounded bg-transparent px-1.5 py-0.5 text-sm font-medium hover:bg-zinc-900 focus:bg-zinc-900 focus:outline-none" />
-      <SaveIndicator state={saveState} />
+      <SaveIndicator state={saveState} cloud={cloudSave} />
       <ModeSwitch />
       <div className="ms-auto flex items-center gap-2">
         <span className="hidden text-[11px] text-zinc-600 xl:inline" dir="ltr">Space · S · Del · Ctrl+Z</span>
-        <button onClick={startNew}
-          className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800">
-          <FilePlus2 className="size-3.5" /> פרויקט חדש
-        </button>
+        {account ? (
+          <form action="/auth/signout" method="post" className="flex items-center gap-2">
+            <span className="hidden text-[11px] text-zinc-500 md:inline" dir="ltr">{account.email}</span>
+            <button title="התנתקות" aria-label="התנתקות" className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white">
+              <LogOut className="size-3.5" />
+            </button>
+          </form>
+        ) : (
+          <button onClick={startNew}
+            className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800">
+            <FilePlus2 className="size-3.5" /> פרויקט חדש
+          </button>
+        )}
         <button onClick={exportJson}
           className="flex items-center gap-1.5 rounded-md bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-white">
           <Download className="size-3.5" /> ייצוא פרויקט
@@ -82,11 +117,11 @@ function TopBar({ saveState }: { saveState: SaveState }) {
   );
 }
 
-function SaveIndicator({ state }: { state: SaveState }) {
+function SaveIndicator({ state, cloud }: { state: SaveState; cloud: boolean }) {
   if (state === "idle") return null;
   const map = {
     saving: { icon: <Loader2 className="size-3 animate-spin" />, text: "שומר…", cls: "text-zinc-500" },
-    saved: { icon: <Check className="size-3" />, text: "נשמר בדפדפן", cls: "text-zinc-500" },
+    saved: { icon: <Check className="size-3" />, text: cloud ? "נשמר בענן" : "נשמר בדפדפן", cls: "text-zinc-500" },
     error: { icon: <AlertTriangle className="size-3" />, text: "השמירה נכשלה", cls: "text-red-400" },
   }[state];
   return <span className={cn("flex items-center gap-1 text-[11px]", map.cls)}>{map.icon}{map.text}</span>;

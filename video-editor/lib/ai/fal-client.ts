@@ -1,6 +1,7 @@
 "use client";
 import { fal } from "@fal-ai/client";
 import type { MediaAsset } from "@/lib/editor/types";
+import { getBackend } from "@/lib/backend";
 
 fal.config({ proxyUrl: "/api/fal/proxy" });
 
@@ -9,14 +10,15 @@ export { fal };
 const uploads = new Map<string, Promise<string>>();
 
 /**
- * מודלים בענן צריכים כתובת ציבורית. קובץ מקומי (blob או /samples) עולה פעם אחת
- * ל-fal storage, והכתובת נשמרת על הנכס.
+ * מודלים בענן צריכים כתובת ציבורית. קובץ ב-Supabase מקבל כתובת חתומה; קובץ מקומי
+ * (blob או /samples) עולה פעם אחת ל-fal storage, והכתובת נשמרת על הנכס.
  */
-export function ensureRemoteUrl(asset: MediaAsset, onUploaded: (url: string) => void): Promise<string> {
-  if (asset.remoteUrl) return Promise.resolve(asset.remoteUrl);
-  if (/^https?:\/\//.test(asset.url) && !asset.url.startsWith(location.origin)) {
-    return Promise.resolve(asset.url);
-  }
+export async function ensureRemoteUrl(asset: MediaAsset, onUploaded: (url: string) => void): Promise<string> {
+  if (asset.remoteUrl) return asset.remoteUrl;
+  // קובץ שכבר נמצא ב-Supabase Storage: נותנים ל-fal כתובת חתומה במקום להעלות שוב
+  const signed = await getBackend().remoteUrlFor(asset);
+  if (signed) return signed;
+  if (/^https?:\/\//.test(asset.url) && !asset.url.startsWith(location.origin)) return asset.url;
   let pending = uploads.get(asset.id);
   if (!pending) {
     pending = (async () => {

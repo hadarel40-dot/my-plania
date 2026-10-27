@@ -1,57 +1,52 @@
--- סכמה לשלב החיבור לענן. במצב הדמו הנוכחי הנתונים נשמרים בזיכרון הדפדפן.
+-- פרויקטים של העורך. כל פרויקט נשמר כמסמך אחד (timeline + assets + variants),
+-- באותו מבנה כמו SavedProject ב-lib/editor/types.ts.
 
-create type job_status as enum ('queued', 'running', 'succeeded', 'failed');
-
-create table media_assets (
+create table public.projects (
   id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null references auth.users on delete cascade,
-  name text not null,
-  source_url text,                 -- קובץ המקור (R2/S3)
-  mux_playback_id text,            -- proxy / HLS לצפייה בדפדפן
-  thumbnail_url text,
-  duration_sec numeric,
-  fps numeric,
-  width int,
-  height int,
-  origin text not null default 'upload',   -- upload | ai_variant | render
-  created_at timestamptz default now()
+  owner_id uuid not null default auth.uid() references auth.users on delete cascade,
+  title text not null default 'פרויקט חדש',
+  doc jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
-create table edit_projects (
-  id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null references auth.users on delete cascade,
-  title text not null,
-  timeline jsonb not null,         -- אותו מבנה כמו Timeline ב-lib/editor/types.ts
-  updated_at timestamptz default now()
-);
+create index projects_owner_updated_idx on public.projects (owner_id, updated_at desc);
 
-create table variants (
-  id uuid primary key default gen_random_uuid(),
-  project_id uuid not null references edit_projects on delete cascade,
-  clip_id text not null,
-  label text not null,
-  parent_id uuid references variants on delete set null,
-  status job_status not null default 'queued',
-  progress int not null default 0,
-  params jsonb not null,           -- prompt, style, strength, seed
-  provider text not null,          -- fal | replicate | runway
-  provider_job_id text,
-  result_asset_id uuid references media_assets,
-  rating smallint not null default 0,
-  error text,
-  created_at timestamptz default now()
-);
-create index on variants (project_id, clip_id);
+create function public.touch_updated_at() returns trigger
+language plpgsql as $$
+begin
+  new.updated_at = now();
+  return new;
+end $$;
 
-alter table media_assets enable row level security;
-alter table edit_projects enable row level security;
-alter table variants enable row level security;
+create trigger projects_touch before update on public.projects
+for each row execute function public.touch_updated_at();
 
-create policy "own assets" on media_assets for all using (owner_id = auth.uid());
-create policy "own projects" on edit_projects for all using (owner_id = auth.uid());
-create policy "own variants" on variants for all using (
-  project_id in (select id from edit_projects where owner_id = auth.uid())
-);
+alter table public.projects enable row level security;
 
--- הכרטיסים בפאנל הווריאציות מתעדכנים מכאן בזמן אמת
-alter publication supabase_realtime add table variants;
+create policy "projects: owner reads" on public.projects
+  for select to authenticated using (owner_id = (select auth.uid()));
+create policy "projects: owner inserts" on public.projects
+  for insert to authenticated with check (owner_id = (select auth.uid()));
+create policy "projects: owner updates" on public.projects
+  for update to authenticated using (owner_id = (select auth.uid())) with check (owner_id = (select auth.uid()));
+create policy "projects: owner deletes" on public.projects
+  for delete to authenticated using (owner_id = (select auth.uid()));
+
+-- קבצי מדיה: bucket פרטי. כל משתמש כותב וקורא רק מתחת לתיקייה שלו: media/<user id>/...
+insert into storage.buckets (id, name, public)
+values ('media', 'media', false)
+on conflict (id) do nothing;
+
+create policy "media: owner reads" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'media' and (storage.foldername(name))[1] = (select auth.uid())::text);
+create policy "media: owner uploads" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'media' and (storage.foldername(name))[1] = (select auth.uid())::text);
+create policy "media: owner updates" on storage.objects
+  for update to authenticated
+  using (bucket_id = 'media' and (storage.foldername(name))[1] = (select auth.uid())::text);
+create policy "media: owner deletes" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'media' and (storage.foldername(name))[1] = (select auth.uid())::text);

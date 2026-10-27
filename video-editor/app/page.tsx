@@ -1,12 +1,22 @@
-"use client";
-import dynamic from "next/dynamic";
+import { redirect } from "next/navigation";
+import { LocalEditor } from "@/components/editor/local-editor";
+import { ProjectList } from "@/components/projects/project-list";
+import { supabaseEnabled } from "@/lib/supabase/env";
+import { getUser } from "@/lib/supabase/server";
 
-// העורך כולו רץ בדפדפן (נגן, מדיה מקומית, מזהים אקראיים), ולכן אין לו SSR
-const Editor = dynamic(() => import("@/components/editor/editor").then((m) => m.Editor), {
-  ssr: false,
-  loading: () => <div className="grid h-screen place-items-center text-sm text-zinc-500">טוען עורך…</div>,
-});
+export const dynamic = "force-dynamic";
 
-export default function Home() {
-  return <Editor />;
+export default async function Home() {
+  // בלי Supabase: עורך יחיד שנשמר בדפדפן
+  if (!supabaseEnabled) return <LocalEditor />;
+
+  const { supabase, user } = await getUser();
+  if (!user) redirect("/login");
+
+  const { data: projects, error } = await supabase
+    .from("projects")
+    .select("id, title, updated_at")
+    .order("updated_at", { ascending: false });
+
+  return <ProjectList email={user.email ?? ""} projects={projects ?? []} error={error?.message ?? null} />;
 }

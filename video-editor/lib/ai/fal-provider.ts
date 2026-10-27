@@ -1,6 +1,6 @@
 "use client";
 import { NEUTRAL_LOOK } from "@/lib/editor/types";
-import { probeVideo } from "@/lib/media/local-upload";
+import { probeVideo } from "@/lib/media/import";
 import { useEditor } from "@/stores/editor-store";
 import type { CloudConfig } from "./fal-config";
 import { ensureRemoteUrl, extractVideoUrl, fal } from "./fal-client";
