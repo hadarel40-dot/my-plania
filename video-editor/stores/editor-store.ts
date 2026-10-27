@@ -1,0 +1,285 @@
+"use client";
+import { create, useStore } from "zustand";
+import { immer } from "zustand/middleware/immer";
+import { temporal } from "zundo";
+import {
+  NEUTRAL_LOOK,
+  type Aspect,
+  type Caption,
+  type Clip,
+  type MediaAsset,
+  type Selection,
+  type Timeline,
+  type Variant,
+  type VariantParams,
+} from "@/lib/editor/types";
+import { clipLength, layoutClips, MIN_CLIP_SEC, uid } from "@/lib/editor/timeline-utils";
+import { mockProvider, type VariantProvider } from "@/lib/ai/provider";
+
+const SAMPLES: MediaAsset[] = [1, 2, 3].map((n) => ({
+  id: `sample_${n}`,
+  name: `דוגמה ${n}.mp4`,
+  url: `/samples/clip-${n}.mp4`,
+  thumbnailUrl: `/samples/clip-${n}.jpg`,
+  duration: 6,
+  width: 720,
+  height: 1280,
+  origin: "sample",
+}));
+
+const makeClip = (asset: MediaAsset, length = asset.duration): Clip => ({
+  id: uid("clip"),
+  sourceAssetId: asset.id,
+  assetId: asset.id,
+  in: 0,
+  out: Math.min(length, asset.duration),
+  look: NEUTRAL_LOOK,
+  activeVariantId: null,
+});
+
+const LABELS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+let provider: VariantProvider = mockProvider;
+export const setVariantProvider = (p: VariantProvider) => { provider = p; };
+
+interface EditorState {
+  title: string;
+  timeline: Timeline;
+  assets: Record<string, MediaAsset>;
+  variants: Record<string, Variant>;
+  selection: Selection;
+  /** וריאציה שמוצגת זמנית בנגן, לפני שהוחלה על ציר הזמן */
+  previewVariantId: string | null;
+  transcribing: boolean;
+
+  addAsset: (asset: MediaAsset) => void;
+  addClip: (assetId: string) => void;
+  moveClip: (clipId: string, toIndex: number) => void;
+  trimClip: (clipId: string, edge: "in" | "out", value: number) => void;
+  splitAt: (time: number) => void;
+  removeSelected: () => void;
+  setAspect: (aspect: Aspect) => void;
+  setTitle: (title: string) => void;
+
+  setCaptions: (captions: Caption[]) => void;
+  updateCaption: (id: string, patch: Partial<Omit<Caption, "id">>) => void;
+  addCaption: (start: number) => void;
+
+  select: (selection: Selection) => void;
+  previewVariant: (variantId: string | null) => void;
+  generateVariants: (clipId: string, params: Omit<VariantParams, "seed">, count: number, parentId?: string) => Promise<void>;
+  applyVariant: (variantId: string) => void;
+  revertClip: (clipId: string) => void;
+  rateVariant: (variantId: string, rating: -1 | 1) => void;
+  deleteVariant: (variantId: string) => void;
+  setTranscribing: (v: boolean) => void;
+}
+
+export const useEditor = create<EditorState>()(
+  temporal(
+    immer((set, get) => ({
+      title: "פרויקט חדש",
+      timeline: {
+        fps: 30,
+        aspect: "9:16",
+        clips: [makeClip(SAMPLES[0], 4), makeClip(SAMPLES[1], 5), makeClip(SAMPLES[2], 4)],
+        captions: [],
+      },
+      assets: Object.fromEntries(SAMPLES.map((a) => [a.id, a])),
+      variants: {},
+      selection: null,
+      previewVariantId: null,
+      transcribing: false,
+
+      addAsset: (asset) => set((s) => { s.assets[asset.id] = asset; }),
+
+      addClip: (assetId) =>
+        set((s) => {
+          const asset = s.assets[assetId];
+          if (!asset) return;
+          const clip = makeClip(asset);
+          s.timeline.clips.push(clip);
+          s.selection = { kind: "clip", id: clip.id };
+        }),
+
+      moveClip: (clipId, toIndex) =>
+        set((s) => {
+          const from = s.timeline.clips.findIndex((c) => c.id === clipId);
+          if (from < 0) return;
+          const target = Math.max(0, Math.min(toIndex, s.timeline.clips.length - 1));
+          if (from === target) return;
+          const [clip] = s.timeline.clips.splice(from, 1);
+          s.timeline.clips.splice(target, 0, clip);
+        }),
+
+      trimClip: (clipId, edge, value) =>
+        set((s) => {
+          const clip = s.timeline.clips.find((c) => c.id === clipId);
+          if (!clip) return;
+          const asset = s.assets[clip.assetId];
+          if (edge === "in") {
+            clip.in = Math.max(0, Math.min(value, clip.out - MIN_CLIP_SEC));
+          } else {
+            clip.out = Math.min(asset?.duration ?? clip.out, Math.max(value, clip.in + MIN_CLIP_SEC));
+          }
+        }),
+
+      splitAt: (time) =>
+        set((s) => {
+          const hit = layoutClips(s.timeline.clips).find(({ start, end }) => time > start && time < end);
+          if (!hit) return;
+          const { clip, start } = hit;
+          const cut = clip.in + (time - start);
+          if (cut - clip.in < MIN_CLIP_SEC || clip.out - cut < MIN_CLIP_SEC) return;
+          const index = s.timeline.clips.findIndex((c) => c.id === clip.id);
+          const second: Clip = { ...clip, id: uid("clip"), in: cut, activeVariantId: null };
+          s.timeline.clips[index].out = cut;
+          s.timeline.clips.splice(index + 1, 0, second);
+        }),
+
+      removeSelected: () =>
+        set((s) => {
+          const sel = s.selection;
+          if (!sel) return;
+          if (sel.kind === "clip") s.timeline.clips = s.timeline.clips.filter((c) => c.id !== sel.id);
+          else s.timeline.captions = s.timeline.captions.filter((c) => c.id !== sel.id);
+          s.selection = null;
+          s.previewVariantId = null;
+        }),
+
+      setAspect: (aspect) => set((s) => { s.timeline.aspect = aspect; }),
+      setTitle: (title) => set((s) => { s.title = title; }),
+
+      setCaptions: (captions) => set((s) => { s.timeline.captions = captions; }),
+      updateCaption: (id, patch) =>
+        set((s) => {
+          const cap = s.timeline.captions.find((c) => c.id === id);
+          if (cap) Object.assign(cap, patch);
+        }),
+      addCaption: (start) =>
+        set((s) => {
+          const cap: Caption = { id: uid("cap"), start, end: start + 2, text: "טקסט חדש", preset: "bold-pop" };
+          s.timeline.captions.push(cap);
+          s.timeline.captions.sort((a, b) => a.start - b.start);
+          s.selection = { kind: "caption", id: cap.id };
+        }),
+
+      select: (selection) => set((s) => { s.selection = selection; s.previewVariantId = null; }),
+      previewVariant: (variantId) => set((s) => { s.previewVariantId = variantId; }),
+
+      generateVariants: async (clipId, params, count, parentId) => {
+        const clip = get().timeline.clips.find((c) => c.id === clipId);
+        const source = clip && get().assets[clip.sourceAssetId];
+        if (!clip || !source) return;
+
+        const existing = Object.values(get().variants).filter((v) => v.clipId === clipId).length;
+        const batchAt = Date.now();
+        const created: Variant[] = Array.from({ length: count }, (_, i) => ({
+          id: uid("var"),
+          clipId,
+          label: LABELS[(existing + i) % LABELS.length] + (existing + i >= LABELS.length ? "2" : ""),
+          status: "queued",
+          progress: 0,
+          params: { ...params, seed: Math.floor(Math.random() * 2 ** 31) },
+          parentId: parentId ?? null,
+          rating: 0,
+          result: null,
+          createdAt: batchAt,
+        }));
+        set((s) => { for (const v of created) s.variants[v.id] = v; });
+
+        // כל וריאציה רצה במקביל ומעדכנת את הכרטיס שלה בנפרד
+        await Promise.all(created.map(async (v) => {
+          try {
+            const result = await provider.generate({ source, clip, params: v.params }, (progress) =>
+              set((s) => {
+                const cur = s.variants[v.id];
+                if (cur) { cur.status = "running"; cur.progress = progress; }
+              }),
+            );
+            set((s) => {
+              const cur = s.variants[v.id];
+              if (cur) { cur.status = "succeeded"; cur.progress = 100; cur.result = result; }
+            });
+          } catch {
+            set((s) => { const cur = s.variants[v.id]; if (cur) cur.status = "failed"; });
+          }
+        }));
+      },
+
+      applyVariant: (variantId) =>
+        set((s) => {
+          const v = s.variants[variantId];
+          const clip = v && s.timeline.clips.find((c) => c.id === v.clipId);
+          if (!v?.result || !clip) return;
+          clip.assetId = v.result.assetId;
+          clip.look = v.result.look;
+          clip.activeVariantId = v.id;
+          const asset = s.assets[clip.assetId];
+          // וריאציה יכולה להיות קצרה מהמקור; שומרים על אורך הקליפ ככל שאפשר
+          if (asset && clip.out > asset.duration) {
+            const len = clipLength(clip);
+            clip.out = asset.duration;
+            clip.in = Math.max(0, asset.duration - len);
+          }
+          s.previewVariantId = null;
+        }),
+
+      revertClip: (clipId) =>
+        set((s) => {
+          const clip = s.timeline.clips.find((c) => c.id === clipId);
+          if (!clip) return;
+          clip.assetId = clip.sourceAssetId;
+          clip.look = NEUTRAL_LOOK;
+          clip.activeVariantId = null;
+          s.previewVariantId = null;
+        }),
+
+      rateVariant: (variantId, rating) =>
+        set((s) => {
+          const v = s.variants[variantId];
+          if (v) v.rating = v.rating === rating ? 0 : rating;
+        }),
+
+      deleteVariant: (variantId) =>
+        set((s) => {
+          delete s.variants[variantId];
+          if (s.previewVariantId === variantId) s.previewVariantId = null;
+        }),
+
+      setTranscribing: (v) => set((s) => { s.transcribing = v; }),
+    })),
+    {
+      // רק ציר הזמן נכנס להיסטוריית undo. בחירה, תצוגה מקדימה וסטטוס jobs לא
+      partialize: (s) => ({ timeline: s.timeline }),
+      equality: (a, b) => a.timeline === b.timeline,
+      limit: 100,
+    },
+  ),
+);
+
+/**
+ * מחוות גרירה (trim/הזזה) מייצרות עשרות עדכונים. עוטפים אותן כך שייכנס
+ * להיסטוריה צעד undo אחד בלבד.
+ */
+export function beginGesture() {
+  const before = useEditor.getState().timeline;
+  const temporalStore = useEditor.temporal.getState();
+  temporalStore.pause();
+  return function endGesture() {
+    const t = useEditor.temporal;
+    t.getState().resume();
+    if (useEditor.getState().timeline !== before) {
+      t.setState((st) => ({ pastStates: [...st.pastStates, { timeline: before }], futureStates: [] }));
+    }
+  };
+}
+
+/** האם יש לאן לבטל / לחזור. לכפתורים בממשק */
+export const useHistory = () => ({
+  canUndo: useStore(useEditor.temporal, (s) => s.pastStates.length > 0),
+  canRedo: useStore(useEditor.temporal, (s) => s.futureStates.length > 0),
+});
+
+export const undo = () => useEditor.temporal.getState().undo();
+export const redo = () => useEditor.temporal.getState().redo();

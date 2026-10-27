@@ -1,0 +1,34 @@
+{
+  "name": "ai-video-editor",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "tsc --noEmit",
+    "samples": "bash scripts/make-samples.sh"
+  },
+  "dependencies": {
+    "@remotion/player": "4.0.539",
+    "remotion": "4.0.539",
+    "clsx": "^2.1.1",
+    "immer": "^11.2.9",
+    "lucide-react": "^1.62.0",
+    "next": "15.5.28",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tailwind-merge": "^3.3.1",
+    "zod": "^4.1.0",
+    "zundo": "^2.3.0",
+    "zustand": "^5.0.16"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.0"
+  }
+}
