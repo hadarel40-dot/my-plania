@@ -32,7 +32,7 @@ npm run dev        # http://localhost:3000
 ## חיבור Supabase
 
 1. יוצרים פרויקט ב-[supabase.com](https://supabase.com).
-2. ב-SQL Editor מריצים לפי הסדר את `supabase/migrations/0001_init.sql` ואת `0002_variant_jobs.sql`. הם יוצרים:
+2. ב-SQL Editor מריצים לפי הסדר את שלוש המיגרציות שב-`supabase/migrations/` (0001 עד 0003). הן יוצרות:
    - את טבלת `projects`, עם RLS שמאפשר לכל משתמש לגשת רק לפרויקטים שלו.
    - את ה-bucket הפרטי `media`, שבו כל משתמש כותב וקורא רק בתיקייה שלו.
    - את טבלת `variant_jobs`, שבה נשמרות עבודות ה-AI.
