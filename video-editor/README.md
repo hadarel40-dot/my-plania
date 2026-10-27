@@ -32,9 +32,10 @@ npm run dev        # http://localhost:3000
 ## חיבור Supabase
 
 1. יוצרים פרויקט ב-[supabase.com](https://supabase.com).
-2. ב-SQL Editor מריצים את `supabase/migrations/0001_init.sql`. הוא יוצר:
+2. ב-SQL Editor מריצים לפי הסדר את `supabase/migrations/0001_init.sql` ואת `0002_variant_jobs.sql`. הם יוצרים:
    - את טבלת `projects`, עם RLS שמאפשר לכל משתמש לגשת רק לפרויקטים שלו.
    - את ה-bucket הפרטי `media`, שבו כל משתמש כותב וקורא רק בתיקייה שלו.
+   - את טבלת `variant_jobs`, שבה נשמרות עבודות ה-AI.
 3. ב-Authentication → URL Configuration מוסיפים ל-Redirect URLs את `http://localhost:3000/auth/callback`
    (ואת הכתובת המקבילה של האתר בפריסה).
 4. ממלאים ב-`.env.local` את `NEXT_PUBLIC_SUPABASE_URL` ואת `NEXT_PUBLIC_SUPABASE_ANON_KEY`, ומריצים `npm run dev`.
@@ -43,6 +44,11 @@ npm run dev        # http://localhost:3000
 - כל העמודים דורשים התחברות (`middleware.ts`). `/` הופך לרשימת הפרויקטים, וכל פרויקט נפתח ב-`/p/<id>`.
 - קבצים עולים ב-tus (resumable) ל-`media/<user>/<project>/`, ומוצגים בכתובות חתומות שמתחדשות בכל פתיחה.
 - fal מקבל כתובת חתומה ישירות מ-Storage, בלי העלאה נוספת.
+- **וריאציות רצות כעבודות שרת** (`app/api/variants`, `lib/ai/variant-jobs.ts`):
+  - השרת שולח את העבודה לתור של fal ושומר שורה ב-`variant_jobs`. הדפדפן רק בודק סטטוס כל 3 שניות.
+  - כשהעבודה מסתיימת, השרת מעתיק את הסרטון ל-`media/<user>/<project>/variants/`.
+  - סגירת הדף לא עוצרת את העבודה. בפתיחה הבאה העורך ממשיך לעקוב, והשרת אוסף את התוצאה.
+  - עבודה שלא הסתיימה תוך שעתיים מסומנת כנכשלה.
 - ה-proxy ל-fal פתוח רק למשתמשים מחוברים.
 
 שימו לב:
@@ -53,7 +59,8 @@ npm run dev        # http://localhost:3000
 - `supabase/tests/rls.sql` בודק את הבידוד בין משתמשים על Postgres רגיל, בעזרת `supabase/tests/stubs.sql`.
 - כל הזרימה נבדקה בדפדפן מול שרת Supabase מדומה שרץ על אותו Postgres עם ה-RLS האמיתי: כניסה,
   יצירת פרויקט, שמירה, העלאה, פתיחה מחדש, בידוד בין משתמשים, מחיקה והתנתקות.
-- **לא** נבדק מול Supabase אמיתי.
+- עבודות השרת נבדקו מול fal מדומה (`FAL_QUEUE_URL`): השלמה, העתקה ל-Storage, יציאה מהדף והמשך בחזרה, וכשל של המודל.
+- **לא** נבדק מול Supabase אמיתי או fal אמיתי.
 
 ## מצב ענן (fal.ai)
 
@@ -103,7 +110,7 @@ supabase/migrations/     סכמה לשלב הענן
 ## השלבים הבאים
 
 1. **Proxy לצפייה:** המרה ל-720p ו-thumbnails בענן (Mux או worker עם FFmpeg), כדי שקבצים כבדים ינגנו חלק.
-2. **Jobs בצד השרת:** העברת הקריאות ל-fal ל-Inngest + webhook, כך שוריאציה ממשיכה לרוץ גם אם סוגרים את הדף.
+2. **Webhook מ-fal:** כרגע התוצאה נאספת כשהעורך פתוח. Webhook ישלים עבודות גם בלי שאף אחד פותח את הפרויקט.
 3. **רינדור:** Remotion Lambda על `TimelineComposition` עם קבצי המקור.
 
 > **רישיון Remotion:** חינמי לאנשים פרטיים ולחברות קטנות. חברות מעל גודל מסוים צריכות רישיון. ראו https://remotion.dev/license

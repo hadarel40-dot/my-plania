@@ -5,6 +5,7 @@ import { setEngines } from "@/stores/editor-store";
 import { setBackend, type ProjectBackend } from "@/lib/backend";
 import { mockProvider } from "@/lib/ai/provider";
 import { createFalProvider } from "@/lib/ai/fal-provider";
+import { createServerJobsProvider } from "@/lib/ai/server-provider";
 import { createFalTranscriber, mockTranscriber } from "@/lib/ai/transcriber";
 import type { CloudConfig } from "@/lib/ai/fal-config";
 
@@ -50,11 +51,18 @@ export function useProjectBootstrap(backend: ProjectBackend) {
 
   useEffect(() => {
     const useCloud = aiMode === "cloud" && cloud;
-    setEngines(
-      useCloud && cloud.video ? createFalProvider(cloud) : mockProvider,
-      useCloud && cloud.transcribe ? createFalTranscriber(cloud) : mockTranscriber,
-    );
-  }, [aiMode, cloud]);
+    // פרויקט בענן: וריאציות רצות כעבודות שרת. מקומי: הדפדפן קורא ל-fal דרך ה-proxy
+    const videoProvider = !(useCloud && cloud.video)
+      ? mockProvider
+      : backend.projectId ? createServerJobsProvider(backend.projectId) : createFalProvider(cloud);
+    setEngines(videoProvider, useCloud && cloud.transcribe ? createFalTranscriber(cloud) : mockTranscriber);
+  }, [aiMode, cloud, backend]);
+
+  // עבודות שרת שהתחילו בביקור קודם ממשיכות מכאן. לא תלוי במתג דמו/ענן: העבודה כבר שולמה
+  useEffect(() => {
+    if (!ready || !backend.projectId) return;
+    useEditor.getState().resumePendingVariants(createServerJobsProvider(backend.projectId));
+  }, [ready, backend]);
 
   useEffect(() => {
     if (!ready) return;

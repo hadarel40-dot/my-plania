@@ -57,7 +57,8 @@ export function MediaBin() {
         ))}
         {error && <p className="rounded-md bg-red-500/10 p-2 text-xs text-red-300">{error}</p>}
 
-        {Object.values(assets).map((a) => (
+        {/* תוצאות AI מופיעות בפאנל הווריאציות, לא בספרייה */}
+        {Object.values(assets).filter((a) => a.origin !== "ai_variant").map((a) => (
           <div key={a.id} onDoubleClick={() => addClip(a.id)}
             className="group flex gap-2 rounded-md border border-transparent p-1.5 hover:border-zinc-700 hover:bg-zinc-800/50">
             <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded bg-zinc-800">
@@ -67,7 +68,7 @@ export function MediaBin() {
               <p className="truncate font-medium">{a.name}</p>
               <p className="text-zinc-500" dir="ltr">{formatTime(a.duration).slice(0, 5)} · {a.width}×{a.height}</p>
               <p className="text-[10px] text-zinc-600">
-                {a.origin === "sample" ? "דוגמה" : a.origin === "ai_variant" ? "נוצר ב-AI" : a.storagePath ? "בענן" : "מקומי"}
+                {a.origin === "sample" ? "דוגמה" : a.storagePath ? "בענן" : "מקומי"}
               </p>
             </div>
             <button onClick={() => addClip(a.id)} title="הוסף לסוף ציר הזמן" aria-label="הוסף לציר הזמן"

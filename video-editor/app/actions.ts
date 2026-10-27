@@ -19,12 +19,15 @@ export async function deleteProject(formData: FormData) {
   const { supabase, user } = await getUser();
   if (!user) redirect("/login");
 
-  // מוחקים גם את הקבצים של הפרויקט מ-Storage
-  const folder = `${user.id}/${id}`;
-  const { data: files } = await supabase.storage.from(MEDIA_BUCKET).list(folder, { limit: 1000 });
-  if (files?.length) {
-    await supabase.storage.from(MEDIA_BUCKET).remove(files.map((f) => `${folder}/${f.name}`));
+  // מוחקים גם את הקבצים של הפרויקט מ-Storage: העלאות, ותוצאות AI בתיקיית variants/
+  const storage = supabase.storage.from(MEDIA_BUCKET);
+  const paths: string[] = [];
+  for (const folder of [`${user.id}/${id}`, `${user.id}/${id}/variants`]) {
+    const { data: files } = await storage.list(folder, { limit: 1000 });
+    // ב-list, תיקייה מופיעה כרשומה בלי id
+    for (const f of files ?? []) if (f.id) paths.push(`${folder}/${f.name}`);
   }
+  if (paths.length) await storage.remove(paths);
   await supabase.from("projects").delete().eq("id", id);
   revalidatePath("/");
 }

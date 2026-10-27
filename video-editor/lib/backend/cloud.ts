@@ -19,6 +19,7 @@ export function createCloudBackend(projectId: string, userId: string): ProjectBa
 
   return {
     kind: "cloud",
+    projectId,
 
     async load() {
       const { data, error } = await supabase.from("projects").select("title, doc").eq("id", projectId).single();

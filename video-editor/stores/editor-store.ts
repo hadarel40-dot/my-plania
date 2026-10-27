@@ -16,7 +16,7 @@ import {
 } from "@/lib/editor/types";
 import { clipLength, layoutClips, MIN_CLIP_SEC, uid } from "@/lib/editor/timeline-utils";
 import { initialProject, makeClip } from "@/lib/editor/initial-project";
-import { mockProvider, type VariantProvider } from "@/lib/ai/provider";
+import { mockProvider, type GenerateResult, type VariantProvider } from "@/lib/ai/provider";
 import type { Transcriber } from "@/lib/ai/transcriber";
 import type { CloudConfig } from "@/lib/ai/fal-config";
 
@@ -70,11 +70,42 @@ interface EditorState {
   select: (selection: Selection) => void;
   previewVariant: (variantId: string | null) => void;
   generateVariants: (clipId: string, params: Omit<VariantParams, "seed">, count: number, parentId?: string) => Promise<void>;
+  /** ממשיך לעקוב אחרי עבודות שרת שעדיין רצות (אחרי טעינת פרויקט) */
+  resumePendingVariants: (provider: VariantProvider) => void;
   applyVariant: (variantId: string) => void;
   revertClip: (clipId: string) => void;
   rateVariant: (variantId: string, rating: -1 | 1) => void;
   deleteVariant: (variantId: string) => void;
   autoTranscribe: () => Promise<void>;
+}
+
+/** וריאציות שכבר עוקבים אחריהן, כדי לא להתחיל מעקב כפול */
+const resuming = new Set<string>();
+
+/** מריץ עבודה של וריאציה אחת ומעדכן את הכרטיס שלה: התקדמות, תוצאה או כשל */
+async function trackVariant(
+  variantId: string,
+  run: (onProgress: (p: number) => void) => Promise<GenerateResult>,
+) {
+  const set = useEditor.setState as (fn: (s: EditorState) => void) => void;
+  resuming.add(variantId);
+  try {
+    const result = await run((progress) =>
+      set((s) => { const cur = s.variants[variantId]; if (cur) { cur.status = "running"; cur.progress = progress; } }));
+    set((s) => {
+      if (result.asset) s.assets[result.asset.id] = result.asset;
+      const cur = s.variants[variantId];
+      if (cur) { cur.status = "succeeded"; cur.progress = 100; cur.result = { assetId: result.assetId, look: result.look }; }
+    });
+  } catch (e) {
+    set((s) => {
+      const cur = s.variants[variantId];
+      if (cur) cur.status = "failed";
+      s.error = `יצירת וריאציה נכשלה: ${e instanceof Error ? e.message : String(e)}`;
+    });
+  } finally {
+    resuming.delete(variantId);
+  }
 }
 
 export const useEditor = create<EditorState>()(
@@ -204,27 +235,29 @@ export const useEditor = create<EditorState>()(
         set((s) => { for (const v of created) s.variants[v.id] = v; });
 
         // כל וריאציה רצה במקביל ומעדכנת את הכרטיס שלה בנפרד
-        await Promise.all(created.map(async (v) => {
-          try {
-            const result = await engines.provider.generate({ source, clip, params: v.params }, (progress) =>
-              set((s) => {
-                const cur = s.variants[v.id];
-                if (cur) { cur.status = "running"; cur.progress = progress; }
-              }),
-            );
-            set((s) => {
-              if (result.asset) s.assets[result.asset.id] = result.asset;
-              const cur = s.variants[v.id];
-              if (cur) { cur.status = "succeeded"; cur.progress = 100; cur.result = { assetId: result.assetId, look: result.look }; }
-            });
-          } catch (e) {
-            set((s) => {
-              const cur = s.variants[v.id];
-              if (cur) cur.status = "failed";
-              s.error = `יצירת וריאציה נכשלה: ${e instanceof Error ? e.message : String(e)}`;
-            });
-          }
-        }));
+        const provider = engines.provider;
+        await Promise.all(created.map((v) =>
+          trackVariant(v.id, (onProgress) => provider.generate({
+            variantId: v.id,
+            source,
+            clip,
+            params: v.params,
+            onJob: (jobId) => set((s) => { const cur = s.variants[v.id]; if (cur) cur.jobId = jobId; }),
+          }, onProgress)),
+        ));
+      },
+
+      resumePendingVariants: (provider) => {
+        const resume = provider.resume?.bind(provider);
+        if (!resume) return;
+        const { variants, timeline, assets } = get();
+        for (const v of Object.values(variants)) {
+          if (!v.jobId || v.status === "succeeded" || v.status === "failed" || resuming.has(v.id)) continue;
+          const clip = timeline.clips.find((c) => c.id === v.clipId);
+          const name = (clip && assets[clip.sourceAssetId]?.name) || "וריאציה";
+          const jobId = v.jobId;
+          trackVariant(v.id, (onProgress) => resume(jobId, name, onProgress));
+        }
       },
 
       applyVariant: (variantId) =>

@@ -83,6 +83,8 @@ export interface Variant {
   params: VariantParams;
   parentId: string | null;
   rating: -1 | 0 | 1;
+  /** עבודה בצד השרת (variant_jobs). מאפשר להמשיך לעקוב אחריה אחרי רענון */
+  jobId?: string;
   /** התוצאה מהענן: נכס חדש + look (בדמו: אותו נכס עם look שונה) */
   result: { assetId: string; look: Look } | null;
   createdAt: number;

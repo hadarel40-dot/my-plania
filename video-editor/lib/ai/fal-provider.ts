@@ -4,6 +4,7 @@ import { probeVideo } from "@/lib/media/import";
 import { useEditor } from "@/stores/editor-store";
 import type { CloudConfig } from "./fal-config";
 import { ensureRemoteUrl, extractVideoUrl, fal } from "./fal-client";
+import { buildVideoInput } from "./fal-output";
 import type { VariantProvider } from "./provider";
 import { styleById } from "./styles";
 
@@ -21,11 +22,10 @@ export function createFalProvider(cloud: CloudConfig): VariantProvider {
         useEditor.getState().setAssetRemoteUrl(source.id, url));
 
       const style = styleById(params.style);
-      const prompt = [params.prompt, style.promptHint].filter(Boolean).join(", ");
       const startedAt = Date.now();
 
       const { data } = await fal.subscribe(model, {
-        input: { video_url: videoUrl, prompt, strength: params.strength, seed: params.seed, ...cloud.videoExtraInput },
+        input: buildVideoInput(videoUrl, params, style.promptHint, cloud.videoExtraInput),
         pollInterval: 2000,
         abortSignal: signal,
         onQueueUpdate: (status) => {

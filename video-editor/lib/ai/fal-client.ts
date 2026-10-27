@@ -33,8 +33,4 @@ export async function ensureRemoteUrl(asset: MediaAsset, onUploaded: (url: strin
   return pending;
 }
 
-/** שולף כתובת וידאו מתשובה של מודל. כל מודל מחזיר מבנה קצת אחר */
-export function extractVideoUrl(data: unknown): string | null {
-  const d = data as Record<string, any>;
-  return d?.video?.url ?? d?.video_url ?? d?.output?.url ?? d?.videos?.[0]?.url ?? null;
-}
+export { extractVideoUrl } from "./fal-output";

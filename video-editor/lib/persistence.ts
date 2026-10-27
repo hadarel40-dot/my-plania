@@ -40,9 +40,9 @@ export function toStorable(project: SavedProject): SavedProject {
   // כתובות blob: וכתובות חתומות לא שורדות רענון; הן נבנות מחדש בטעינה
   const assets = Object.fromEntries(Object.entries(project.assets).map(([id, a]) =>
     [id, a.url.startsWith("blob:") || a.storagePath ? { ...a, url: "" } : a]));
-  // jobs שעדיין רצים לא ימשיכו אחרי רענון, אז לא שומרים אותם
+  // jobs שרצים בדפדפן לא ימשיכו אחרי רענון, אז לא שומרים אותם. עבודות שרת (jobId) ממשיכות
   const variants = Object.fromEntries(Object.entries(project.variants).filter(([, v]) =>
-    v.status === "succeeded" || v.status === "failed"));
+    v.status === "succeeded" || v.status === "failed" || !!v.jobId));
   return { ...project, assets, variants };
 }
 

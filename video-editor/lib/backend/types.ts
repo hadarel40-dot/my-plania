@@ -3,6 +3,8 @@ import type { MediaAsset, SavedProject } from "@/lib/editor/types";
 /** איפה הפרויקט והקבצים נשמרים: בדפדפן (local) או ב-Supabase (cloud) */
 export interface ProjectBackend {
   kind: "local" | "cloud";
+  /** במצב ענן: מזהה הפרויקט בטבלת projects */
+  projectId?: string;
   load(): Promise<SavedProject | null>;
   save(project: SavedProject): Promise<boolean>;
   /** שומר קובץ שהועלה. מחזיר שדות להוספה לנכס (למשל storagePath) */

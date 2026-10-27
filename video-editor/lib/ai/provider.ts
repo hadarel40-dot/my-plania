@@ -2,9 +2,12 @@ import type { Clip, Look, MediaAsset, VariantParams } from "@/lib/editor/types";
 import { styleById } from "./styles";
 
 export interface GenerateRequest {
+  variantId: string;
   source: MediaAsset;
   clip: Clip;
   params: VariantParams;
+  /** נקרא כשהשרת יצר עבודה, כדי לשמור את המזהה שלה על הוריאציה */
+  onJob?: (jobId: string) => void;
 }
 
 export interface GenerateResult {
@@ -26,6 +29,8 @@ export interface VariantProvider {
     onProgress: (progress: number) => void,
     signal?: AbortSignal,
   ): Promise<GenerateResult>;
+  /** ממשיך לעקוב אחרי עבודה שכבר רצה בשרת (למשל אחרי רענון הדף) */
+  resume?(jobId: string, variantName: string, onProgress: (progress: number) => void): Promise<GenerateResult>;
 }
 
 /** ספק דמו: מדמה תור, התקדמות וזמן עיבוד, ומחזיר look על אותו קובץ */
