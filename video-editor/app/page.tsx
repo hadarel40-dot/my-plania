@@ -15,7 +15,7 @@ export default async function Home() {
 
   const { data: projects, error } = await supabase
     .from("projects")
-    .select("id, title, updated_at")
+    .select("id, title, updated_at, meta")
     .order("updated_at", { ascending: false });
 
   return <ProjectList email={user.email ?? ""} projects={projects ?? []} error={error?.message ?? null} />;

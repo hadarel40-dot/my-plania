@@ -2,6 +2,7 @@
 import * as tus from "tus-js-client";
 import type { SavedProject } from "@/lib/editor/types";
 import { toStorable } from "@/lib/persistence";
+import { computeMeta } from "@/lib/editor/project-meta";
 import { getSupabaseBrowser } from "@/lib/supabase/browser";
 import { MEDIA_BUCKET, SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase/env";
 import type { ProjectBackend } from "./types";
@@ -43,7 +44,8 @@ export function createCloudBackend(projectId: string, userId: string): ProjectBa
 
     async save(project) {
       const { title, ...doc } = toStorable(project);
-      const { error } = await supabase.from("projects").update({ title, doc }).eq("id", projectId);
+      const meta = computeMeta(project);
+      const { error } = await supabase.from("projects").update({ title, doc, meta }).eq("id", projectId);
       return !error;
     },
 

@@ -2,14 +2,20 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { initialProject } from "@/lib/editor/initial-project";
+import { computeMeta } from "@/lib/editor/project-meta";
 import { MEDIA_BUCKET } from "@/lib/supabase/env";
 import { getUser } from "@/lib/supabase/server";
 
 export async function createProject() {
   const { supabase, user } = await getUser();
   if (!user) redirect("/login");
-  const { title, ...doc } = initialProject();
-  const { data, error } = await supabase.from("projects").insert({ title, doc }).select("id").single();
+  const project = initialProject();
+  const { title, ...doc } = project;
+  const { data, error } = await supabase
+    .from("projects")
+    .insert({ title, doc, meta: computeMeta(project) })
+    .select("id")
+    .single();
   if (error) throw new Error(error.message);
   redirect(`/p/${data.id}`);
 }
