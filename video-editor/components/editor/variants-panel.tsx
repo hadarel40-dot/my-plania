@@ -21,6 +21,7 @@ export function VariantsPanel() {
     clip ? Object.values(s.variants).filter((v) => v.clipId === clip.id) : []));
   const previewVariantId = useEditor((s) => s.previewVariantId);
   const { generateVariants, previewVariant, applyVariant, revertClip } = useEditor.getState();
+  const cloudVideo = useEditor((s) => s.aiMode === "cloud" && !!s.cloud?.video);
 
   const [prompt, setPrompt] = useState("");
   const [style, setStyle] = useState(STYLE_PRESETS[0].id);
@@ -66,6 +67,12 @@ export function VariantsPanel() {
     generateVariants(clip!.id, { prompt: v.params.prompt, style: v.params.style, strength: v.params.strength }, 2, v.id);
   }
 
+  /** וריאציה שנכשלה: מוחקים ומריצים שוב עם אותם פרמטרים */
+  function retry(v: Variant) {
+    useEditor.getState().deleteVariant(v.id);
+    generateVariants(clip!.id, { prompt: v.params.prompt, style: v.params.style, strength: v.params.strength }, 1, v.parentId ?? undefined);
+  }
+
   return (
     <Shell
       extra={
@@ -94,7 +101,7 @@ export function VariantsPanel() {
             onPreview={() => previewVariant(previewVariantId === v.id ? null : v.id)}
             onApply={() => applyVariant(v.id)}
             onRemix={() => remix(v)}
-            onMore={() => more(v)}
+            onMore={() => (v.status === "failed" ? retry(v) : more(v))}
           />
         ))}
         {variants.length === 0 && (
@@ -150,7 +157,7 @@ export function VariantsPanel() {
           <Wand2 className="size-4" />
           צור {count} וריאציות
           <span className="text-xs font-normal text-blue-200">
-            · ≈${estimateCostUsd(count, clipLength(clip))} בענן · חינם בדמו
+            {cloudVideo ? `· ≈$${estimateCostUsd(count, clipLength(clip))}` : "· חינם בדמו"}
           </span>
         </button>
       </form>
@@ -283,7 +290,8 @@ function VariantCard({ variant: v, clip, source, parentLabel, isActive, isPrevie
         </div>
         <div className="flex">
           <IconBtn title="שנה את זה (טען פרמטרים לטופס)" onClick={onRemix} disabled={!ready}><Wand2 className="size-3.5" /></IconBtn>
-          <IconBtn title="עוד כמו זה" onClick={onMore} disabled={!ready}><RefreshCw className="size-3.5" /></IconBtn>
+          <IconBtn title={v.status === "failed" ? "נסה שוב" : "עוד כמו זה"} onClick={onMore}
+            disabled={!ready && v.status !== "failed"}><RefreshCw className="size-3.5" /></IconBtn>
           <IconBtn title="החל על ציר הזמן" onClick={onApply} disabled={!ready || isActive} primary><Check className="size-3.5" /></IconBtn>
         </div>
       </div>

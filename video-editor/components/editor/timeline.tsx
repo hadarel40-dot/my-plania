@@ -4,7 +4,6 @@ import { Captions, Loader2, Plus, Redo2, Scissors, Sparkles, Trash2, Undo2, Zoom
 import { beginGesture, redo, undo, useEditor, useHistory } from "@/stores/editor-store";
 import { usePlayback } from "@/stores/playback-store";
 import { clipLength, formatTime, layoutClips, timelineDuration } from "@/lib/editor/timeline-utils";
-import { mockTranscribe } from "@/lib/ai/mock-transcribe";
 import type { Caption, Clip } from "@/lib/editor/types";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +37,7 @@ export function TimelinePanel() {
   const timeline = useEditor((s) => s.timeline);
   const selection = useEditor((s) => s.selection);
   const transcribing = useEditor((s) => s.transcribing);
-  const { splitAt, removeSelected, addCaption, setCaptions, setTranscribing } = useEditor.getState();
+  const { splitAt, removeSelected, addCaption, autoTranscribe } = useEditor.getState();
   const { canUndo, canRedo } = useHistory();
   const currentTime = usePlayback((s) => s.currentTime);
   const seek = usePlayback((s) => s.seek);
@@ -51,12 +50,6 @@ export function TimelinePanel() {
     const rect = tracksRef.current!.getBoundingClientRect();
     return Math.max(0, (clientX - rect.left - TRACK_LABEL_W) / pps);
   };
-
-  async function autoTranscribe() {
-    setTranscribing(true);
-    setCaptions(await mockTranscribe(timelineDuration(useEditor.getState().timeline)));
-    setTranscribing(false);
-  }
 
   return (
     <section dir="ltr" className="flex h-56 shrink-0 flex-col border-t border-zinc-800 bg-zinc-950">

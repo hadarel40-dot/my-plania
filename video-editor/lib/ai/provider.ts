@@ -10,6 +10,8 @@ export interface GenerateRequest {
 export interface GenerateResult {
   assetId: string;
   look: Look;
+  /** נכס חדש שהספק יצר (וידאו מהענן). העורך מוסיף אותו לספרייה */
+  asset?: MediaAsset;
 }
 
 /**

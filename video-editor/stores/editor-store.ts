@@ -15,6 +15,9 @@ import {
 } from "@/lib/editor/types";
 import { clipLength, layoutClips, MIN_CLIP_SEC, uid } from "@/lib/editor/timeline-utils";
 import { mockProvider, type VariantProvider } from "@/lib/ai/provider";
+import type { Transcriber } from "@/lib/ai/transcriber";
+import type { CloudConfig } from "@/lib/ai/fal-config";
+import type { SavedProject } from "@/lib/persistence";
 
 const SAMPLES: MediaAsset[] = [1, 2, 3].map((n) => ({
   id: `sample_${n}`,
@@ -27,20 +30,43 @@ const SAMPLES: MediaAsset[] = [1, 2, 3].map((n) => ({
   origin: "sample",
 }));
 
-const makeClip = (asset: MediaAsset, length = asset.duration): Clip => ({
-  id: uid("clip"),
-  sourceAssetId: asset.id,
-  assetId: asset.id,
-  in: 0,
-  out: Math.min(length, asset.duration),
-  look: NEUTRAL_LOOK,
-  activeVariantId: null,
+const initialProject = (): SavedProject => ({
+  title: "פרויקט חדש",
+  timeline: {
+    fps: 30,
+    aspect: "9:16",
+    clips: [makeClip(SAMPLES[0], 4), makeClip(SAMPLES[1], 5), makeClip(SAMPLES[2], 4)],
+    captions: [],
+  },
+  assets: Object.fromEntries(SAMPLES.map((a) => [a.id, a])),
+  variants: {},
 });
+
+function makeClip (asset: MediaAsset, length = asset.duration): Clip {
+  return {
+    id: uid("clip"),
+    sourceAssetId: asset.id,
+    assetId: asset.id,
+    in: 0,
+    out: Math.min(length, asset.duration),
+    look: NEUTRAL_LOOK,
+    activeVariantId: null,
+  };
+}
 
 const LABELS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-let provider: VariantProvider = mockProvider;
-export const setVariantProvider = (p: VariantProvider) => { provider = p; };
+export type AiMode = "mock" | "cloud";
+
+/** הספקים הפעילים. מוחלפים יחד כשעוברים בין דמו לענן */
+const engines: { provider: VariantProvider; transcriber: Transcriber | null } = {
+  provider: mockProvider,
+  transcriber: null,
+};
+export function setEngines(provider: VariantProvider, transcriber: Transcriber) {
+  engines.provider = provider;
+  engines.transcriber = transcriber;
+}
 
 interface EditorState {
   title: string;
@@ -51,8 +77,18 @@ interface EditorState {
   /** וריאציה שמוצגת זמנית בנגן, לפני שהוחלה על ציר הזמן */
   previewVariantId: string | null;
   transcribing: boolean;
+  aiMode: AiMode;
+  /** מה זמין בענן (מ-/api/config). null עד שנטען */
+  cloud: CloudConfig | null;
+  error: string | null;
 
+  hydrate: (project: SavedProject) => void;
+  newProject: () => void;
+  setAiMode: (mode: AiMode) => void;
+  setCloud: (cloud: CloudConfig) => void;
+  setError: (error: string | null) => void;
   addAsset: (asset: MediaAsset) => void;
+  setAssetRemoteUrl: (assetId: string, url: string) => void;
   addClip: (assetId: string) => void;
   moveClip: (clipId: string, toIndex: number) => void;
   trimClip: (clipId: string, edge: "in" | "out", value: number) => void;
@@ -72,26 +108,39 @@ interface EditorState {
   revertClip: (clipId: string) => void;
   rateVariant: (variantId: string, rating: -1 | 1) => void;
   deleteVariant: (variantId: string) => void;
-  setTranscribing: (v: boolean) => void;
+  autoTranscribe: () => Promise<void>;
 }
 
 export const useEditor = create<EditorState>()(
   temporal(
     immer((set, get) => ({
-      title: "פרויקט חדש",
-      timeline: {
-        fps: 30,
-        aspect: "9:16",
-        clips: [makeClip(SAMPLES[0], 4), makeClip(SAMPLES[1], 5), makeClip(SAMPLES[2], 4)],
-        captions: [],
-      },
-      assets: Object.fromEntries(SAMPLES.map((a) => [a.id, a])),
-      variants: {},
+      ...initialProject(),
       selection: null,
       previewVariantId: null,
       transcribing: false,
+      aiMode: "mock",
+      cloud: null,
+      error: null,
+
+      hydrate: (project) =>
+        set((s) => {
+          Object.assign(s, project);
+          s.selection = null;
+          s.previewVariantId = null;
+        }),
+      newProject: () =>
+        set((s) => {
+          Object.assign(s, initialProject());
+          s.selection = null;
+          s.previewVariantId = null;
+        }),
+      setAiMode: (mode) => set((s) => { s.aiMode = mode; }),
+      setCloud: (cloud) => set((s) => { s.cloud = cloud; }),
+      setError: (error) => set((s) => { s.error = error; }),
 
       addAsset: (asset) => set((s) => { s.assets[asset.id] = asset; }),
+      setAssetRemoteUrl: (assetId, url) =>
+        set((s) => { const a = s.assets[assetId]; if (a) a.remoteUrl = url; }),
 
       addClip: (assetId) =>
         set((s) => {
@@ -191,18 +240,23 @@ export const useEditor = create<EditorState>()(
         // כל וריאציה רצה במקביל ומעדכנת את הכרטיס שלה בנפרד
         await Promise.all(created.map(async (v) => {
           try {
-            const result = await provider.generate({ source, clip, params: v.params }, (progress) =>
+            const result = await engines.provider.generate({ source, clip, params: v.params }, (progress) =>
               set((s) => {
                 const cur = s.variants[v.id];
                 if (cur) { cur.status = "running"; cur.progress = progress; }
               }),
             );
             set((s) => {
+              if (result.asset) s.assets[result.asset.id] = result.asset;
               const cur = s.variants[v.id];
-              if (cur) { cur.status = "succeeded"; cur.progress = 100; cur.result = result; }
+              if (cur) { cur.status = "succeeded"; cur.progress = 100; cur.result = { assetId: result.assetId, look: result.look }; }
             });
-          } catch {
-            set((s) => { const cur = s.variants[v.id]; if (cur) cur.status = "failed"; });
+          } catch (e) {
+            set((s) => {
+              const cur = s.variants[v.id];
+              if (cur) cur.status = "failed";
+              s.error = `יצירת וריאציה נכשלה: ${e instanceof Error ? e.message : String(e)}`;
+            });
           }
         }));
       },
@@ -247,7 +301,19 @@ export const useEditor = create<EditorState>()(
           if (s.previewVariantId === variantId) s.previewVariantId = null;
         }),
 
-      setTranscribing: (v) => set((s) => { s.transcribing = v; }),
+      autoTranscribe: async () => {
+        if (get().transcribing || !engines.transcriber) return;
+        set((s) => { s.transcribing = true; s.error = null; });
+        try {
+          const { timeline, assets } = get();
+          const captions = await engines.transcriber.transcribe(timeline, assets);
+          set((s) => { s.timeline.captions = captions; });
+        } catch (e) {
+          set((s) => { s.error = `התמלול נכשל: ${e instanceof Error ? e.message : String(e)}`; });
+        } finally {
+          set((s) => { s.transcribing = false; });
+        }
+      },
     })),
     {
       // רק ציר הזמן נכנס להיסטוריית undo. בחירה, תצוגה מקדימה וסטטוס jobs לא

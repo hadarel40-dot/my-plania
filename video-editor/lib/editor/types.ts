@@ -18,6 +18,8 @@ export interface MediaAsset {
   width: number;
   height: number;
   origin: "sample" | "upload" | "ai_variant";
+  /** כתובת ציבורית בענן (למשל fal storage), כדי שמודלים יוכלו לקרוא את הקובץ */
+  remoteUrl?: string;
 }
 
 /** עיבוד ויזואלי שמוחל בזמן התצוגה. בדמו כך "מייצרים" וריאציות בלי ענן */
