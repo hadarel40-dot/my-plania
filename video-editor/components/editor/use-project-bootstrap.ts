@@ -6,7 +6,8 @@ import { setBackend, type ProjectBackend } from "@/lib/backend";
 import { mockProvider } from "@/lib/ai/provider";
 import { createFalProvider } from "@/lib/ai/fal-provider";
 import { createServerJobsProvider } from "@/lib/ai/server-provider";
-import { createFalTranscriber, mockTranscriber } from "@/lib/ai/transcriber";
+import { createFalTranscriber } from "@/lib/ai/transcriber";
+import { createBrowserTranscriber } from "@/lib/ai/browser-transcriber";
 import type { CloudConfig } from "@/lib/ai/fal-config";
 
 export type SaveState = "idle" | "saving" | "saved" | "error";
@@ -55,7 +56,8 @@ export function useProjectBootstrap(backend: ProjectBackend) {
     const videoProvider = !(useCloud && cloud.video)
       ? mockProvider
       : backend.projectId ? createServerJobsProvider(backend.projectId) : createFalProvider(cloud);
-    setEngines(videoProvider, useCloud && cloud.transcribe ? createFalTranscriber(cloud) : mockTranscriber);
+    // תמלול: Whisper בענן אם הוגדר fal; אחרת Whisper חינמי בתוך הדפדפן
+    setEngines(videoProvider, useCloud && cloud.transcribe ? createFalTranscriber(cloud) : createBrowserTranscriber());
   }, [aiMode, cloud, backend]);
 
   // עבודות שרת שהתחילו בביקור קודם ממשיכות מכאן. לא תלוי במתג דמו/ענן: העבודה כבר שולמה

@@ -48,6 +48,8 @@ interface EditorState {
   /** וריאציה שמוצגת זמנית בנגן, לפני שהוחלה על ציר הזמן */
   previewVariantId: string | null;
   transcribing: boolean;
+  /** מה התמלול עושה עכשיו (הורדת מודל / תמלול), להצגה בממשק */
+  transcribeStatus: string | null;
   aiMode: AiMode;
   /** מה זמין בענן (מ-/api/config). null עד שנטען */
   cloud: CloudConfig | null;
@@ -132,6 +134,7 @@ export const useEditor = create<EditorState>()(
       selection: null,
       previewVariantId: null,
       transcribing: false,
+      transcribeStatus: null,
       aiMode: "mock",
       cloud: null,
       error: null,
@@ -385,15 +388,17 @@ export const useEditor = create<EditorState>()(
 
       autoTranscribe: async () => {
         if (get().transcribing || !engines.transcriber) return;
-        set((s) => { s.transcribing = true; s.error = null; });
+        set((s) => { s.transcribing = true; s.transcribeStatus = null; s.error = null; });
         try {
           const { timeline, assets } = get();
-          const captions = await engines.transcriber.transcribe(timeline, assets);
-          set((s) => { s.timeline.captions = captions; });
+          const captions = await engines.transcriber.transcribe(timeline, assets, (status) =>
+            set((s) => { s.transcribeStatus = status; }));
+          if (captions.length === 0) set((s) => { s.error = "לא נמצא דיבור בסרטון, לכן לא נוספו כתוביות"; });
+          else set((s) => { s.timeline.captions = captions; });
         } catch (e) {
           set((s) => { s.error = `התמלול נכשל: ${e instanceof Error ? e.message : String(e)}`; });
         } finally {
-          set((s) => { s.transcribing = false; });
+          set((s) => { s.transcribing = false; s.transcribeStatus = null; });
         }
       },
     })),

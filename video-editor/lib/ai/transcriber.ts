@@ -8,7 +8,7 @@ import { mockTranscribe } from "./mock-transcribe";
 
 export interface Transcriber {
   id: string;
-  transcribe(timeline: Timeline, assets: Record<string, MediaAsset>): Promise<Caption[]>;
+  transcribe(timeline: Timeline, assets: Record<string, MediaAsset>, onStatus?: (status: string) => void): Promise<Caption[]>;
 }
 
 export const mockTranscriber: Transcriber = {

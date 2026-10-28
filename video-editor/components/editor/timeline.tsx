@@ -37,6 +37,7 @@ export function TimelinePanel() {
   const timeline = useEditor((s) => s.timeline);
   const selection = useEditor((s) => s.selection);
   const transcribing = useEditor((s) => s.transcribing);
+  const transcribeStatus = useEditor((s) => s.transcribeStatus);
   const { splitAt, removeSelected, addCaption, autoTranscribe } = useEditor.getState();
   const { canUndo, canRedo } = useHistory();
   const currentTime = usePlayback((s) => s.currentTime);
@@ -72,7 +73,7 @@ export function TimelinePanel() {
           className="flex items-center gap-1.5 rounded-md px-2 py-1 text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"
         >
           {transcribing ? <Loader2 className="size-3.5 animate-spin" /> : <Captions className="size-3.5" />}
-          <span dir="rtl">{transcribing ? "מתמלל…" : "תמלול אוטומטי"}</span>
+          <span dir="rtl">{transcribing ? transcribeStatus ?? "מתחיל…" : "כתוביות אוטומטיות"}</span>
         </button>
         <div className="ms-auto flex items-center gap-2 text-zinc-500">
           <span className="font-mono tabular-nums">{formatTime(duration, timeline.fps)}</span>

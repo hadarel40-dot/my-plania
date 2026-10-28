@@ -12,6 +12,7 @@
   "dependencies": {
     "@fal-ai/client": "^1.10.1",
     "@fal-ai/server-proxy": "^1.2.1",
+    "@huggingface/transformers": "^4.3.2",
     "@remotion/media": "^4.0.539",
     "@remotion/player": "4.0.539",
     "@remotion/web-renderer": "^4.0.539",
