@@ -11,7 +11,9 @@ npm install
 npm run dev        # http://localhost:3000
 ```
 
-בלי מפתחות הכול רץ מקומית: פרויקט אחד שנשמר בדפדפן, ועיבוד AI מדומה.
+`npm run dev` מתחבר כברירת מחדל לפרויקט ה-Supabase של העורך (`.env.development`): כניסה במייל, לוח פרויקטים
+ושמירה בענן. לעבודה מקומית בלי Supabase: `NEXT_PUBLIC_SUPABASE_URL=` בקובץ `.env.development.local`,
+ואז הכול רץ בדפדפן (פרויקט אחד, עיבוד AI מדומה).
 - **Supabase** מוסיף התחברות, רשימת פרויקטים, שמירה בענן והעלאת קבצים ל-Storage. ראו "חיבור Supabase".
 - **fal.ai** מוסיף וריאציות ותמלול אמיתיים. ראו "מצב ענן".
 
@@ -36,8 +38,9 @@ npm run dev        # http://localhost:3000
    - את טבלת `projects`, עם RLS שמאפשר לכל משתמש לגשת רק לפרויקטים שלו.
    - את ה-bucket הפרטי `media`, שבו כל משתמש כותב וקורא רק בתיקייה שלו.
    - את טבלת `variant_jobs`, שבה נשמרות עבודות ה-AI.
-3. ב-Authentication → URL Configuration מוסיפים ל-Redirect URLs את `http://localhost:3000/auth/callback`
-   (ואת הכתובת המקבילה של האתר בפריסה).
+3. (מומלץ) ב-Authentication → URL Configuration מוסיפים ל-Redirect URLs את `http://localhost:3000/auth/callback`
+   ואת הכתובת המקבילה של האתר בפריסה. בלי זה הקישור מהמייל מגיע ל-Site URL, וה-middleware מעביר אותו
+   ל-callback בעצמו, כך שהכניסה עובדת גם כך כל עוד ה-Site URL הוא כתובת האתר.
 4. ממלאים ב-`.env.local` את `NEXT_PUBLIC_SUPABASE_URL` ואת `NEXT_PUBLIC_SUPABASE_ANON_KEY`, ומריצים `npm run dev`.
 
 מה משתנה כש-Supabase מוגדר:

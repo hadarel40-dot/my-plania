@@ -24,7 +24,12 @@ export default function LoginPage() {
       email,
       options: { emailRedirectTo: `${location.origin}/auth/callback` },
     });
-    if (error) { setError(error.message); setState("error"); }
+    if (error) {
+      // שגיאת רשת (Supabase לא נגיש) מגיעה כ-"Failed to fetch"; מציגים הסבר במקום זה
+      const offline = error.name === "AuthRetryableFetchError" || /fetch/i.test(error.message);
+      setError(offline ? "אין חיבור לשרת ההתחברות. בדוק את החיבור לאינטרנט ונסה שוב." : error.message);
+      setState("error");
+    }
     else setState("sent");
   }
 

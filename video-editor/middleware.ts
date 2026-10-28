@@ -8,6 +8,15 @@ const PUBLIC_PATHS = ["/login", "/auth", "/api"];
 export async function middleware(request: NextRequest) {
   if (!supabaseEnabled) return NextResponse.next();
 
+  // אם כתובת ה-callback לא ברשימת ה-Redirect URLs של Supabase, הקישור מהמייל
+  // מגיע ל-Site URL (ברירת המחדל: http://localhost:3000/?code=...). מעבירים אותו ל-callback
+  const { pathname, searchParams } = request.nextUrl;
+  if (!pathname.startsWith("/auth/") && (searchParams.has("code") || searchParams.has("token_hash"))) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/callback";
+    return NextResponse.redirect(url);
+  }
+
   let response = NextResponse.next({ request });
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     cookies: {
