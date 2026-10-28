@@ -5,8 +5,11 @@ import { temporal } from "zundo";
 import {
   NEUTRAL_LOOK,
   type Aspect,
+  type AudioClip,
   type Caption,
   type Clip,
+  type Look,
+  type Overlay,
   type MediaAsset,
   type SavedProject,
   type Selection,
@@ -15,7 +18,9 @@ import {
   type VariantParams,
 } from "@/lib/editor/types";
 import { clipLength, layoutClips, MIN_CLIP_SEC, uid } from "@/lib/editor/timeline-utils";
-import { initialProject, makeClip } from "@/lib/editor/initial-project";
+import { initialProject, makeClip, normalizeProject } from "@/lib/editor/initial-project";
+import { presetById } from "@/lib/editor/overlay-presets";
+import { sfxAsset, type SfxId } from "@/lib/editor/sfx";
 import { mockProvider, type GenerateResult, type VariantProvider } from "@/lib/ai/provider";
 import type { Transcriber } from "@/lib/ai/transcriber";
 import type { CloudConfig } from "@/lib/ai/fal-config";
@@ -62,6 +67,18 @@ interface EditorState {
   removeSelected: () => void;
   setAspect: (aspect: Aspect) => void;
   setTitle: (title: string) => void;
+
+  setClipLook: (clipId: string, look: Look) => void;
+  setClipVolume: (clipId: string, volume: number) => void;
+
+  addOverlay: (presetId: string, at: number) => void;
+  updateOverlay: (id: string, patch: Partial<Omit<Overlay, "id">>) => void;
+  /** הזזה או חיתוך של פריט מתוזמן (טקסט / כתובית) על ציר הזמן */
+  retimeItem: (kind: "overlay" | "caption", id: string, start: number, end: number) => void;
+
+  addSfx: (sfxId: SfxId, at: number) => void;
+  addAudioClip: (assetId: string, at: number) => void;
+  updateAudioClip: (id: string, patch: Partial<Omit<AudioClip, "id" | "assetId">>) => void;
 
   setCaptions: (captions: Caption[]) => void;
   updateCaption: (id: string, patch: Partial<Omit<Caption, "id">>) => void;
@@ -121,7 +138,7 @@ export const useEditor = create<EditorState>()(
 
       hydrate: (project) =>
         set((s) => {
-          Object.assign(s, project);
+          Object.assign(s, normalizeProject(project));
           s.selection = null;
           s.previewVariantId = null;
         }),
@@ -188,13 +205,79 @@ export const useEditor = create<EditorState>()(
           const sel = s.selection;
           if (!sel) return;
           if (sel.kind === "clip") s.timeline.clips = s.timeline.clips.filter((c) => c.id !== sel.id);
-          else s.timeline.captions = s.timeline.captions.filter((c) => c.id !== sel.id);
+          else if (sel.kind === "caption") s.timeline.captions = s.timeline.captions.filter((c) => c.id !== sel.id);
+          else if (sel.kind === "overlay") s.timeline.overlays = s.timeline.overlays.filter((o) => o.id !== sel.id);
+          else s.timeline.audio = s.timeline.audio.filter((a) => a.id !== sel.id);
           s.selection = null;
           s.previewVariantId = null;
         }),
 
       setAspect: (aspect) => set((s) => { s.timeline.aspect = aspect; }),
       setTitle: (title) => set((s) => { s.title = title; }),
+
+      setClipLook: (clipId, look) =>
+        set((s) => {
+          const clip = s.timeline.clips.find((c) => c.id === clipId);
+          if (clip) clip.look = look;
+        }),
+      setClipVolume: (clipId, volume) =>
+        set((s) => {
+          const clip = s.timeline.clips.find((c) => c.id === clipId);
+          if (clip) clip.volume = Math.max(0, Math.min(1, volume));
+        }),
+
+      addOverlay: (presetId, at) =>
+        set((s) => {
+          const preset = presetById(presetId);
+          const overlay: Overlay = { ...preset.fields, id: uid("ovl"), start: at, end: at + preset.duration };
+          s.timeline.overlays.push(overlay);
+          s.selection = { kind: "overlay", id: overlay.id };
+        }),
+      updateOverlay: (id, patch) =>
+        set((s) => {
+          const o = s.timeline.overlays.find((x) => x.id === id);
+          if (o) Object.assign(o, patch);
+        }),
+      retimeItem: (kind, id, start, end) =>
+        set((s) => {
+          const list = kind === "overlay" ? s.timeline.overlays : s.timeline.captions;
+          const item = list.find((x) => x.id === id);
+          if (!item) return;
+          item.start = Math.max(0, +start.toFixed(2));
+          item.end = Math.max(item.start + MIN_CLIP_SEC, +end.toFixed(2));
+        }),
+
+      addSfx: (sfxId, at) =>
+        set((s) => {
+          const asset = sfxAsset(sfxId);
+          s.assets[asset.id] ??= asset;
+          const clip: AudioClip = { id: uid("aud"), assetId: asset.id, start: at, in: 0, out: asset.duration, volume: 1, fadeIn: 0, fadeOut: 0 };
+          s.timeline.audio.push(clip);
+          s.selection = { kind: "audio", id: clip.id };
+        }),
+      addAudioClip: (assetId, at) =>
+        set((s) => {
+          const asset = s.assets[assetId];
+          if (!asset) return;
+          // מוזיקה ארוכה מקבלת דהייה רכה בהתחלה ובסוף
+          const long = asset.duration > 5;
+          const clip: AudioClip = {
+            id: uid("aud"), assetId, start: at, in: 0, out: asset.duration,
+            volume: long ? 0.6 : 1, fadeIn: long ? 1 : 0, fadeOut: long ? 2 : 0,
+          };
+          s.timeline.audio.push(clip);
+          s.selection = { kind: "audio", id: clip.id };
+        }),
+      updateAudioClip: (id, patch) =>
+        set((s) => {
+          const a = s.timeline.audio.find((x) => x.id === id);
+          if (!a) return;
+          Object.assign(a, patch);
+          const dur = s.assets[a.assetId]?.duration ?? a.out;
+          a.start = Math.max(0, a.start);
+          a.in = Math.max(0, Math.min(a.in, a.out - MIN_CLIP_SEC));
+          a.out = Math.min(dur, Math.max(a.out, a.in + MIN_CLIP_SEC));
+        }),
 
       setCaptions: (captions) => set((s) => { s.timeline.captions = captions; }),
       updateCaption: (id, patch) =>

@@ -17,7 +17,9 @@ export interface MediaAsset {
   duration: number;
   width: number;
   height: number;
-  origin: "sample" | "upload" | "ai_variant";
+  origin: "sample" | "upload" | "ai_variant" | "library";
+  /** וידאו (ברירת מחדל) או קובץ שמע: מוזיקה או אפקט סאונד */
+  kind?: "video" | "audio";
   /** כתובת ציבורית בענן (למשל fal storage), כדי שמודלים יוכלו לקרוא את הקובץ */
   remoteUrl?: string;
   /** נתיב הקובץ ב-Supabase Storage (bucket media). כתובת הצפייה נחתמת מחדש בכל טעינה */
@@ -45,6 +47,52 @@ export interface Clip {
   look: Look;
   /** הוריאציה שהוחלה כרגע על הקליפ, אם יש */
   activeVariantId: string | null;
+  /** עוצמת הסאונד המקורי של הקליפ, 0..1 (ברירת מחדל 1) */
+  volume?: number;
+}
+
+/** אנימציית כניסה של טקסט או אימוג'י */
+export type OverlayAnimIn = "pop" | "bounce" | "slide-up" | "slide-side" | "zoom" | "typewriter" | "fade" | "none";
+/** תנועה חוזרת כל עוד הפריט על המסך */
+export type OverlayLoop = "none" | "pulse" | "wiggle" | "float" | "shake";
+export type OverlayAnimOut = "fade" | "pop" | "slide-down" | "none";
+
+/** טקסט או אימוג'י שמונח מעל הווידאו, עם אנימציה */
+export interface Overlay {
+  id: string;
+  kind: "text" | "emoji";
+  text: string;
+  start: number;
+  end: number;
+  /** מרכז הפריט, יחסי לגודל המסגרת (0..1) */
+  x: number;
+  y: number;
+  /** גודל גופן בפיקסלים, ביחס למסגרת ברוחב 1080 */
+  size: number;
+  color: string;
+  /** רקע "תווית" מאחורי הטקסט, או null בלי רקע */
+  background: string | null;
+  /** קו מתאר שחור סביב האותיות */
+  stroke: boolean;
+  weight: 400 | 700 | 900;
+  rotate: number;
+  animIn: OverlayAnimIn;
+  loop: OverlayLoop;
+  animOut: OverlayAnimOut;
+}
+
+/** קטע שמע במסלול הסאונד: מוזיקת רקע או אפקט */
+export interface AudioClip {
+  id: string;
+  assetId: string;
+  /** מיקום על ציר הזמן, בשניות */
+  start: number;
+  /** נקודות החיתוך בתוך הקובץ */
+  in: number;
+  out: number;
+  volume: number;
+  fadeIn: number;
+  fadeOut: number;
 }
 
 export type CaptionPreset = "bold-pop" | "minimal" | "karaoke";
@@ -63,6 +111,8 @@ export interface Timeline {
   aspect: Aspect;
   clips: Clip[];
   captions: Caption[];
+  overlays: Overlay[];
+  audio: AudioClip[];
 }
 
 export type JobStatus = "queued" | "running" | "succeeded" | "failed";
@@ -93,6 +143,8 @@ export interface Variant {
 export type Selection =
   | { kind: "clip"; id: string }
   | { kind: "caption"; id: string }
+  | { kind: "overlay"; id: string }
+  | { kind: "audio"; id: string }
   | null;
 
 /** הפרויקט כפי שהוא נשמר (בדפדפן או בטבלת projects) */

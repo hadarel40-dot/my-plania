@@ -1,10 +1,10 @@
 "use client";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Captions, Loader2, Plus, Redo2, Scissors, Sparkles, Trash2, Undo2, ZoomIn } from "lucide-react";
 import { beginGesture, redo, undo, useEditor, useHistory } from "@/stores/editor-store";
 import { usePlayback } from "@/stores/playback-store";
-import { clipLength, formatTime, layoutClips, timelineDuration } from "@/lib/editor/timeline-utils";
-import type { Caption, Clip } from "@/lib/editor/types";
+import { assignLanes, clipLength, formatTime, layoutClips, timelineDuration } from "@/lib/editor/timeline-utils";
+import type { AudioClip, Clip } from "@/lib/editor/types";
 import { cn } from "@/lib/utils";
 
 const TRACK_LABEL_W = 44;
@@ -44,6 +44,11 @@ export function TimelinePanel() {
   const tracksRef = useRef<HTMLDivElement>(null);
 
   const duration = timelineDuration(timeline);
+  const overlayLanes = useMemo(() => assignLanes(timeline.overlays), [timeline.overlays]);
+  const audioLanes = useMemo(
+    () => assignLanes(timeline.audio.map((a) => ({ id: a.id, start: a.start, end: a.start + a.out - a.in }))),
+    [timeline.audio],
+  );
   const width = Math.max(duration + 5, 20) * pps;
 
   const timeFromClientX = (clientX: number) => {
@@ -52,7 +57,7 @@ export function TimelinePanel() {
   };
 
   return (
-    <section dir="ltr" className="flex h-56 shrink-0 flex-col border-t border-zinc-800 bg-zinc-950">
+    <section dir="ltr" className="flex h-72 shrink-0 flex-col border-t border-zinc-800 bg-zinc-950">
       <div className="flex items-center gap-1 border-b border-zinc-800 px-3 py-1.5 text-xs">
         <ToolBtn label="ביטול (Ctrl+Z)" onClick={undo} disabled={!canUndo}><Undo2 className="size-4" /></ToolBtn>
         <ToolBtn label="חזרה (Ctrl+Shift+Z)" onClick={redo} disabled={!canRedo}><Redo2 className="size-4" /></ToolBtn>
@@ -93,10 +98,25 @@ export function TimelinePanel() {
             ))}
           </Track>
 
-          <Track label="T">
+          <Track label="Aa" lanes={overlayLanes.count}>
+            {timeline.overlays.map((o) => (
+              <TimedBlock key={o.id} kind="overlay" id={o.id} start={o.start} end={o.end} pps={pps}
+                lane={overlayLanes.lanes.get(o.id) ?? 0}
+                label={o.text} selected={selection?.kind === "overlay" && selection.id === o.id} />
+            ))}
+          </Track>
+
+          <Track label="T" lanes={1}>
             {timeline.captions.map((cap) => (
-              <CaptionBlock key={cap.id} caption={cap} pps={pps}
-                selected={selection?.kind === "caption" && selection.id === cap.id} />
+              <TimedBlock key={cap.id} kind="caption" id={cap.id} start={cap.start} end={cap.end} pps={pps} lane={0}
+                label={cap.text} selected={selection?.kind === "caption" && selection.id === cap.id} />
+            ))}
+          </Track>
+
+          <Track label="♪" lanes={audioLanes.count}>
+            {timeline.audio.map((a) => (
+              <AudioBlock key={a.id} clip={a} pps={pps} lane={audioLanes.lanes.get(a.id) ?? 0}
+                selected={selection?.kind === "audio" && selection.id === a.id} />
             ))}
           </Track>
 
@@ -130,9 +150,12 @@ function Ruler({ pps, width, fps, onScrub }: {
   );
 }
 
-function Track({ label, children }: { label: string; children: React.ReactNode }) {
+const LANE_H = 30;
+
+function Track({ label, children, lanes }: { label: string; children: React.ReactNode; lanes?: number }) {
   return (
-    <div className="flex h-16 border-b border-zinc-800/70">
+    <div className={cn("flex border-b border-zinc-800/70", !lanes && "h-16")}
+      style={lanes ? { height: Math.min(lanes, 4) * LANE_H + 8 } : undefined}>
       <div className="sticky left-0 z-10 grid shrink-0 place-items-center border-r border-zinc-800 bg-zinc-900 text-[11px] font-semibold text-zinc-500"
         style={{ width: TRACK_LABEL_W }}>
         {label}
@@ -215,29 +238,80 @@ function Handle({ side, onPointerDown }: { side: "left" | "right"; onPointerDown
   );
 }
 
-function CaptionBlock({ caption, pps, selected }: { caption: Caption; pps: number; selected: boolean }) {
-  const { select, updateCaption } = useEditor.getState();
-  const onDown = (e: React.PointerEvent) => {
-    select({ kind: "caption", id: caption.id });
-    const { start, end: capEnd } = caption;
-    const end = beginGesture();
+const BLOCK_COLORS = {
+  overlay: { idle: "border-violet-500/60 bg-violet-900/70 hover:bg-violet-800", active: "bg-violet-700" },
+  caption: { idle: "border-sky-600/60 bg-sky-900/70 hover:bg-sky-800", active: "bg-sky-700" },
+};
+
+/** פריט עם התחלה וסוף (טקסט / כתובית): גרירה מזיזה, הקצוות משנים אורך */
+function TimedBlock({ kind, id, start, end, pps, label, selected, lane }: {
+  kind: "overlay" | "caption"; id: string; start: number; end: number; pps: number; label: string; selected: boolean; lane: number;
+}) {
+  const { select, retimeItem } = useEditor.getState();
+  const drag = (mode: "move" | "start" | "end") => (e: React.PointerEvent) => {
+    select({ kind, id });
+    const end0 = end, start0 = start;
+    const finish = beginGesture();
     startDrag(e, (dx) => {
-      const shift = Math.max(-start, dx / pps);
-      updateCaption(caption.id, { start: +(start + shift).toFixed(2), end: +(capEnd + shift).toFixed(2) });
-    }, end);
+      const d = dx / pps;
+      if (mode === "move") {
+        const shift = Math.max(-start0, d);
+        retimeItem(kind, id, start0 + shift, end0 + shift);
+      } else if (mode === "start") {
+        retimeItem(kind, id, Math.min(start0 + d, end0 - 0.2), end0);
+      } else {
+        retimeItem(kind, id, start0, Math.max(end0 + d, start0 + 0.2));
+      }
+    }, finish);
+  };
+  const colors = BLOCK_COLORS[kind];
+  return (
+    <div
+      onPointerDown={drag("move")}
+      className={cn("group absolute cursor-grab overflow-hidden rounded border text-[11px] select-none",
+        selected ? `z-10 border-amber-400 ${colors.active}` : colors.idle)}
+      style={{ left: start * pps, width: Math.max(8, (end - start) * pps), top: 4 + lane * LANE_H, height: LANE_H - 4 }}
+      title={label}
+    >
+      <div dir="rtl" className="truncate px-2 py-0.5 leading-5">{label}</div>
+      <Handle side="left" onPointerDown={drag("start")} />
+      <Handle side="right" onPointerDown={drag("end")} />
+    </div>
+  );
+}
+
+/** קטע סאונד: גרירה מזיזה את ההתחלה בסרטון, הקצוות חותכים את הקובץ */
+function AudioBlock({ clip, pps, selected, lane }: { clip: AudioClip; pps: number; selected: boolean; lane: number }) {
+  const asset = useEditor((s) => s.assets[clip.assetId]);
+  const { select, updateAudioClip } = useEditor.getState();
+  const length = clip.out - clip.in;
+  const drag = (mode: "move" | "in" | "out") => (e: React.PointerEvent) => {
+    select({ kind: "audio", id: clip.id });
+    const { start, in: in0, out: out0 } = clip;
+    const finish = beginGesture();
+    startDrag(e, (dx) => {
+      const d = dx / pps;
+      if (mode === "move") updateAudioClip(clip.id, { start: Math.max(0, start + d) });
+      else if (mode === "in") {
+        // חיתוך מההתחלה: הקובץ מתחיל מאוחר יותר והקטע זז ימינה באותה מידה
+        const delta = Math.max(-in0, Math.min(d, out0 - in0 - 0.2));
+        updateAudioClip(clip.id, { in: in0 + delta, start: start + delta });
+      } else updateAudioClip(clip.id, { out: out0 + d });
+    }, finish);
   };
   return (
     <div
-      onPointerDown={onDown}
-      dir="rtl"
-      className={cn(
-        "absolute inset-y-3 cursor-grab truncate rounded border px-1.5 py-1 text-[11px] select-none",
-        selected ? "z-10 border-amber-400 bg-sky-700" : "border-sky-600/60 bg-sky-900/70 hover:bg-sky-800",
-      )}
-      style={{ left: caption.start * pps, width: Math.max(8, (caption.end - caption.start) * pps) }}
-      title={caption.text}
+      onPointerDown={drag("move")}
+      className={cn("group absolute cursor-grab overflow-hidden rounded border text-[11px] select-none",
+        selected ? "z-10 border-amber-400 bg-emerald-700" : "border-emerald-600/60 bg-emerald-900/70 hover:bg-emerald-800")}
+      style={{ left: clip.start * pps, width: Math.max(8, length * pps), top: 4 + lane * LANE_H, height: LANE_H - 4 }}
+      title={asset?.name}
     >
-      {caption.text}
+      <div className="absolute inset-0 opacity-40"
+        style={{ background: "repeating-linear-gradient(90deg, transparent 0 3px, rgba(255,255,255,.35) 3px 4px)" }} />
+      <div dir="rtl" className="relative truncate px-2 py-0.5 leading-5">{asset?.name ?? "סאונד"}</div>
+      <Handle side="left" onPointerDown={drag("in")} />
+      <Handle side="right" onPointerDown={drag("out")} />
     </div>
   );
 }

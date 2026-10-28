@@ -7,12 +7,30 @@ import { getBackend } from "@/lib/backend";
  * ב-backend הפעיל: IndexedDB במצב מקומי, או העלאה resumable ל-Supabase Storage.
  */
 export async function importFile(file: File, onProgress?: (p: number) => void): Promise<MediaAsset> {
-  if (!file.type.startsWith("video/")) throw new Error("רק קבצי וידאו נתמכים כרגע");
+  const isAudio = file.type.startsWith("audio/");
+  if (!isAudio && !file.type.startsWith("video/")) throw new Error("אפשר להעלות קבצי וידאו או שמע (MP4, MOV, MP3, WAV, M4A)");
   const url = URL.createObjectURL(file);
-  const asset = await probeVideo(url, { name: file.name, origin: "upload" });
+  const asset = isAudio
+    ? await probeAudio(url, file.name)
+    : await probeVideo(url, { name: file.name, origin: "upload" });
   onProgress?.(5);
   const stored = await getBackend().storeFile(asset.id, file, (p) => onProgress?.(5 + Math.round(p * 0.95)));
   return { ...asset, ...stored };
+}
+
+/** מודד קובץ שמע (משך) בדפדפן */
+export async function probeAudio(url: string, name: string): Promise<MediaAsset> {
+  const audio = document.createElement("audio");
+  audio.preload = "metadata";
+  audio.src = url;
+  await new Promise<void>((resolve, reject) => {
+    audio.onloadedmetadata = () => resolve();
+    audio.onerror = () => reject(new Error("הדפדפן לא מצליח לפענח את קובץ השמע (כדאי לנסות MP3)"));
+  });
+  return {
+    id: uid("asset"), name, url, thumbnailUrl: null, duration: audio.duration,
+    width: 0, height: 0, origin: "upload", kind: "audio",
+  };
 }
 
 /** מודד וידאו בדפדפן (משך, מידות) ומייצר תמונה ממוזערת. עובד גם על כתובות מהענן */

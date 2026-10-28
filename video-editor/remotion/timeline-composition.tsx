@@ -1,5 +1,7 @@
-import { AbsoluteFill, Html5Video, Sequence, useCurrentFrame, useVideoConfig } from "remotion";
-import type { Caption, Look, MediaAsset, Timeline } from "@/lib/editor/types";
+import { AbsoluteFill, Html5Audio, Html5Video, Sequence, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import type { AudioClip, Caption, Look, MediaAsset, Timeline } from "@/lib/editor/types";
+import { Audio as MediaAudio, Video as MediaVideo } from "@remotion/media";
+import { OverlayView } from "./overlay-view";
 import { layoutClips } from "@/lib/editor/timeline-utils";
 
 export interface CompositionProps extends Record<string, unknown> {
@@ -7,14 +9,21 @@ export interface CompositionProps extends Record<string, unknown> {
   assets: Record<string, MediaAsset>;
   /** וריאציה בתצוגה מקדימה: מחליפה זמנית קליפ אחד בלי לשנות את ציר הזמן */
   override: { clipId: string; assetId: string; look: Look } | null;
+  /**
+   * html5: תגיות video/audio רגילות (לתצוגה בנגן). media: רכיבי @remotion/media,
+   * שנדרשים לרינדור לקובץ בתוך הדפדפן.
+   */
+  mediaMode?: "html5" | "media";
 }
 
 /**
  * אותה קומפוזיציה משמשת לתצוגה החיה בדפדפן (Remotion Player, על ה-proxy)
  * ולרינדור הסופי בענן (Remotion Lambda, על קבצי המקור).
  */
-export function TimelineComposition({ timeline, assets, override }: CompositionProps) {
+export function TimelineComposition({ timeline, assets, override, mediaMode = "html5" }: CompositionProps) {
   const { fps } = timeline;
+  const VideoTag = mediaMode === "media" ? MediaVideo : Html5Video;
+  const AudioTag = mediaMode === "media" ? MediaAudio : Html5Audio;
   return (
     <AbsoluteFill style={{ backgroundColor: "black" }}>
       {layoutClips(timeline.clips).map(({ clip, start, end }) => {
@@ -26,14 +35,15 @@ export function TimelineComposition({ timeline, assets, override }: CompositionP
         if (!asset) return null;
         return (
           <Sequence key={clip.id} from={from} durationInFrames={duration} premountFor={fps}>
-            <Html5Video
+            <VideoTag
               src={asset.url}
               trimBefore={Math.round(clip.in * fps)}
-              pauseWhenBuffering
+              volume={clip.volume ?? 1}
+              {...(mediaMode === "html5" ? { pauseWhenBuffering: true } : { objectFit: "cover" as const })}
               style={{
                 width: "100%",
                 height: "100%",
-                objectFit: "cover",
+                ...(mediaMode === "html5" ? { objectFit: "cover" as const } : {}),
                 filter: look.filter,
                 transform: `scale(${look.zoom}) scaleX(${look.flip ? -1 : 1})`,
               }}
@@ -51,8 +61,39 @@ export function TimelineComposition({ timeline, assets, override }: CompositionP
           </Sequence>
         );
       })}
+
+      {(timeline.overlays ?? []).map((o) => {
+        const from = Math.round(o.start * fps);
+        const duration = Math.max(1, Math.round(o.end * fps) - from);
+        return (
+          <Sequence key={o.id} from={from} durationInFrames={duration} layout="none">
+            <OverlayView overlay={o} durationInFrames={duration} />
+          </Sequence>
+        );
+      })}
+
+      {(timeline.audio ?? []).map((a) => {
+        const asset = assets[a.assetId];
+        if (!asset) return null;
+        const from = Math.round(a.start * fps);
+        const duration = Math.max(1, Math.round((a.out - a.in) * fps));
+        return (
+          <Sequence key={a.id} from={from} durationInFrames={duration} layout="none">
+            <AudioTag src={asset.url} trimBefore={Math.round(a.in * fps)} volume={(f) => audioVolume(a, f, duration, fps)} />
+          </Sequence>
+        );
+      })}
     </AbsoluteFill>
   );
+}
+
+/** עוצמה לפי פריים: דהייה פנימה בהתחלה ודהייה החוצה בסוף */
+function audioVolume(a: AudioClip, frame: number, duration: number, fps: number) {
+  const fadeIn = a.fadeIn > 0 ? interpolate(frame, [0, a.fadeIn * fps], [0, 1], { extrapolateRight: "clamp" }) : 1;
+  const fadeOut = a.fadeOut > 0
+    ? interpolate(frame, [duration - a.fadeOut * fps, duration], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })
+    : 1;
+  return a.volume * Math.min(fadeIn, fadeOut);
 }
 
 function CaptionView({ caption }: { caption: Caption }) {

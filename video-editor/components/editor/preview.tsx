@@ -8,6 +8,7 @@ import { usePlayback } from "@/stores/playback-store";
 import { ASPECT_SIZE, type Aspect } from "@/lib/editor/types";
 import { formatTime, layoutClips, timelineDuration } from "@/lib/editor/timeline-utils";
 import { cn } from "@/lib/utils";
+import { OverlayHandles } from "./overlay-handles";
 
 export function Preview() {
   const playerRef = useRef<PlayerRef>(null);
@@ -85,9 +86,10 @@ export function Preview() {
             />
           ) : (
             <div dir="rtl" className="grid h-full place-items-center px-6 text-center text-sm text-zinc-500">
-              גרור קליפ מספריית המדיה לציר הזמן
+              הוסיפו קליפ מספריית המדיה לציר הזמן
             </div>
           )}
+          {duration > 0 && <OverlayHandles />}
           {previewVariant && (
             <div dir="rtl" className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-blue-600/80 to-transparent px-3 py-2 text-xs font-medium">
               תצוגה מקדימה: וריאציה {previewVariant.label} · עדיין לא הוחלה

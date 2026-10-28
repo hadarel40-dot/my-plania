@@ -1,14 +1,14 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, Check, ChevronRight, Clapperboard, Cloud, Download, FilePlus2, Loader2, LogOut, X } from "lucide-react";
+import { AlertTriangle, Check, FileJson, ChevronRight, Clapperboard, Cloud, Download, FilePlus2, Loader2, LogOut, X } from "lucide-react";
 import { redo, undo, useEditor, type AiMode } from "@/stores/editor-store";
 import { usePlayback } from "@/stores/playback-store";
 import { MediaBin } from "./media-bin";
 import { Preview } from "./preview";
 import { TimelinePanel } from "./timeline";
-import { VariantsPanel } from "./variants-panel";
-import { CaptionInspector } from "./caption-inspector";
+import { SidePanel } from "./side-panel";
+import { ExportDialog } from "./export-dialog";
 import { useProjectBootstrap, type SaveState } from "./use-project-bootstrap";
 import { clearProject } from "@/lib/persistence";
 import type { ProjectBackend } from "@/lib/backend";
@@ -23,8 +23,6 @@ export interface EditorProps {
 export function Editor({ backend, account }: EditorProps) {
   useShortcuts();
   const { ready, loadError, saveState } = useProjectBootstrap(backend);
-  const caption = useEditor((s) =>
-    s.selection?.kind === "caption" ? s.timeline.captions.find((c) => c.id === s.selection!.id) ?? null : null);
 
   if (loadError) {
     return (
@@ -49,7 +47,7 @@ export function Editor({ backend, account }: EditorProps) {
         <main className="flex min-w-0 flex-1 flex-col">
           <Preview />
         </main>
-        {caption ? <CaptionInspector caption={caption} /> : <VariantsPanel />}
+        <SidePanel />
       </div>
       <TimelinePanel />
     </div>
@@ -61,6 +59,7 @@ function TopBar({ saveState, cloudSave, account }: {
 }) {
   const title = useEditor((s) => s.title);
   const setTitle = useEditor((s) => s.setTitle);
+  const [exporting, setExporting] = useState(false);
 
   async function startNew() {
     if (!confirm("להתחיל פרויקט חדש? הפרויקט הנוכחי והקבצים שהועלו יימחקו מהדפדפן.")) return;
@@ -108,10 +107,15 @@ function TopBar({ saveState, cloudSave, account }: {
             <FilePlus2 className="size-3.5" /> פרויקט חדש
           </button>
         )}
-        <button onClick={exportJson}
-          className="flex items-center gap-1.5 rounded-md bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-white">
-          <Download className="size-3.5" /> ייצוא פרויקט
+        <button onClick={exportJson} title="גיבוי הפרויקט כקובץ JSON" aria-label="גיבוי פרויקט"
+          className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white">
+          <FileJson className="size-4" />
         </button>
+        <button onClick={() => setExporting(true)}
+          className="flex items-center gap-1.5 rounded-md bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-white">
+          <Download className="size-3.5" /> ייצוא סרטון
+        </button>
+        {exporting && <ExportDialog onClose={() => setExporting(false)} />}
       </div>
     </header>
   );
@@ -133,6 +137,8 @@ function ModeSwitch() {
   const cloud = useEditor((s) => s.cloud);
   const setAiMode = useEditor((s) => s.setAiMode);
   const cloudAvailable = !!(cloud?.video || cloud?.transcribe);
+  // בלי שירות AI מחובר אין מה להחליף, ולכן המתג לא מוצג בכלל
+  if (!cloudAvailable) return null;
 
   const options: { id: AiMode; label: string; disabled: boolean; title: string }[] = [
     { id: "mock", label: "דמו", disabled: false, title: "עיבוד מדומה, מקומי וחינמי" },

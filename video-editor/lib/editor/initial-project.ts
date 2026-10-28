@@ -19,10 +19,29 @@ export const initialProject = (): SavedProject => ({
     aspect: "9:16",
     clips: [makeClip(SAMPLES[0], 4), makeClip(SAMPLES[1], 5), makeClip(SAMPLES[2], 4)],
     captions: [],
+    overlays: [],
+    audio: [],
   },
   assets: Object.fromEntries(SAMPLES.map((a) => [a.id, a])),
   variants: {},
 });
+
+/**
+ * פרויקטים שנשמרו לפני שנוספו מסלולי הטקסט והסאונד: משלימים שדות חסרים,
+ * כדי שפרויקט ישן ייפתח בלי שגיאות.
+ */
+export function normalizeProject(project: SavedProject): SavedProject {
+  return {
+    ...project,
+    timeline: {
+      ...project.timeline,
+      captions: project.timeline.captions ?? [],
+      overlays: project.timeline.overlays ?? [],
+      audio: project.timeline.audio ?? [],
+    },
+    variants: project.variants ?? {},
+  };
+}
 
 export function makeClip(asset: MediaAsset, length = asset.duration): Clip {
   return {
