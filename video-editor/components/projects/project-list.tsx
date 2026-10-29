@@ -1,7 +1,8 @@
-import { Captions, Clapperboard, Film, LogOut, Plus, Sparkles } from "lucide-react";
+import { Captions, Clapperboard, Film, LogOut, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { createProject, deleteProject } from "@/app/actions";
 import type { ProjectMeta } from "@/lib/editor/project-meta";
+import { CreateButton } from "./create-button";
 import { DeleteButton } from "./delete-button";
 
 interface Row { id: string; title: string; updated_at: string; meta: Partial<ProjectMeta> | null }
@@ -38,14 +39,12 @@ export function ProjectList({ email, projects, error }: { email: string; project
         </form>
       </header>
 
-      <main className="mx-auto max-w-5xl p-6">
+      <main className="mx-auto max-w-5xl p-4 sm:p-6">
         {error && <p className="mb-4 rounded-md bg-red-500/10 p-3 text-sm text-red-300">שגיאה בטעינת הפרויקטים: {error}</p>}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <form action={createProject}>
-            <button className="flex h-full min-h-60 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-700 text-sm text-zinc-400 transition hover:border-violet-500 hover:bg-violet-500/5 hover:text-white">
-              <Plus className="size-7" /> פרויקט חדש
-            </button>
+            <CreateButton />
           </form>
 
           {projects.map((p) => <ProjectCard key={p.id} project={p} />)}

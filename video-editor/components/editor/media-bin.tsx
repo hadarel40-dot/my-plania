@@ -36,7 +36,7 @@ export function MediaBin() {
   }
 
   return (
-    <aside className="flex w-full min-h-0 shrink-0 flex-col border-zinc-800 bg-zinc-900/40 md:w-64 md:border-e">
+    <aside className="flex min-h-0 w-full flex-1 flex-col border-zinc-800 bg-zinc-900/40 md:w-64 md:flex-none md:shrink-0 md:border-e">
       <header className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
         <h2 className="flex items-center gap-2 text-sm font-semibold"><Film className="size-4" /> מדיה</h2>
         <button onClick={() => inputRef.current?.click()}

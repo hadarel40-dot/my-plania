@@ -50,7 +50,7 @@ export function SidePanel({ tab: fixedTab, inspect = true }: {
 
   if (tab === "ai" && aiAvailable) {
     return (
-      <div className="flex shrink-0 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col md:flex-none md:shrink-0">
         {!fixedTab && <TabBar tabs={tabs} tab={tab} onTab={setTab} />}
         <VariantsPanel />
       </div>
@@ -70,7 +70,7 @@ export function SidePanel({ tab: fixedTab, inspect = true }: {
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
-  return <aside className="flex min-h-0 w-full shrink-0 flex-col border-zinc-800 bg-zinc-900/40 md:w-[22rem] md:border-s">{children}</aside>;
+  return <aside className="flex min-h-0 w-full flex-1 flex-col border-zinc-800 bg-zinc-900/40 md:w-[22rem] md:flex-none md:shrink-0 md:border-s">{children}</aside>;
 }
 
 function TabBar({ tabs, tab, onTab }: { tabs: { id: Tab; label: string; icon: React.ReactNode }[]; tab: Tab; onTab: (t: Tab) => void }) {

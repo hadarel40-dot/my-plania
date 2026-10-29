@@ -94,7 +94,7 @@ function PhoneLayout({ top }: { top: React.ReactNode }) {
         <Preview />
       </main>
       {sheet ? (
-        <div className="flex h-[46dvh] shrink-0 flex-col border-t border-zinc-800 bg-zinc-900">
+        <div className="flex h-[46dvh] shrink-0 flex-col overflow-hidden border-t border-zinc-800 bg-zinc-900">
           {sheet === "media" ? <MediaBin /> : <SidePanel tab={sheet === "edit" ? "text" : sheet} inspect={sheet === "edit"} />}
         </div>
       ) : (

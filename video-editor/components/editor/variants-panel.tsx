@@ -167,7 +167,7 @@ export function VariantsPanel() {
 
 function Shell({ children, extra }: { children: React.ReactNode; extra?: React.ReactNode }) {
   return (
-    <aside className="flex min-h-0 w-full shrink-0 flex-col border-zinc-800 bg-zinc-900/40 md:w-[22rem] md:border-s">
+    <aside className="flex min-h-0 w-full flex-1 flex-col border-zinc-800 bg-zinc-900/40 md:w-[22rem] md:flex-none md:shrink-0 md:border-s">
       <header className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
         <h2 className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="size-4 text-violet-400" /> וריאציות AI</h2>
         {extra}
