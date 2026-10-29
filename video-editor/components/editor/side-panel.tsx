@@ -15,25 +15,31 @@ import { OverlayInspector } from "./overlay-inspector";
 import { AudioInspector } from "./audio-inspector";
 import { VariantsPanel } from "./variants-panel";
 
-type Tab = "text" | "sound" | "style" | "ai";
+export type Tab = "text" | "sound" | "style" | "ai";
 
 /**
  * הפאנל הצדדי. כשנבחר פריט בציר הזמן (טקסט, כתובית, סאונד) מוצג העורך שלו;
  * אחרת מוצגות הלשוניות להוספת תוכן.
  */
-export function SidePanel() {
+export function SidePanel({ tab: fixedTab, inspect = true }: {
+  /** בטלפון: הלשונית נבחרת בסרגל התחתון, ושורת הלשוניות כאן מוסתרת */
+  tab?: Tab;
+  /** בטלפון עורך הפריט הנבחר מוצג רק במגירת "עריכה" */
+  inspect?: boolean;
+} = {}) {
   const selection = useEditor((s) => s.selection);
   const select = useEditor((s) => s.select);
   const aiAvailable = useEditor((s) => !!s.cloud?.video);
-  const [tab, setTab] = useState<Tab>("text");
+  const [ownTab, setTab] = useState<Tab>("text");
+  const tab = fixedTab ?? ownTab;
 
   // בחירת קליפ חדש פותחת את לשונית הסגנון (אבל לא נועלת אותה)
   const selectedClipId = selection?.kind === "clip" ? selection.id : null;
   useEffect(() => { if (selectedClipId) setTab((t) => (t === "ai" ? t : "style")); }, [selectedClipId]);
 
-  if (selection?.kind === "overlay") return <Shell><OverlayInspector id={selection.id} onClose={() => select(null)} /></Shell>;
-  if (selection?.kind === "audio") return <Shell><AudioInspector id={selection.id} onClose={() => select(null)} /></Shell>;
-  if (selection?.kind === "caption") return <CaptionPanel id={selection.id} />;
+  if (inspect && selection?.kind === "overlay") return <Shell><OverlayInspector id={selection.id} onClose={() => select(null)} /></Shell>;
+  if (inspect && selection?.kind === "audio") return <Shell><AudioInspector id={selection.id} onClose={() => select(null)} /></Shell>;
+  if (inspect && selection?.kind === "caption") return <CaptionPanel id={selection.id} />;
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "text", label: "טקסט", icon: <Type className="size-4" /> },
@@ -45,7 +51,7 @@ export function SidePanel() {
   if (tab === "ai" && aiAvailable) {
     return (
       <div className="flex shrink-0 flex-col">
-        <TabBar tabs={tabs} tab={tab} onTab={setTab} />
+        {!fixedTab && <TabBar tabs={tabs} tab={tab} onTab={setTab} />}
         <VariantsPanel />
       </div>
     );
@@ -53,7 +59,7 @@ export function SidePanel() {
 
   return (
     <Shell>
-      <TabBar tabs={tabs} tab={tab} onTab={setTab} />
+      {!fixedTab && <TabBar tabs={tabs} tab={tab} onTab={setTab} />}
       <div className="min-h-0 flex-1 overflow-y-auto">
         {tab === "text" && <TextTab />}
         {tab === "sound" && <SoundTab />}
@@ -64,12 +70,12 @@ export function SidePanel() {
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
-  return <aside className="flex w-[22rem] shrink-0 flex-col border-s border-zinc-800 bg-zinc-900/40">{children}</aside>;
+  return <aside className="flex min-h-0 w-full shrink-0 flex-col border-zinc-800 bg-zinc-900/40 md:w-[22rem] md:border-s">{children}</aside>;
 }
 
 function TabBar({ tabs, tab, onTab }: { tabs: { id: Tab; label: string; icon: React.ReactNode }[]; tab: Tab; onTab: (t: Tab) => void }) {
   return (
-    <div className="flex w-[22rem] border-b border-s border-zinc-800 bg-zinc-900/40">
+    <div className="flex w-full border-b border-zinc-800 bg-zinc-900/40 md:w-[22rem] md:border-s">
       {tabs.map((t) => (
         <button key={t.id} onClick={() => onTab(t.id)}
           className={cn("flex flex-1 items-center justify-center gap-1.5 border-b-2 py-3 text-sm transition",

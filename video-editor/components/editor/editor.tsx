@@ -1,13 +1,13 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { AlertTriangle, Check, FileJson, ChevronRight, Clapperboard, Cloud, Download, FilePlus2, Loader2, LogOut, X } from "lucide-react";
+import { AlertTriangle, Check, FileJson, ChevronRight, Clapperboard, Cloud, Download, Film, FilePlus2, GanttChart, Loader2, LogOut, Music, Palette, Pencil, Sparkles, Type, X } from "lucide-react";
 import { redo, undo, useEditor, type AiMode } from "@/stores/editor-store";
 import { usePlayback } from "@/stores/playback-store";
 import { MediaBin } from "./media-bin";
 import { Preview } from "./preview";
 import { TimelinePanel } from "./timeline";
-import { SidePanel } from "./side-panel";
+import { SidePanel, type Tab } from "./side-panel";
 import { ExportDialog } from "./export-dialog";
 import { useProjectBootstrap, type SaveState } from "./use-project-bootstrap";
 import { clearProject } from "@/lib/persistence";
@@ -38,9 +38,15 @@ export function Editor({ backend, account }: EditorProps) {
     return <div className="grid h-screen place-items-center text-sm text-zinc-500">טוען פרויקט…</div>;
   }
 
+  return <Layout top={<TopBar saveState={saveState} cloudSave={backend.kind === "cloud"} account={account} />} />;
+}
+
+function Layout({ top }: { top: React.ReactNode }) {
+  const phone = useMediaQuery("(max-width: 767px)");
+  if (phone) return <PhoneLayout top={top} />;
   return (
-    <div className="flex h-screen flex-col bg-zinc-950 text-zinc-100">
-      <TopBar saveState={saveState} cloudSave={backend.kind === "cloud"} account={account} />
+    <div className="flex h-dvh flex-col bg-zinc-950 text-zinc-100">
+      {top}
       <ErrorBar />
       <div className="flex min-h-0 flex-1">
         <MediaBin />
@@ -51,6 +57,71 @@ export function Editor({ backend, account }: EditorProps) {
       </div>
       <TimelinePanel />
     </div>
+  );
+}
+
+type Sheet = "edit" | "media" | Exclude<Tab, "ai"> | "ai";
+
+/**
+ * מסך העריכה בטלפון: הנגן למעלה, ציר הזמן מתחתיו, וסרגל כפתורים בתחתית.
+ * כל כפתור מחליף את ציר הזמן במגירה (מדיה, טקסט, סאונד, סגנון), כך שהנגן נשאר גלוי.
+ */
+function PhoneLayout({ top }: { top: React.ReactNode }) {
+  const [sheet, setSheet] = useState<Sheet | null>(null);
+  const editable = useEditor((s) => (s.selection && s.selection.kind !== "clip" ? s.selection.id : null));
+  const aiAvailable = useEditor((s) => !!s.cloud?.video);
+
+  // פריט שנוסף מלשונית טקסט/סאונד נפתח מיד לעריכה. כשהבחירה מתבטלת, מגירת העריכה נסגרת
+  useEffect(() => {
+    setSheet((v) => (!editable ? (v === "edit" ? null : v) : v && v !== "media" ? "edit" : v));
+  }, [editable]);
+
+  const buttons: { id: Sheet | null; label: string; icon: React.ReactNode }[] = [
+    { id: null, label: "ציר הזמן", icon: <GanttChart className="size-5" /> },
+    ...(editable ? [{ id: "edit" as Sheet, label: "עריכה", icon: <Pencil className="size-5" /> }] : []),
+    { id: "media", label: "מדיה", icon: <Film className="size-5" /> },
+    { id: "text", label: "טקסט", icon: <Type className="size-5" /> },
+    { id: "sound", label: "סאונד", icon: <Music className="size-5" /> },
+    { id: "style", label: "סגנון", icon: <Palette className="size-5" /> },
+    ...(aiAvailable ? [{ id: "ai" as Sheet, label: "AI", icon: <Sparkles className="size-5" /> }] : []),
+  ];
+
+  return (
+    <div className="flex h-dvh flex-col overflow-hidden bg-zinc-950 text-zinc-100">
+      {top}
+      <ErrorBar />
+      <main className="flex min-h-0 flex-1 flex-col">
+        <Preview />
+      </main>
+      {sheet ? (
+        <div className="flex h-[46dvh] shrink-0 flex-col border-t border-zinc-800 bg-zinc-900">
+          {sheet === "media" ? <MediaBin /> : <SidePanel tab={sheet === "edit" ? "text" : sheet} inspect={sheet === "edit"} />}
+        </div>
+      ) : (
+        <TimelinePanel />
+      )}
+      <nav className="flex shrink-0 border-t border-zinc-800 bg-zinc-950 pb-[env(safe-area-inset-bottom)]">
+        {buttons.map((b) => (
+          <button key={b.id ?? "timeline"} onClick={() => setSheet((v) => (v === b.id ? null : b.id))}
+            className={cn("flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px]",
+              sheet === b.id ? "text-violet-300" : b.id === "edit" ? "text-amber-300" : "text-zinc-400")}>
+            {b.icon}{b.label}
+          </button>
+        ))}
+      </nav>
+    </div>
+  );
+}
+
+function useMediaQuery(query: string) {
+  return useSyncExternalStore(
+    (onChange) => {
+      const mql = window.matchMedia(query);
+      mql.addEventListener("change", onChange);
+      return () => mql.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia(query).matches,
+    () => false,
   );
 }
 
@@ -80,7 +151,7 @@ function TopBar({ saveState, cloudSave, account }: {
   }
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-3 border-b border-zinc-800 px-4">
+    <header className="flex h-12 shrink-0 items-center gap-2 border-b border-zinc-800 px-2 sm:gap-3 sm:px-4">
       {account ? (
         <Link href="/" title="הפרויקטים שלי" className="flex items-center gap-1 rounded px-1 py-0.5 text-zinc-400 hover:bg-zinc-900 hover:text-white">
           <ChevronRight className="size-4" /><Clapperboard className="size-5 text-violet-400" />
@@ -89,10 +160,10 @@ function TopBar({ saveState, cloudSave, account }: {
         <Clapperboard className="size-5 text-violet-400" />
       )}
       <input value={title} onChange={(e) => setTitle(e.target.value)} aria-label="שם הפרויקט"
-        className="w-56 rounded bg-transparent px-1.5 py-0.5 text-sm font-medium hover:bg-zinc-900 focus:bg-zinc-900 focus:outline-none" />
+        className="w-28 min-w-0 rounded bg-transparent sm:w-56 px-1.5 py-0.5 text-sm font-medium hover:bg-zinc-900 focus:bg-zinc-900 focus:outline-none" />
       <SaveIndicator state={saveState} cloud={cloudSave} />
       <ModeSwitch />
-      <div className="ms-auto flex items-center gap-2">
+      <div className="ms-auto flex shrink-0 items-center gap-1 sm:gap-2">
         <span className="hidden text-[11px] text-zinc-600 xl:inline" dir="ltr">Space · S · Del · Ctrl+Z</span>
         {account ? (
           <form action="/auth/signout" method="post" className="flex items-center gap-2">
@@ -104,16 +175,16 @@ function TopBar({ saveState, cloudSave, account }: {
         ) : (
           <button onClick={startNew}
             className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800">
-            <FilePlus2 className="size-3.5" /> פרויקט חדש
+            <FilePlus2 className="size-3.5" /><span className="hidden sm:inline">פרויקט חדש</span>
           </button>
         )}
         <button onClick={exportJson} title="גיבוי הפרויקט כקובץ JSON" aria-label="גיבוי פרויקט"
-          className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white">
+          className="hidden rounded-md p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white sm:block">
           <FileJson className="size-4" />
         </button>
         <button onClick={() => setExporting(true)}
           className="flex items-center gap-1.5 rounded-md bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-white">
-          <Download className="size-3.5" /> ייצוא סרטון
+          <Download className="size-3.5" /> ייצוא<span className="hidden sm:inline"> סרטון</span>
         </button>
         {exporting && <ExportDialog onClose={() => setExporting(false)} />}
       </div>
@@ -128,7 +199,7 @@ function SaveIndicator({ state, cloud }: { state: SaveState; cloud: boolean }) {
     saved: { icon: <Check className="size-3" />, text: cloud ? "נשמר בענן" : "נשמר בדפדפן", cls: "text-zinc-500" },
     error: { icon: <AlertTriangle className="size-3" />, text: "השמירה נכשלה", cls: "text-red-400" },
   }[state];
-  return <span className={cn("flex items-center gap-1 text-[11px]", map.cls)}>{map.icon}{map.text}</span>;
+  return <span title={map.text} className={cn("flex shrink-0 items-center gap-1 text-[11px]", map.cls)}>{map.icon}<span className="hidden sm:inline">{map.text}</span></span>;
 }
 
 /** מעבר בין דמו מקומי לעיבוד בענן. הענן זמין רק אם הוגדר FAL_KEY בשרת */

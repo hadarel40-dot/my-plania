@@ -29,9 +29,15 @@ export function OverlayHandles() {
         y: +clamp(y0 + (ev.clientY - cy) / layer.height).toFixed(3),
       });
     };
-    const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); finish(); };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      finish();
+    };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
   }
 
   return (
@@ -44,7 +50,7 @@ export function OverlayHandles() {
         const h = o.size * unit * (o.kind === "emoji" ? 1.2 : 1.4);
         return (
           <div key={o.id} onPointerDown={(e) => onDown(e, o.id)} title="גרירה להזזה"
-            className={cn("pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 cursor-move rounded-md border-2 transition-colors",
+            className={cn("pointer-events-auto absolute touch-none -translate-x-1/2 -translate-y-1/2 cursor-move rounded-md border-2 transition-colors",
               o.id === selectedId ? "border-dashed border-amber-400" : "border-transparent hover:border-white/50")}
             style={{ left: `${o.x * 100}%`, top: `${o.y * 100}%`, width: w, height: h }} />
         );

@@ -26,10 +26,22 @@ function startDrag(
   const up = () => {
     window.removeEventListener("pointermove", move);
     window.removeEventListener("pointerup", up);
+    window.removeEventListener("pointercancel", up);
     onEnd?.(moved);
   };
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", up);
+  window.addEventListener("pointercancel", up);
+}
+
+/**
+ * במגע, נגיעה ראשונה בפריט רק בוחרת אותו, כדי שהחלקה על ציר הזמן תגלול ולא תזיז.
+ * רק פריט שכבר נבחר (ומקבל touch-none) נגרר באצבע.
+ */
+function touchSelectOnly(e: React.PointerEvent, selected: boolean) {
+  if (e.pointerType !== "touch" || selected) return false;
+  e.stopPropagation();
+  return true;
 }
 
 export function TimelinePanel() {
@@ -58,8 +70,8 @@ export function TimelinePanel() {
   };
 
   return (
-    <section dir="ltr" className="flex h-72 shrink-0 flex-col border-t border-zinc-800 bg-zinc-950">
-      <div className="flex items-center gap-1 border-b border-zinc-800 px-3 py-1.5 text-xs">
+    <section dir="ltr" className="flex h-56 shrink-0 flex-col border-t md:h-72 border-zinc-800 bg-zinc-950">
+      <div className="flex items-center gap-1 overflow-x-auto whitespace-nowrap border-b border-zinc-800 px-3 py-1.5 text-xs">
         <ToolBtn label="ביטול (Ctrl+Z)" onClick={undo} disabled={!canUndo}><Undo2 className="size-4" /></ToolBtn>
         <ToolBtn label="חזרה (Ctrl+Shift+Z)" onClick={redo} disabled={!canRedo}><Redo2 className="size-4" /></ToolBtn>
         <Sep />
@@ -70,12 +82,12 @@ export function TimelinePanel() {
         <button
           onClick={autoTranscribe}
           disabled={transcribing || timeline.clips.length === 0}
-          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"
+          className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"
         >
           {transcribing ? <Loader2 className="size-3.5 animate-spin" /> : <Captions className="size-3.5" />}
           <span dir="rtl">{transcribing ? transcribeStatus ?? "מתחיל…" : "כתוביות אוטומטיות"}</span>
         </button>
-        <div className="ms-auto flex items-center gap-2 text-zinc-500">
+        <div className="ms-auto flex shrink-0 items-center gap-2 ps-2 text-zinc-500">
           <span className="font-mono tabular-nums">{formatTime(duration, timeline.fps)}</span>
           <ZoomIn className="size-3.5" />
           <input type="range" min={20} max={240} value={pps} onChange={(e) => setPps(+e.target.value)}
@@ -179,6 +191,7 @@ function ClipBlock({ clip, start, index, pps, selected, timeFromClientX }: {
 
   const onBodyDown = (e: React.PointerEvent) => {
     select({ kind: "clip", id: clip.id });
+    if (touchSelectOnly(e, selected)) return;
     const end = beginGesture();
     startDrag(
       e,
@@ -196,6 +209,7 @@ function ClipBlock({ clip, start, index, pps, selected, timeFromClientX }: {
 
   const onEdgeDown = (edge: "in" | "out") => (e: React.PointerEvent) => {
     select({ kind: "clip", id: clip.id });
+    if (touchSelectOnly(e, selected)) return;
     const initial = clip[edge];
     const end = beginGesture();
     startDrag(e, (dx) => trimClip(clip.id, edge, initial + dx / pps), end);
@@ -206,11 +220,12 @@ function ClipBlock({ clip, start, index, pps, selected, timeFromClientX }: {
       onPointerDown={onBodyDown}
       className={cn(
         "group absolute inset-y-1.5 cursor-grab overflow-hidden rounded-md border bg-zinc-800 select-none",
-        selected ? "z-10 border-amber-400 ring-1 ring-amber-400" : "border-zinc-700 hover:border-zinc-500",
+        selected ? "z-10 touch-none border-amber-400 ring-1 ring-amber-400" : "border-zinc-700 hover:border-zinc-500",
         dragging && "cursor-grabbing opacity-80",
       )}
       style={{ left: start * pps, width: w }}
       data-index={index}
+      data-selected={selected}
     >
       {asset?.thumbnailUrl && (
         <div className="absolute inset-0 bg-repeat-x opacity-80"
@@ -234,7 +249,8 @@ function ClipBlock({ clip, start, index, pps, selected, timeFromClientX }: {
 function Handle({ side, onPointerDown }: { side: "left" | "right"; onPointerDown: (e: React.PointerEvent) => void }) {
   return (
     <div onPointerDown={onPointerDown}
-      className={cn("absolute inset-y-0 w-2 cursor-ew-resize bg-amber-400/0 hover:bg-amber-400/70 group-hover:bg-amber-400/30",
+      className={cn("absolute inset-y-0 w-4 cursor-ew-resize bg-amber-400/0 hover:bg-amber-400/70 group-hover:bg-amber-400/30 md:w-2",
+        "group-data-[selected=true]:bg-amber-400/40 max-md:group-data-[selected=false]:pointer-events-none",
         side === "left" ? "left-0" : "right-0")} />
   );
 }
@@ -251,6 +267,7 @@ function TimedBlock({ kind, id, start, end, pps, label, selected, lane }: {
   const { select, retimeItem } = useEditor.getState();
   const drag = (mode: "move" | "start" | "end") => (e: React.PointerEvent) => {
     select({ kind, id });
+    if (touchSelectOnly(e, selected)) return;
     const end0 = end, start0 = start;
     const finish = beginGesture();
     startDrag(e, (dx) => {
@@ -270,7 +287,8 @@ function TimedBlock({ kind, id, start, end, pps, label, selected, lane }: {
     <div
       onPointerDown={drag("move")}
       className={cn("group absolute cursor-grab overflow-hidden rounded border text-[11px] select-none",
-        selected ? `z-10 border-amber-400 ${colors.active}` : colors.idle)}
+        selected ? `z-10 touch-none border-amber-400 ${colors.active}` : colors.idle)}
+      data-selected={selected}
       style={{ left: start * pps, width: Math.max(8, (end - start) * pps), top: 4 + lane * LANE_H, height: LANE_H - 4 }}
       title={label}
     >
@@ -288,6 +306,7 @@ function AudioBlock({ clip, pps, selected, lane }: { clip: AudioClip; pps: numbe
   const length = clip.out - clip.in;
   const drag = (mode: "move" | "in" | "out") => (e: React.PointerEvent) => {
     select({ kind: "audio", id: clip.id });
+    if (touchSelectOnly(e, selected)) return;
     const { start, in: in0, out: out0 } = clip;
     const finish = beginGesture();
     startDrag(e, (dx) => {
@@ -304,9 +323,10 @@ function AudioBlock({ clip, pps, selected, lane }: { clip: AudioClip; pps: numbe
     <div
       onPointerDown={drag("move")}
       className={cn("group absolute cursor-grab overflow-hidden rounded border text-[11px] select-none",
-        selected ? "z-10 border-amber-400 bg-emerald-700" : "border-emerald-600/60 bg-emerald-900/70 hover:bg-emerald-800")}
+        selected ? "z-10 touch-none border-amber-400 bg-emerald-700" : "border-emerald-600/60 bg-emerald-900/70 hover:bg-emerald-800")}
       style={{ left: clip.start * pps, width: Math.max(8, length * pps), top: 4 + lane * LANE_H, height: LANE_H - 4 }}
       title={asset?.name}
+      data-selected={selected}
     >
       <div className="absolute inset-0 opacity-40"
         style={{ background: "repeating-linear-gradient(90deg, transparent 0 3px, rgba(255,255,255,.35) 3px 4px)" }} />
@@ -322,7 +342,7 @@ function ToolBtn({ children, label, onClick, disabled }: {
 }) {
   return (
     <button onClick={onClick} disabled={disabled} title={label} aria-label={label}
-      className="grid size-7 place-items-center rounded-md text-zinc-300 hover:bg-zinc-800 disabled:opacity-30">
+      className="grid size-9 shrink-0 place-items-center rounded-md text-zinc-300 md:size-7 hover:bg-zinc-800 disabled:opacity-30">
       {children}
     </button>
   );

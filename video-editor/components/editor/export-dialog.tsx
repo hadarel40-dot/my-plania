@@ -61,7 +61,7 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
               ))}
             </div>
             <p className="text-xs leading-relaxed text-zinc-400">
-              הסרטון נוצר כאן במחשב, בלי לשלוח אותו לשום מקום. זה לוקח בערך כמו אורך הסרטון, ובזמן הזה כדאי להשאיר את הלשונית פתוחה.
+              הסרטון נוצר כאן במכשיר, בלי לשלוח אותו לשום מקום. זה לוקח בערך כמו אורך הסרטון, ובזמן הזה כדאי להשאיר את הלשונית פתוחה.
             </p>
             <button onClick={start} className="w-full rounded-lg bg-violet-600 py-2.5 text-sm font-medium hover:bg-violet-500">
               התחלת ייצוא

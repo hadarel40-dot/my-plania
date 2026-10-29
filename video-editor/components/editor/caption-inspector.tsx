@@ -15,7 +15,7 @@ export function CaptionInspector({ caption }: { caption: Caption }) {
   const set = (patch: Partial<Caption>) => updateCaption(caption.id, patch);
 
   return (
-    <aside className="flex w-[22rem] shrink-0 flex-col border-s border-zinc-800 bg-zinc-900/40">
+    <aside className="flex min-h-0 w-full shrink-0 flex-col border-zinc-800 bg-zinc-900/40 md:w-[22rem] md:border-s">
       <header className="flex items-center gap-2 border-b border-zinc-800 px-4 py-3 text-sm font-semibold">
         <Type className="size-4 text-sky-400" /> כתובית
       </header>

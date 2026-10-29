@@ -64,7 +64,7 @@ export function Preview() {
   const step = (frames: number) => seek(currentTime + frames / timeline.fps);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col items-center gap-3 p-4">
+    <div className="flex min-h-0 flex-1 flex-col items-center gap-2 p-2 md:gap-3 md:p-4">
       <div className="relative flex min-h-0 w-full flex-1 items-center justify-center">
         {/* Remotion ממקם את הקומפוזיציה בהנחת LTR. הכתוביות עצמן מוגדרות RTL */}
         <div

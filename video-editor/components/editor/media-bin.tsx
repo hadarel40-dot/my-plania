@@ -36,7 +36,7 @@ export function MediaBin() {
   }
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col border-e border-zinc-800 bg-zinc-900/40">
+    <aside className="flex w-full min-h-0 shrink-0 flex-col border-zinc-800 bg-zinc-900/40 md:w-64 md:border-e">
       <header className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
         <h2 className="flex items-center gap-2 text-sm font-semibold"><Film className="size-4" /> מדיה</h2>
         <button onClick={() => inputRef.current?.click()}
@@ -78,14 +78,15 @@ export function MediaBin() {
               </p>
             </div>
             <button onClick={() => addToTimeline(a)} title="הוסף לציר הזמן" aria-label="הוסף לציר הזמן"
-              className="self-center rounded p-1 text-zinc-500 opacity-0 hover:bg-zinc-700 hover:text-white group-hover:opacity-100">
+              className="self-center rounded p-1 text-zinc-500 hover:bg-zinc-700 hover:text-white md:opacity-0 md:group-hover:opacity-100">
               <Plus className="size-4" />
             </button>
           </div>
         ))}
 
         <p className="pt-2 text-center text-[11px] leading-relaxed text-zinc-600">
-          גרור קבצים לכאן · לחיצה כפולה מוסיפה לציר הזמן
+          <span className="md:hidden">לחיצה על + מוסיפה לציר הזמן</span>
+          <span className="hidden md:inline">גרור קבצים לכאן · לחיצה כפולה מוסיפה לציר הזמן</span>
         </p>
       </div>
     </aside>

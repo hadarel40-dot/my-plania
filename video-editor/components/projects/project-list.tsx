@@ -26,12 +26,12 @@ const formatDuration = (sec: number) =>
 export function ProjectList({ email, projects, error }: { email: string; projects: Row[]; error: string | null }) {
   return (
     <div className="h-screen overflow-y-auto bg-zinc-950 text-zinc-100">
-      <header className="flex h-14 items-center gap-3 border-b border-zinc-800 px-6">
+      <header className="flex h-14 items-center gap-3 border-b border-zinc-800 px-4 sm:px-6">
         <Clapperboard className="size-5 text-violet-400" />
         <h1 className="text-sm font-semibold">הפרויקטים שלי</h1>
         {projects.length > 0 && <span className="text-xs text-zinc-500">{projects.length}</span>}
         <form action="/auth/signout" method="post" className="ms-auto flex items-center gap-2 text-xs text-zinc-500">
-          <span dir="ltr">{email}</span>
+          <span dir="ltr" className="hidden sm:inline">{email}</span>
           <button title="התנתקות" aria-label="התנתקות" className="rounded-md p-1.5 hover:bg-zinc-800 hover:text-white">
             <LogOut className="size-4" />
           </button>
