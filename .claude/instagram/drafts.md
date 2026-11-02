@@ -85,3 +85,33 @@
 
 #תכנוןארוחות #ניהולהבית #אמאעובדת
 ```
+
+## English versions (2.11.2026)
+
+### Sunset: out/plania-broll-nachat-EN.mp4
+**This is what calm feels like** / When you already know on Sunday what's for dinner all week. When the chicken's thawed on time, and the groceries are already home. When at 6pm your head is clear, and you just head out with the kids to watch the sunset.
+
+```
+This is the calm I wanted for myself when I started building Plania 🤍
+
+I love to cook. What always weighed on me was remembering to thaw, deciding what to make, and carrying "what's for dinner?" around in my head all day.
+
+So I started small and built my own weekly meal plan system. Now I'm turning it into an app for meal planning and running your home, all in one place.
+
+Plania is coming soon. Follow for early access and be one of the first to get it.
+
+#mealplanning #weeklymealplan #busymom
+```
+
+### Baking: out/plania-broll-bake-EN.mp4
+**Cooking was never what wore me out.** / What wore me out was figuring out what to cook, every single day. Since I started planning our meals ahead, there's suddenly room for other things. Like baking a cake in the middle of the day, just because I feel like it.
+
+```
+This is what meal planning gave back to me 🤍
+
+I tried paper, spreadsheets and notes on the fridge, until I built a system for meal planning that actually works for me. Now I'm putting the whole thing in one app, so your weekly meal plan stops living in your head.
+
+Plania is coming soon. Follow for early access and be one of the first to get it.
+
+#mealplanning #weeklymealplan #busymom
+```
