@@ -113,10 +113,11 @@ async function runAutoEdit() {
   }
 }
 
-/** הוראות והערות לעורך. נשמרות בפרויקט, ועם Claude הן נשלחות אליו בכל עריכה אוטומטית */
+/** הוראות והערות לעורך. נשמרות בפרויקט, ועם מוח מחובר (Gemini / Claude) הן נשלחות אליו בכל עריכה אוטומטית */
 function EditorNotes() {
   const notes = useEditor((s) => s.notes);
   const smart = useEditor((s) => !!s.cloud?.smartEdit);
+  const brain = useEditor((s) => s.cloud?.brain ?? "הבינה המלאכותית");
   return (
     <label className="mb-3 block">
       <span className="text-xs font-medium text-zinc-300">הוראות לעורך</span>
@@ -125,8 +126,8 @@ function EditorNotes() {
         className="mt-1 w-full resize-y rounded-lg border border-zinc-700 bg-zinc-950 p-2.5 text-sm placeholder:text-zinc-600 focus:border-violet-500 focus:outline-none" />
       <span className="block text-[11px] text-zinc-500">
         {smart
-          ? "Claude קורא את ההוראות בכל עריכה אוטומטית. ההוראות נשמרות בפרויקט."
-          : "ההוראות נשמרות בפרויקט. בלי Claude העורך מבין רק דברים פשוטים (סוג מוזיקה, בלי מוזיקה); עם Claude הוא פועל לפי הכל."}
+          ? `${brain} קורא את ההוראות בכל עריכה אוטומטית ופועל לפיהן. ההוראות נשמרות בפרויקט.`
+          : "ההוראות נשמרות בפרויקט. כרגע העורך מבין רק דברים פשוטים (סוג מוזיקה, בלי מוזיקה, בלי כתוביות); עם Gemini מחובר הוא פועל לפי הכל."}
       </span>
     </label>
   );
@@ -242,11 +243,12 @@ function TemplatePicker({ disabled }: { disabled: boolean }) {
 }
 
 /**
- * טרנדים: Claude מחפש ברשת מה עובד עכשיו ברילס, ומתאים לסרטון. כל רעיון אפשר
+ * טרנדים: המוח (Gemini / Claude) מחפש ברשת מה עובד עכשיו ברילס, ומתאים לסרטון. כל רעיון אפשר
  * להוסיף להוראות לעורך בלחיצה, וההוקים, התיאור וההאשטגים מוכנים להעתקה.
  */
 function TrendsPanel() {
   const smart = useEditor((s) => !!s.cloud?.smartEdit);
+  const brain = useEditor((s) => s.cloud?.brain ?? "הבינה המלאכותית");
   const [busy, setBusy] = useState(false);
   const [trends, setTrends] = useState<Trends | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -279,14 +281,14 @@ function TrendsPanel() {
   const copy = (key: string, text: string) => navigator.clipboard?.writeText(text).then(() => setCopied(key));
 
   if (!smart) {
-    return <p className="mt-2 rounded-lg bg-zinc-950 p-3 text-xs text-zinc-400">כדי לחפש טרנדים עדכניים צריך לחבר את Claude (מפתח ב-Vercel). הוא מחפש ברשת מה עובד עכשיו ברילס, ומתאים לסרטון שלך.</p>;
+    return <p className="mt-2 rounded-lg bg-zinc-950 p-3 text-xs text-zinc-400">כדי לחפש טרנדים עדכניים צריך לחבר את Gemini (מפתח חינמי מגוגל). הוא מחפש ברשת מה עובד עכשיו ברילס, ומתאים לסרטון שלך.</p>;
   }
   return (
     <div className="mt-2 space-y-3">
       <button onClick={load} disabled={busy}
         className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-700 bg-zinc-950 py-2.5 text-sm hover:border-violet-500 disabled:opacity-60">
         {busy ? <Loader2 className="size-4 animate-spin" /> : <TrendingUp className="size-4 text-violet-300" />}
-        {busy ? "Claude מחפש מה טרנדי עכשיו… (עד דקה)" : trends ? "לחפש שוב" : "מה טרנדי עכשיו?"}
+        {busy ? `${brain} מחפש מה טרנדי עכשיו… (עד דקה)` : trends ? "לחפש שוב" : "מה טרנדי עכשיו?"}
       </button>
       {error && <p className="text-xs text-red-300">{error}</p>}
       {trends && (

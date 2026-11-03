@@ -7,8 +7,10 @@ export interface CloudConfig {
   /** מודל תמלול, או null אם אין מפתח */
   transcribe: string | null;
   transcribeLanguage: string | null;
-  /** עריכה חכמה עם Claude (יש ANTHROPIC_API_KEY בשרת) */
+  /** עריכה חכמה: יש מוח מחובר בשרת (GEMINI_API_KEY או ANTHROPIC_API_KEY) */
   smartEdit: boolean;
+  /** שם המוח להצגה (Gemini / Claude) */
+  brain: string | null;
 }
 
 export function getCloudConfig(): CloudConfig {
@@ -24,6 +26,7 @@ export function getCloudConfig(): CloudConfig {
     videoExtraInput,
     transcribe: hasKey ? process.env.FAL_TRANSCRIBE_MODEL || "fal-ai/whisper" : null,
     transcribeLanguage: process.env.FAL_TRANSCRIBE_LANGUAGE || "he",
-    smartEdit: !!process.env.ANTHROPIC_API_KEY,
+    smartEdit: !!(process.env.GEMINI_API_KEY || process.env.ANTHROPIC_API_KEY),
+    brain: process.env.GEMINI_API_KEY ? "Gemini" : process.env.ANTHROPIC_API_KEY ? "Claude" : null,
   };
 }

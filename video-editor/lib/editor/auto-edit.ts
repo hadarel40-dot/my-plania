@@ -133,7 +133,7 @@ export interface AutoEditResult {
 }
 
 /**
- * עריכה אוטומטית שמחזירה כמה גרסאות לבחירה. העבודה הכבדה (ניתוח, כתוביות, Claude)
+ * עריכה אוטומטית שמחזירה כמה גרסאות לבחירה. העבודה הכבדה (ניתוח, כתוביות, בינה מלאכותית)
  * נעשית פעם אחת, ומהתוצאה נבנות גרסאות שונות בקצב, במוזיקה ובעיצוב. הראשונה מוחלת.
  */
 export async function autoEditAll(onStatus: (s: string) => void, mode: AutoEditMode = "auto"): Promise<AutoEditResult> {
@@ -233,11 +233,11 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
     }
   });
 
-  // Claude: חיתוך טייקים ותוכן (הוק, אימוג'ים, קריאה לפעולה), פעם אחת לכל הגרסאות
+  // המוח (Gemini / Claude): חיתוך טייקים ותוכן (הוק, אימוג'ים, קריאה לפעולה), פעם אחת לכל הגרסאות
   let smart: SmartCuts | null = null;
   if (useEditor.getState().cloud?.smartEdit && useEditor.getState().timeline.captions.length > 0) {
     await step("עריכה חכמה", async () => {
-      onStatus("4/5 · Claude עורך את הסרטון…");
+      onStatus(`4/5 · ${brainName()} עורך את הסרטון…`);
       smart = await smartCuts();
       return smart.summary;
     });
@@ -247,9 +247,9 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
   const hook = s0?.hook ?? (captions.length ? captions.map((c) => c.text).join(" ").split(/\s+/).slice(0, 6).join(" ") : undefined);
   const extras = s0?.extras ?? (/בלי אימוג|ללא אימוג/.test(notes) ? [] : emojiOverlays(captions));
 
-  // הגרסאות: הראשונה לפי Claude (אם יש), והשאר בסגנונות אחרים
+  // הגרסאות: הראשונה לפי המוח (אם מחובר), והשאר בסגנונות אחרים
   const looks: TalkingLook[] = [];
-  if (s0) looks.push({ template: s0.plan.template, preset: s0.plan.caption_style, accent: s0.plan.accent, color: s0.plan.color_style, title: "הבחירה של Claude", description: "הסגנון ש-Claude בחר לתוכן" });
+  if (s0) looks.push({ template: s0.plan.template, preset: s0.plan.caption_style, accent: s0.plan.accent, color: s0.plan.color_style, title: `הבחירה של ${brainName()}`, description: "הסגנון שהבינה המלאכותית בחרה לתוכן" });
   for (const l of TALKING_LOOKS) if (looks.length < 3 && !looks.some((x) => x.template === l.template)) looks.push(l);
 
   onStatus("5/5 · בונה גרסאות…");
@@ -269,15 +269,10 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
   return { report, options };
 }
 
-/**
- * עריכה חכמה: שולח את התמלול ל-Claude (דרך השרת) ומחיל את התוכנית שחזרה:
- * מוחק טייקים כפולים ומילוי, מוסיף הוק, אימוג'ים, קריאה לפעולה, סגנון וצבע.
- * הכל נשאר עריכה רגילה שאפשר לשנות.
- */
 interface SmartCuts { plan: SmartPlan; hook: string; extras: Overlay[]; summary: string }
 
 /**
- * עריכה חכמה: שולח את התמלול ל-Claude (דרך השרת), חותך את הטייקים החוזרים והמילוי
+ * עריכה חכמה: שולח את התמלול למוח (Gemini או Claude, דרך השרת), חותך את הטייקים החוזרים והמילוי
  * שהוא סימן, ומכין את התוכן שלו (הוק, אימוג'ים, קריאה לפעולה) לגרסאות.
  */
 async function smartCuts(): Promise<SmartCuts> {
@@ -355,13 +350,13 @@ interface VibeLook {
   pace: [number, number];
   mood: MusicMood;
   color: string;
-  /** להשתמש בסדר ש-Claude בחר (רק בגרסה הראשונה) */
-  useClaudeOrder: boolean;
+  /** להשתמש בסדר שהמוח בחר (רק בגרסה הראשונה) */
+  useBrainOrder: boolean;
 }
 
 /**
  * סרטון אווירה (בלי דיבור): בוחר את הרגעים היפים מכל הצילומים, מסדר אותם,
- * מוסיף מוזיקה שמתאימה ומסנכרן את החיתוכים לקצב. עם Claude, הוא רואה את
+ * מוסיף מוזיקה שמתאימה ומסנכרן את החיתוכים לקצב. עם מוח מחובר, הוא רואה את
  * הקטעים ובוחר כמו עורך; בלעדיו, הבחירה לפי חדות, תאורה, צבע ותנועה.
  * הניתוח נעשה פעם אחת, ומבנים ממנו שלוש גרסאות בקצב ובאווירה שונים.
  */
@@ -397,11 +392,11 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditResu
   const userMusic = musicClip();
   const noMusic = !userMusic && /בלי מוזיקה|ללא מוזיקה|לא לשים מוזיקה|בלי שיר/.test(notes);
 
-  // 2. Claude רואה את המועמדים הטובים ובוחר (פעם אחת)
+  // 2. המוח רואה את המועמדים הטובים ובוחר (פעם אחת)
   let plan: VibePlan | null = null;
-  let claudeShots: Shot[] = [];
+  let brainShots: Shot[] = [];
   if (useEditor.getState().cloud?.smartEdit) {
-    onStatus("3/4 · Claude בוחר את הקטעים הכי יפים…");
+    onStatus(`3/4 · ${brainName()} בוחר את הקטעים הכי יפים…`);
     try {
       const shots = rankShots(samples, clips, Math.min(2, footage), step);
       const target = vibeTarget(footage, clips.length, 2);
@@ -417,19 +412,19 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditResu
       if (!res.ok || !data) throw new Error(data?.error ?? "השרת לא החזיר תוכנית");
       plan = data as VibePlan;
       const byId = new Map(candidates.map((c) => [c.id, c]));
-      claudeShots = plan.order.map((id) => byId.get(id)).filter((c): c is Shot => !!c);
+      brainShots = plan.order.map((id) => byId.get(id)).filter((c): c is Shot => !!c);
       if (plan.summary) report.done.push(plan.summary);
     } catch (e) {
-      report.skipped.push(`בחירה עם Claude: ${e instanceof Error ? e.message : "נכשל"} (נבחר לפי איכות התמונה)`);
+      report.skipped.push(`בחירה עם ${brainName()}: ${e instanceof Error ? e.message : "נכשל"} (נבחר לפי איכות התמונה)`);
     }
   }
 
   // 3. הגרסאות: מומלצת, קצבית, ורגועה-קולנועית. מצבי רוח שונים זה מזה
   const mainMood: MusicMood = plan?.music ?? moodFromNotes(notes) ?? "chill";
   const looks: VibeLook[] = [
-    { title: plan ? "הבחירה של Claude" : "מומלץ", description: "קטע של כשתי שניות מכל צילום", pace: [1.3, 2.6], mood: mainMood, color: plan?.color_style ?? "cinematic", useClaudeOrder: true },
-    { title: "קצבי ואנרגטי", description: "חיתוכים מהירים של כשנייה, מוזיקה אנרגטית", pace: [0.7, 1.3], mood: mainMood === "energetic" ? "pop" : "energetic", color: "vivid", useClaudeOrder: false },
-    { title: "רגוע וקולנועי", description: "קטעים ארוכים יותר, מוזיקה קולנועית", pace: [2.2, 3.4], mood: mainMood === "cinematic" ? "romantic" : "cinematic", color: "warm", useClaudeOrder: false },
+    { title: plan ? `הבחירה של ${brainName()}` : "מומלץ", description: "קטע של כשתי שניות מכל צילום", pace: [1.3, 2.6], mood: mainMood, color: plan?.color_style ?? "cinematic", useBrainOrder: true },
+    { title: "קצבי ואנרגטי", description: "חיתוכים מהירים של כשנייה, מוזיקה אנרגטית", pace: [0.7, 1.3], mood: mainMood === "energetic" ? "pop" : "energetic", color: "vivid", useBrainOrder: false },
+    { title: "רגוע וקולנועי", description: "קטעים ארוכים יותר, מוזיקה קולנועית", pace: [2.2, 3.4], mood: mainMood === "cinematic" ? "romantic" : "cinematic", color: "warm", useBrainOrder: false },
   ];
 
   onStatus("4/4 · בונה גרסאות…");
@@ -446,8 +441,8 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditResu
       bpm = await addVibeMusic(look.mood, i === 0, report);
     }
     const shotLen = bpm ? beatsShot(bpm, look.pace) : (look.pace[0] + look.pace[1]) / 2;
-    const chosen = look.useClaudeOrder && claudeShots.length >= 2
-      ? claudeShots
+    const chosen = look.useBrainOrder && brainShots.length >= 2
+      ? brainShots
       : pickShots(rankShots(samples, clips, Math.min(shotLen, footage), step), plan?.target_seconds || vibeTarget(footage, clips.length, shotLen), clipOrder);
     useEditor.getState().arrangeShots(chosen);
     if (musicClip()) {
@@ -507,7 +502,7 @@ async function addVibeMusic(mood: MusicMood, tryLibrary: boolean, report: AutoEd
   return builtin.bpm;
 }
 
-/** בלי Claude: מצב הרוח של המוזיקה לפי מילים בהוראות */
+/** בלי מוח מחובר: מצב הרוח של המוזיקה לפי מילים בהוראות */
 function moodFromNotes(notes: string): MusicMood | null {
   const words: [RegExp, MusicMood][] = [
     [/רגוע|שקט|לואו.?פיי|chill/i, "chill"],
@@ -529,6 +524,9 @@ function beatsShot(bpm: number, [min, max]: [number, number] = [1.3, 2.6]) {
   const n = [4, 2, 8, 3, 6, 1].find((k) => k * beat >= min && k * beat <= max) ?? Math.max(1, Math.round((min + max) / 2 / beat));
   return n * beat;
 }
+
+/** שם המוח המחובר להצגה (Gemini / Claude) */
+const brainName = () => useEditor.getState().cloud?.brain ?? "הבינה המלאכותית";
 
 /** קטע המוזיקה (הסאונד הארוך ביותר בציר הזמן), אם יש */
 function musicClip() {
