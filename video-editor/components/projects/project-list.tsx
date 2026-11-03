@@ -1,9 +1,10 @@
-import { Captions, Clapperboard, Film, LogOut, Sparkles } from "lucide-react";
+import { Captions, Clapperboard, Film, KeyRound, LogOut, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { createProject, deleteProject } from "@/app/actions";
 import type { ProjectMeta } from "@/lib/editor/project-meta";
 import { CreateButton } from "./create-button";
 import { DeleteButton } from "./delete-button";
+import { PasswordCard } from "./password-card";
 
 interface Row { id: string; title: string; updated_at: string; meta: Partial<ProjectMeta> | null }
 
@@ -24,7 +25,9 @@ function updatedLabel(iso: string) {
 const formatDuration = (sec: number) =>
   `${Math.floor(sec / 60)}:${Math.floor(sec % 60).toString().padStart(2, "0")}`;
 
-export function ProjectList({ email, projects, error }: { email: string; projects: Row[]; error: string | null }) {
+export function ProjectList({ email, projects, error, showPassword, hasPassword }: {
+  email: string; projects: Row[]; error: string | null; showPassword: boolean; hasPassword: boolean;
+}) {
   return (
     <div className="h-screen overflow-y-auto bg-zinc-950 text-zinc-100">
       <header className="flex h-14 items-center gap-3 border-b border-zinc-800 px-4 sm:px-6">
@@ -33,6 +36,10 @@ export function ProjectList({ email, projects, error }: { email: string; project
         {projects.length > 0 && <span className="text-xs text-zinc-500">{projects.length}</span>}
         <form action="/auth/signout" method="post" className="ms-auto flex items-center gap-2 text-xs text-zinc-500">
           <span dir="ltr" className="hidden sm:inline">{email}</span>
+          <Link href="/?password=1" title={hasPassword ? "שינוי סיסמה" : "בחירת סיסמה"} aria-label={hasPassword ? "שינוי סיסמה" : "בחירת סיסמה"}
+            className="rounded-md p-1.5 hover:bg-zinc-800 hover:text-white">
+            <KeyRound className="size-4" />
+          </Link>
           <button title="התנתקות" aria-label="התנתקות" className="rounded-md p-1.5 hover:bg-zinc-800 hover:text-white">
             <LogOut className="size-4" />
           </button>
@@ -40,6 +47,7 @@ export function ProjectList({ email, projects, error }: { email: string; project
       </header>
 
       <main className="mx-auto max-w-5xl p-4 sm:p-6">
+        {showPassword && <PasswordCard email={email} dismissible={hasPassword} />}
         {error && <p className="mb-4 rounded-md bg-red-500/10 p-3 text-sm text-red-300">שגיאה בטעינת הפרויקטים: {error}</p>}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -51,7 +59,7 @@ export function ProjectList({ email, projects, error }: { email: string; project
         </div>
 
         {projects.length === 0 && !error && (
-          <p className="mt-8 text-center text-sm text-zinc-500">עדיין אין פרויקטים. צור את הראשון.</p>
+          <p className="mt-8 text-center text-sm text-zinc-500">עדיין אין פרויקטים. צרו את הראשון.</p>
         )}
       </main>
     </div>
