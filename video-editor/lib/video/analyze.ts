@@ -167,8 +167,9 @@ export function rankShots(samples: FrameSample[], clips: { id: string; in: numbe
 }
 
 /**
- * בוחר את הקטעים הטובים עד שמגיעים לאורך היעד: הכי טובים קודם, בלי חפיפה,
- * ולא שני קטעים צמודים מאותו מקום (כדי שיהיה גיוון). התוצאה בסדר הצילום.
+ * בוחר את הקטעים הטובים עד שמגיעים לאורך היעד, כמו בסרטון אווירה: כמה שניות מכל
+ * צילום, מתחלפים. קודם הקטע הכי טוב מכל צילום (כדי שכל הצילומים ייכנסו), ואז
+ * עוד קטעים לפי איכות. בלי חפיפה ובלי שני קטעים צמודים מאותו מקום.
  * קטע גרוע (מטושטש, חשוך, רועד) לא נכנס רק כדי למלא זמן: עדיף סרטון קצר יותר.
  */
 export function pickShots(shots: Shot[], target: number, clipOrder: string[]): Shot[] {
@@ -177,15 +178,24 @@ export function pickShots(shots: Shot[], target: number, clipOrder: string[]): S
   const sorted = [...shots].sort((a, b) => b.score - a.score);
   const median = sorted[Math.floor(sorted.length / 2)]?.score ?? 0;
   const floor = Math.min(-0.8, median - 1.5);
+  const tryAdd = (s: Shot) => {
+    const len = s.end - s.start;
+    const clash = chosen.some((c) => c.clipId === s.clipId && s.start < c.end + len * 0.75 && c.start < s.end + len * 0.75);
+    if (clash) return;
+    chosen.push(s);
+    total += len;
+  };
+  // סבב ראשון: הקטע הכי טוב מכל צילום (אם הוא לא גרוע)
+  for (const clipId of clipOrder) {
+    if (total >= target) break;
+    const best = sorted.find((s) => s.clipId === clipId);
+    if (best && best.score >= floor) tryAdd(best);
+  }
   for (const s of sorted) {
     if (total >= target) break;
     // מתחת לרף נכנסים רק אם עוד אין כמעט כלום (פחות משלוש שניות)
     if (s.score < floor && total >= 3) break;
-    const len = s.end - s.start;
-    const clash = chosen.some((c) => c.clipId === s.clipId && s.start < c.end + len * 0.75 && c.start < s.end + len * 0.75);
-    if (clash) continue;
-    chosen.push(s);
-    total += len;
+    if (!chosen.includes(s)) tryAdd(s);
   }
   return orderShots(chosen, clipOrder);
 }

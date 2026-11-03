@@ -2,6 +2,7 @@
 import { useEditor } from "@/stores/editor-store";
 import { importFile } from "@/lib/media/import";
 import type { MusicTrack } from "./openverse";
+import { builtinAsset, type BuiltinTrack } from "./builtin";
 
 export const musicFileUrl = (id: string) => `/api/music/file?id=${encodeURIComponent(id)}`;
 
@@ -25,6 +26,15 @@ export async function addLibraryTrack(t: MusicTrack, { select = true }: { select
   const asset = await importFile(new File([await res.blob()], name, { type: "audio/mpeg" }));
   const { addAsset, addAudioClip } = useEditor.getState();
   addAsset({ ...asset, name, credit: t.needsCredit ? t.credit : undefined });
+  addAudioClip(asset.id, 0, { select });
+  return asset.id;
+}
+
+/** מוסיף שיר מובנה (מהאתר עצמו, בלי הורדה והעלאה) למסלול הסאונד מתחילת הסרטון */
+export function addBuiltinTrack(t: BuiltinTrack, { select = true }: { select?: boolean } = {}): string {
+  const asset = builtinAsset(t);
+  const { addAsset, addAudioClip } = useEditor.getState();
+  addAsset(asset);
   addAudioClip(asset.id, 0, { select });
   return asset.id;
 }

@@ -11,7 +11,9 @@ import type { Overlay } from "./types";
 import { MUSIC_MOODS, type MusicMood } from "@/lib/music/moods";
 import type { SmartPlan, SmartPlanRequest, VibePlan, VibePlanRequest } from "@/lib/ai/smart-plan";
 import { pickShots, rankShots, sampleClip, type FrameSample, type Shot } from "@/lib/video/analyze";
-import { addLibraryTrack, searchLibrary } from "@/lib/music/add";
+import { addBuiltinTrack, addLibraryTrack, searchLibrary } from "@/lib/music/add";
+import { builtinForMood } from "@/lib/music/builtin";
+import { errorText, logEvent } from "@/lib/telemetry";
 import type { SourceRange } from "./timeline-utils";
 import { timelineDuration } from "./timeline-utils";
 
@@ -58,7 +60,11 @@ export async function syncToBeat(onStatus: (s: string) => void): Promise<number>
   if (timeline.clips.length < 2) throw new Error("צריך לפחות שני קליפים כדי שיהיו חיתוכים לסנכרן");
 
   onStatus("מנתח את המוזיקה…");
-  const { bpm, beats } = detectBeats(await decodeAssetAudio(assets[music.assetId]));
+  const musicAsset = assets[music.assetId];
+  // למוזיקה מובנית הקצב ידוע והיא מתחילה על ביט; אחרת מזהים מהסאונד
+  const { bpm, beats } = musicAsset.bpm
+    ? { bpm: musicAsset.bpm, beats: Array.from({ length: Math.ceil(musicAsset.duration * musicAsset.bpm / 60) }, (_, i) => +(i * 60 / musicAsset.bpm!).toFixed(3)) }
+    : detectBeats(await decodeAssetAudio(musicAsset));
   if (!beats.length) throw new Error("לא הצלחתי למצוא קצב במוזיקה הזאת");
   // זמני הביטים על ציר הזמן של הסרטון
   const onTimeline = beats.map((b) => music.start + b - music.in).filter((t) => t > 0 && t <= music.start + music.out - music.in);
@@ -115,19 +121,32 @@ export type AutoEditMode = "auto" | "talking" | "vibe";
 
 export async function autoEditAll(onStatus: (s: string) => void, mode: AutoEditMode = "auto"): Promise<AutoEditReport> {
   if (!useEditor.getState().timeline.clips.length) throw new Error("קודם מעלים סרטון");
-  if (mode === "auto") {
+  const auto = mode === "auto";
+  if (auto) {
     onStatus("בודק אם מדברים בסרטון…");
     mode = (await looksLikeTalking()) ? "talking" : "vibe";
   }
-  if (mode === "vibe") return autoEditVibe(onStatus);
-  return autoEditTalking(onStatus);
+  const started = Date.now();
+  try {
+    const report = mode === "vibe" ? await autoEditVibe(onStatus) : await autoEditTalking(onStatus);
+    if (auto && mode === "talking") report.done.unshift("זוהה סרטון דיבור (אם זה סרטון אווירה, בחרו \"אווירה\" ונסו שוב)");
+    logEvent("auto_edit_done", { mode, auto, ms: Date.now() - started, done: report.done.length, skipped: report.skipped });
+    return report;
+  } catch (e) {
+    logEvent("auto_edit_failed", { mode, auto, ms: Date.now() - started, error: errorText(e) });
+    throw e;
+  }
 }
 
 /**
- * האם זה סרטון דיבור: יש קטעי דיבור עם הפסקות ביניהם, על לפחות שליש מהזמן.
- * סאונד רציף (מוזיקה, רוח, רחוב) או בלי פס קול בכלל = סרטון אווירה.
+ * האם זה סרטון דיבור. כמה צילומים קצרים הם כמעט תמיד סרטון אווירה (גם אם שומעים
+ * ברקע אנשים מדברים), ולכן שם צריך דיבור ברור ורציף. סרטון ארוך אחד הוא דיבור אם
+ * יש קטעי דיבור עם הפסקות על לפחות שליש מהזמן. סאונד רציף או בלי קול = אווירה.
  */
 async function looksLikeTalking(): Promise<boolean> {
+  const clips = useEditor.getState().timeline.clips;
+  const avg = clips.reduce((s, c) => s + c.out - c.in, 0) / Math.max(1, clips.length);
+  const manyShortClips = clips.length >= 3 && avg <= 20;
   const { timeline, assets } = useEditor.getState();
   let total = 0, speech = 0, segments = 0;
   for (const clip of timeline.clips) {
@@ -143,7 +162,10 @@ async function looksLikeTalking(): Promise<boolean> {
       segments += ranges.length;
     } catch { /* אין פס קול */ }
   }
-  return total > 0 && speech / total > 0.3 && segments >= 2;
+  const ratio = total > 0 ? speech / total : 0;
+  const talking = manyShortClips ? ratio > 0.75 && segments >= clips.length * 2 : ratio > 0.3 && segments >= 2;
+  logEvent("auto_edit_detect", { clips: clips.length, avg: +avg.toFixed(1), ratio: +ratio.toFixed(2), segments, talking });
+  return talking;
 }
 
 async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditReport> {
@@ -300,7 +322,7 @@ function timelineRangesToPlan(remove: SourceRange[]) {
  * הקטעים ובוחר כמו עורך; בלעדיו, הבחירה לפי חדות, תאורה, צבע ותנועה.
  */
 async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditReport> {
-  const report: AutoEditReport = { done: ["זוהה סרטון אווירה: בוחר את הקטעים הכי יפים"], skipped: [] };
+  const report: AutoEditReport = { done: ["סרטון אווירה: נבחרים הקטעים הכי יפים מכל הצילומים"], skipped: [] };
   useEditor.getState().select(null);
   try {
     const { reframed } = await autoReframe((st) => onStatus(`1/5 · ${st}`));
@@ -327,14 +349,16 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditRepo
   }
   if (!samples.length) throw new Error("לא הצלחתי לקרוא את הסרטונים");
 
-  // 2. אורך כל קטע: 4 ביטים אם כבר יש מוזיקה, אחרת כשתי שניות
+  // 2. אורך כל קטע: כמה שניות, כמו בסרטוני אווירה. עם מוזיקה: מספר שלם של ביטים
   const music = musicClip();
-  let shotLen = 1.8;
+  let shotLen = 2;
   if (music) {
-    const { bpm } = detectBeats(await decodeAssetAudio(useEditor.getState().assets[music.assetId]));
-    if (bpm) shotLen = Math.min(2.8, Math.max(1.2, (60 / bpm) * 4));
+    const asset = useEditor.getState().assets[music.assetId];
+    const bpm = asset.bpm ?? detectBeats(await decodeAssetAudio(asset)).bpm;
+    if (bpm) shotLen = beatsShot(bpm);
   }
-  const target = footage < 8 ? footage * 0.85 : Math.min(15, Math.max(6, footage * 0.5));
+  // אורך הסרטון: בערך קטע אחד-שניים מכל צילום, בין 6 ל-15 שניות
+  const target = footage < 8 ? footage * 0.85 : Math.min(15, Math.max(6, clips.length * shotLen * 1.5, footage * 0.3));
   const shots = rankShots(samples, clips, Math.min(shotLen, footage), step);
   if (!shots.length) throw new Error("הצילומים קצרים מדי לבחירת קטעים");
   const clipOrder = clips.map((c) => c.id);
@@ -374,15 +398,22 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditRepo
     report.done.push("לא נוספה מוזיקה, לפי ההוראות");
   } else if (!music) {
     onStatus("4/5 · מחפש מוזיקה מתאימה…");
+    const mood = plan?.music ?? moodFromNotes(notes) ?? "chill";
     try {
-      const mood = plan?.music ?? moodFromNotes(notes) ?? "chill";
-      const tracks = await searchLibrary(MUSIC_MOODS[mood]);
+      // קודם מהספרייה הגדולה (עד 10 שניות), ואם היא לא זמינה, שיר מובנה שתמיד עובד
+      const tracks = await Promise.race([
+        searchLibrary(MUSIC_MOODS[mood]),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 10_000)),
+      ]);
       const track = tracks.find((t) => t.duration >= length) ?? tracks[0];
       if (!track) throw new Error("לא נמצא שיר");
       await addLibraryTrack(track, { select: false });
       report.done.push(`נוספה מוזיקה: ${track.title}${track.needsCredit ? " (צריך קרדיט בתיאור, ראו בלשונית סאונד)" : ""}`);
     } catch (e) {
-      report.skipped.push(`מוזיקה: ${e instanceof Error ? e.message : "נכשל"}. אפשר להוסיף בלשונית סאונד`);
+      const builtin = builtinForMood(mood);
+      addBuiltinTrack(builtin, { select: false });
+      report.done.push(`נוספה מוזיקה מובנית: ${builtin.title}`);
+      logEvent("auto_edit_music_fallback", { mood, error: errorText(e) });
     }
   }
   if (musicClip()) {
@@ -425,6 +456,13 @@ function moodFromNotes(notes: string): MusicMood | null {
     [/אקוסטי|גיטרה/, "acoustic"],
   ];
   return words.find(([re]) => re.test(notes))?.[1] ?? null;
+}
+
+/** אורך קטע בסרטון אווירה: מספר שלם של ביטים, קרוב לשתי שניות (בין 1.3 ל-2.6) */
+function beatsShot(bpm: number) {
+  const beat = 60 / bpm;
+  const n = [4, 2, 8, 3, 6].find((k) => k * beat >= 1.3 && k * beat <= 2.6) ?? 4;
+  return n * beat;
 }
 
 /** קטע המוזיקה (הסאונד הארוך ביותר בציר הזמן), אם יש */

@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { Check, Loader2, Play, Plus, Search, Square } from "lucide-react";
-import { addLibraryTrack, musicFileUrl, searchLibrary } from "@/lib/music/add";
+import { addBuiltinTrack, addLibraryTrack, musicFileUrl, searchLibrary } from "@/lib/music/add";
+import { BUILTIN_TRACKS } from "@/lib/music/builtin";
 import type { MusicTrack } from "@/lib/music/openverse";
 import { IconButton } from "./ui";
 import { cn } from "@/lib/utils";
@@ -52,6 +53,16 @@ export function MusicLibrary() {
     }
   }
 
+  function previewUrl(id: string, url: string) {
+    audioRef.current?.pause();
+    if (playing === id) { setPlaying(null); return; }
+    const el = new Audio(url);
+    audioRef.current = el;
+    el.onended = () => setPlaying(null);
+    el.play().catch(() => setPlaying(null));
+    setPlaying(id);
+  }
+
   function preview(t: MusicTrack) {
     audioRef.current?.pause();
     if (playing === t.id) { setPlaying(null); return; }
@@ -84,6 +95,29 @@ export function MusicLibrary() {
 
   return (
     <div className="space-y-2">
+      <p className="text-xs font-medium text-zinc-300">מוזיקה מובנית (תמיד זמינה)</p>
+      <div className="space-y-1.5">
+        {BUILTIN_TRACKS.map((t) => (
+          <div key={t.id} className="flex items-center gap-2 rounded-lg bg-zinc-950 p-2 text-sm">
+            <IconButton label={playing === t.id ? "עצור" : "השמע"} onClick={() => previewUrl(t.id, `/music/${t.id}.mp3`)}>
+              {playing === t.id ? <Square className="size-3.5" /> : <Play className="size-3.5" />}
+            </IconButton>
+            <div className="min-w-0 flex-1">
+              <p className="truncate">{t.title}</p>
+              <p className="text-[11px] text-zinc-500" dir="ltr">{t.bpm} BPM · {mmss(t.duration)}</p>
+            </div>
+            {added.has(t.id) ? (
+              <span className="p-1.5 text-emerald-400"><Check className="size-4" /></span>
+            ) : (
+              <IconButton label="הוסף לסרטון" onClick={() => { addBuiltinTrack(t); setAdded((s) => new Set(s).add(t.id)); }}>
+                <Plus className="size-4" />
+              </IconButton>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <p className="pt-2 text-xs font-medium text-zinc-300">עוד מוזיקה לפי מצב רוח</p>
       <div className="flex flex-wrap gap-1.5">
         {MOODS.map((m) => (
           <button key={m.label} onClick={() => search(m.query, m.label)}
