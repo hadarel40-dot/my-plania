@@ -45,16 +45,22 @@ const GEMINI_API = process.env.GEMINI_API_BASE || "https://generativelanguage.go
 
 async function geminiCall(body: unknown): Promise<string> {
   const model = process.env.GEMINI_MODEL || "gemini-flash-latest";
+  const key = process.env.GEMINI_API_KEY!.trim();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 55_000);
+  const send = (auth: Record<string, string>) => fetch(`${GEMINI_API}/${model}:generateContent`, {
+    method: "POST",
+    headers: { "content-type": "application/json", ...auth },
+    body: JSON.stringify(body),
+    signal: controller.signal,
+  });
   let res: Response;
   try {
-    res = await fetch(`${GEMINI_API}/${model}:generateContent`, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
+    res = await send({ "x-goog-api-key": key });
+    // מפתחות מהסוג החדש (מתחילים ב-AQ.) אולי נשלחים כ-Bearer: אם הדרך הרגילה נדחתה, מנסים גם אותה
+    if ((res.status === 401 || res.status === 403) && key.startsWith("AQ.")) {
+      res = await send({ authorization: `Bearer ${key}` });
+    }
   } catch {
     throw new BrainError("Gemini לא ענה בזמן, נסו שוב", 504);
   } finally {
