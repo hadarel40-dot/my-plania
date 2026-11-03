@@ -170,6 +170,8 @@ export type Selection =
 /** הפרויקט כפי שהוא נשמר (בדפדפן או בטבלת projects) */
 export interface SavedProject {
   title: string;
+  /** הוראות והערות לעורך (נשלחות ל-Claude בעריכה האוטומטית) */
+  notes?: string;
   timeline: Timeline;
   assets: Record<string, MediaAsset>;
   variants: Record<string, Variant>;

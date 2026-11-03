@@ -104,6 +104,25 @@ async function runAutoEdit() {
   }
 }
 
+/** הוראות והערות לעורך. נשמרות בפרויקט, ועם Claude הן נשלחות אליו בכל עריכה אוטומטית */
+function EditorNotes() {
+  const notes = useEditor((s) => s.notes);
+  const smart = useEditor((s) => !!s.cloud?.smartEdit);
+  return (
+    <label className="mb-3 block">
+      <span className="text-xs font-medium text-zinc-300">הוראות לעורך</span>
+      <textarea value={notes} onChange={(e) => useEditor.getState().setNotes(e.target.value)} rows={3} dir="auto"
+        placeholder={"למשל: לפתוח עם הכלב, מוזיקה רגועה, סרטון קצר של 10 שניות, הוק על המחיר, בלי אימוג'ים"}
+        className="mt-1 w-full resize-y rounded-lg border border-zinc-700 bg-zinc-950 p-2.5 text-sm placeholder:text-zinc-600 focus:border-violet-500 focus:outline-none" />
+      <span className="block text-[11px] text-zinc-500">
+        {smart
+          ? "Claude קורא את ההוראות בכל עריכה אוטומטית. ההוראות נשמרות בפרויקט."
+          : "ההוראות נשמרות בפרויקט. בלי Claude העורך מבין רק דברים פשוטים (סוג מוזיקה, בלי מוזיקה); עם Claude הוא פועל לפי הכל."}
+      </span>
+    </label>
+  );
+}
+
 function AutoEditButton({ disabled }: { disabled: boolean }) {
   const { busy, report, error, before, mode } = useAutoEditRun();
   const setMode = (m: AutoEditMode) => useAutoEditRun.setState({ mode: m });
@@ -119,6 +138,7 @@ function AutoEditButton({ disabled }: { disabled: boolean }) {
 
   return (
     <div>
+      <EditorNotes />
       <div className="mb-2 flex flex-wrap items-center gap-1.5 text-xs">
         <span className="text-zinc-500">סוג הסרטון:</span>
         {modes.map((m) => (

@@ -2,8 +2,9 @@ import { NEUTRAL_LOOK, type Clip, type MediaAsset, type SavedProject } from "./t
 import { uid } from "./timeline-utils";
 
 /** פרויקט חדש מתחיל ריק: בלי סרטונים, טקסטים או סאונד */
-export const initialProject = (): SavedProject => ({
+export const initialProject = (): SavedProject & { notes: string } => ({
   title: "פרויקט חדש",
+  notes: "",
   timeline: { fps: 30, aspect: "9:16", clips: [], captions: [], overlays: [], audio: [] },
   assets: {},
   variants: {},
@@ -21,6 +22,7 @@ export function normalizeProject(project: SavedProject): SavedProject {
   );
   return {
     ...project,
+    notes: project.notes ?? "",
     assets,
     timeline: {
       ...project.timeline,

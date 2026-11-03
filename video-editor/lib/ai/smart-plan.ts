@@ -24,6 +24,8 @@ export interface SmartPlanRequest {
   segments: { start: number; end: number; text: string }[];
   duration: number;
   hasMusic: boolean;
+  /** ההוראות שנכתבו לעורך */
+  notes?: string;
 }
 
 /** תוכנית לסרטון אווירה: אילו קטעים, באיזה סדר, ואיזו מוזיקה */
@@ -43,4 +45,5 @@ export interface VibePlanRequest {
   /** כמה שניות בערך הסרטון הסופי */
   target: number;
   hasMusic: boolean;
+  notes?: string;
 }

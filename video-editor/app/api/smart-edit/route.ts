@@ -8,6 +8,10 @@ import { getUser } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
+/** ההוראות שהיוצרת כתבה לעורך גוברות על ברירות המחדל */
+const notesBlock = (notes?: string) =>
+  notes?.trim() ? `\n\nThe creator's instructions for this edit (follow them; they override the defaults above):\n${notes.trim().slice(0, 2000)}` : "";
+
 const SYSTEM = `You are an expert editor of short-form vertical videos (Instagram Reels, TikTok) for a Hebrew-speaking creator.
 You receive the transcript of a raw video as numbered segments with timestamps, and return an edit plan.
 
@@ -48,7 +52,7 @@ export async function POST(request: Request) {
       system: SYSTEM,
       messages: [{
         role: "user",
-        content: `Video length: ${body!.duration.toFixed(1)}s. Background music: ${body!.hasMusic ? "yes" : "no"}.\n\nTranscript segments:\n${transcript}`,
+        content: `Video length: ${body!.duration.toFixed(1)}s. Background music: ${body!.hasMusic ? "yes" : "no"}.\n\nTranscript segments:\n${transcript}${notesBlock(body!.notes)}`,
       }],
     });
     if (response.stop_reason === "refusal" || !response.parsed_output) {

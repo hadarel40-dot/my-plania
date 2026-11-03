@@ -74,12 +74,12 @@ export function useProjectBootstrap(backend: ProjectBackend) {
       clearTimeout(timer);
       if (!dirty) return;
       dirty = false;
-      const { title, timeline, assets, variants } = useEditor.getState();
-      const ok = await backend.save({ title, timeline, assets, variants }).catch(() => false);
+      const { title, notes, timeline, assets, variants } = useEditor.getState();
+      const ok = await backend.save({ title, notes, timeline, assets, variants }).catch(() => false);
       setSaveState(ok ? "saved" : "error");
     };
     const unsubscribe = useEditor.subscribe((s, prev) => {
-      if (s.timeline === prev.timeline && s.assets === prev.assets && s.variants === prev.variants && s.title === prev.title) return;
+      if (s.timeline === prev.timeline && s.assets === prev.assets && s.variants === prev.variants && s.title === prev.title && s.notes === prev.notes) return;
       dirty = true;
       setSaveState("saving");
       clearTimeout(timer);

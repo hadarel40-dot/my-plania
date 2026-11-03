@@ -44,6 +44,8 @@ export function setEngines(provider: VariantProvider, transcriber: Transcriber) 
 
 interface EditorState {
   title: string;
+  /** הוראות והערות לעורך */
+  notes: string;
   timeline: Timeline;
   assets: Record<string, MediaAsset>;
   variants: Record<string, Variant>;
@@ -79,6 +81,7 @@ interface EditorState {
   applyCuts: (plan: Map<string, SourceRange[]>) => void;
   setAspect: (aspect: Aspect) => void;
   setTitle: (title: string) => void;
+  setNotes: (notes: string) => void;
 
   setClipLook: (clipId: string, look: Look) => void;
   setClipVolume: (clipId: string, volume: number) => void;
@@ -274,6 +277,7 @@ export const useEditor = create<EditorState>()(
 
       setAspect: (aspect) => set((s) => { s.timeline.aspect = aspect; }),
       setTitle: (title) => set((s) => { s.title = title; }),
+      setNotes: (notes) => set((s) => { s.notes = notes; }),
 
       setClipLook: (clipId, look) =>
         set((s) => {

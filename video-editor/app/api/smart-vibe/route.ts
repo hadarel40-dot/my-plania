@@ -8,6 +8,10 @@ import { getUser } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
+/** ההוראות שהיוצרת כתבה לעורך גוברות על ברירות המחדל */
+const notesBlock = (notes?: string) =>
+  notes?.trim() ? `\n\nThe creator's instructions for this edit (follow them; they override the defaults above):\n${notes.trim().slice(0, 2000)}` : "";
+
 const SYSTEM = `You are an expert editor of aesthetic "vibe" Reels (travel, food, places, lifestyle) with no talking.
 You receive candidate shots, each a frame from the middle of a short clip, numbered and tagged with the source clip and time.
 
@@ -33,7 +37,7 @@ export async function POST(request: Request) {
 
   const content: Anthropic.Beta.BetaContentBlockParam[] = [{
     type: "text",
-    text: `Target length: about ${Math.round(body!.target)}s. Background music already chosen: ${body!.hasMusic ? "yes" : "no"}.\nCandidate shots follow.`,
+    text: `Target length: about ${Math.round(body!.target)}s. Background music already chosen: ${body!.hasMusic ? "yes" : "no"}.\nCandidate shots follow.${notesBlock(body!.notes)}`,
   }];
   for (const s of shots) {
     content.push({ type: "text", text: `Shot ${s.id} (clip ${s.clip + 1}, ${s.start.toFixed(1)}-${s.end.toFixed(1)}s, ${(s.end - s.start).toFixed(1)}s long):` });

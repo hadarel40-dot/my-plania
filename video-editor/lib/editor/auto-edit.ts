@@ -8,7 +8,7 @@ import { presetById } from "./overlay-presets";
 import { CLIP_STYLES } from "./clip-styles";
 import { layoutClips, uid } from "./timeline-utils";
 import type { Overlay } from "./types";
-import { MUSIC_MOODS } from "@/lib/music/moods";
+import { MUSIC_MOODS, type MusicMood } from "@/lib/music/moods";
 import type { SmartPlan, SmartPlanRequest, VibePlan, VibePlanRequest } from "@/lib/ai/smart-plan";
 import { pickShots, rankShots, sampleClip, type FrameSample, type Shot } from "@/lib/video/analyze";
 import { addLibraryTrack, searchLibrary } from "@/lib/music/add";
@@ -167,7 +167,10 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
     const removed = await removeSilences((s) => onStatus(`2/5 · ${s}`));
     return removed > 0.05 ? `הוסרו ${removed.toFixed(1)} שניות של שתיקה` : null;
   });
-  await step("כתוביות", async () => {
+  const notes = useEditor.getState().notes;
+  const noCaptions = /בלי כתוביות|ללא כתוביות/.test(notes);
+  if (noCaptions) report.done.push("בלי כתוביות, לפי ההוראות");
+  if (!noCaptions) await step("כתוביות", async () => {
     const unsubscribe = useEditor.subscribe((st) => { if (st.transcribeStatus) onStatus(`3/5 · ${st.transcribeStatus}`); });
     try {
       onStatus("3/5 · כתוביות…");
@@ -197,7 +200,7 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
       const hook = captions.length
         ? captions.map((c) => c.text).join(" ").split(/\s+/).slice(0, 6).join(" ")
         : undefined;
-      const emojis = emojiOverlays(captions);
+      const emojis = /בלי אימוג|ללא אימוג/.test(notes) ? [] : emojiOverlays(captions);
       useEditor.getState().applyTemplate("talking", { hook, extraOverlays: emojis });
       return `נוספו הוק בפתיחה, ${emojis.length ? `${emojis.length} אימוג'ים, ` : ""}אפקטי סאונד וצבע`;
     });
@@ -224,6 +227,7 @@ async function applySmartPlan(): Promise<string> {
     segments: captions.map((c) => ({ start: c.start, end: c.end, text: c.text })),
     duration: timelineDuration(timeline),
     hasMusic: timeline.audio.some((a) => a.out - a.in > 5),
+    notes: useEditor.getState().notes,
   };
   const response = await fetch("/api/smart-edit", {
     method: "POST",
@@ -346,6 +350,7 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditRepo
         shots: candidates.map((c) => ({ id: c.id, start: c.start, end: c.end, clip: clipOrder.indexOf(c.clipId), image: c.thumb })),
         target,
         hasMusic: !!music,
+        notes: useEditor.getState().notes,
       };
       const res = await fetch("/api/smart-vibe", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => null);
@@ -364,10 +369,13 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditRepo
   report.done.push(`נבחרו ${chosen.length} קטעים (${length.toFixed(1)} שניות) מתוך ${footage.toFixed(0)} שניות צילום`);
 
   // 4. מוזיקה: אם אין, מוסיפים מהספרייה לפי האווירה; הסאונד המקורי מושתק
-  if (!music) {
+  const notes = useEditor.getState().notes;
+  if (!music && /בלי מוזיקה|ללא מוזיקה|לא לשים מוזיקה|בלי שיר/.test(notes)) {
+    report.done.push("לא נוספה מוזיקה, לפי ההוראות");
+  } else if (!music) {
     onStatus("4/5 · מחפש מוזיקה מתאימה…");
     try {
-      const mood = plan?.music ?? "chill";
+      const mood = plan?.music ?? moodFromNotes(notes) ?? "chill";
       const tracks = await searchLibrary(MUSIC_MOODS[mood]);
       const track = tracks.find((t) => t.duration >= length) ?? tracks[0];
       if (!track) throw new Error("לא נמצא שיר");
@@ -401,6 +409,22 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditRepo
   if (plan?.title && (!title || title === "פרויקט חדש")) setTitle(plan.title);
   report.done.push(`צבע: ${style?.label ?? "מקורי"}`);
   return report;
+}
+
+/** בלי Claude: מצב הרוח של המוזיקה לפי מילים בהוראות */
+function moodFromNotes(notes: string): MusicMood | null {
+  const words: [RegExp, MusicMood][] = [
+    [/רגוע|שקט|לואו.?פיי|chill/i, "chill"],
+    [/שמח|קליל|עליז/, "happy"],
+    [/אנרגטי|קצבי|מקפיץ|אנרגיה/, "energetic"],
+    [/רומנטי|אהבה|פסנתר/, "romantic"],
+    [/דרמטי|אפי|קולנועי/, "cinematic"],
+    [/השראה|מעורר/, "inspiring"],
+    [/היפ.?הופ|ראפ/, "hiphop"],
+    [/פופ/, "pop"],
+    [/אקוסטי|גיטרה/, "acoustic"],
+  ];
+  return words.find(([re]) => re.test(notes))?.[1] ?? null;
 }
 
 /** קטע המוזיקה (הסאונד הארוך ביותר בציר הזמן), אם יש */
