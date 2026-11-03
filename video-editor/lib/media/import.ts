@@ -1,24 +1,36 @@
 import type { MediaAsset } from "@/lib/editor/types";
 import { uid } from "@/lib/editor/timeline-utils";
 import { getBackend } from "@/lib/backend";
+import { MAX_UPLOAD_BYTES, mb, prepareVideoForUpload } from "./compress";
 
 /**
  * מייבא קובץ וידאו: מנגנים אותו מיד מהדפדפן (blob URL), ובמקביל שומרים אותו
  * ב-backend הפעיל: IndexedDB במצב מקומי, או העלאה resumable ל-Supabase Storage.
  */
-export async function importFile(file: File, onProgress?: (p: number) => void): Promise<MediaAsset> {
+export async function importFile(
+  file: File,
+  onProgress?: (p: number, stage: "compress" | "upload") => void,
+): Promise<MediaAsset> {
   // בטלפון סוג הקובץ לפעמים ריק, ואז מזהים לפי הסיומת
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
   const isAudio = file.type.startsWith("audio/") || (!file.type && AUDIO_EXT.includes(ext));
   const isVideo = file.type.startsWith("video/") || (!file.type && VIDEO_EXT.includes(ext));
   if (!isAudio && !isVideo) throw new Error("אפשר להעלות קבצי וידאו או שמע (MP4, MOV, MP3, WAV, M4A)");
+  // בענן יש מגבלת גודל לקובץ: וידאו מכווצים קודם (חצי ראשון של ההתקדמות), ואז מעלים
+  const cloud = getBackend().kind === "cloud";
+  if (cloud && isVideo) {
+    file = await prepareVideoForUpload(file, (p) => onProgress?.(Math.round(p * 50), "compress"));
+  } else if (cloud && file.size > MAX_UPLOAD_BYTES) {
+    throw new Error(`הקובץ גדול מדי (${mb(file.size)}MB, המקסימום 50MB)`);
+  }
+  const base = cloud && isVideo ? 50 : 5;
   const url = URL.createObjectURL(file);
   const asset = isAudio
     ? await probeAudio(url, file.name)
     : await probeVideo(url, { name: file.name, origin: "upload" })
         .catch((e) => probeVideoFile(file, url).catch(() => { throw e; }));
-  onProgress?.(5);
-  const stored = await getBackend().storeFile(asset.id, file, (p) => onProgress?.(5 + Math.round(p * 0.95)));
+  onProgress?.(base, "upload");
+  const stored = await getBackend().storeFile(asset.id, file, (p) => onProgress?.(base + Math.round((p * (100 - base)) / 100), "upload"));
   return { ...asset, ...stored };
 }
 

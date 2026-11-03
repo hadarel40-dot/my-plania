@@ -3,36 +3,27 @@ import { useRef, useState } from "react";
 import { Film, Loader2, Music, Plus, Upload } from "lucide-react";
 import { usePlayback } from "@/stores/playback-store";
 import { useEditor } from "@/stores/editor-store";
-import { importFile } from "@/lib/media/import";
+import { useUploads } from "@/stores/upload-store";
 import { formatTime } from "@/lib/editor/timeline-utils";
 import { cn } from "@/lib/utils";
 
+const UPLOAD_STAGE = { waiting: "ממתין", compress: "מכינים", upload: "מעלה" } as const;
+
 export function MediaBin() {
   const assets = useEditor((s) => s.assets);
-  const { addAsset, addClip, addAudioClip } = useEditor.getState();
+  const { addClip, addAudioClip } = useEditor.getState();
   // וידאו נכנס לסוף מסלול הווידאו; שמע נכנס למסלול הסאונד בנקודת הניגון
   const addToTimeline = (a: { id: string; kind?: string }) =>
     a.kind === "audio" ? addAudioClip(a.id, usePlayback.getState().currentTime) : addClip(a.id);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [uploads, setUploads] = useState<{ name: string; progress: number }[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const uploads = useUploads((s) => s.items);
+  const errors = useUploads((s) => s.errors);
   const [dragOver, setDragOver] = useState(false);
 
-  async function handleFiles(files: FileList | null) {
-    if (!files) return;
-    setError(null);
-    await Promise.all([...files].map(async (file) => {
-      setUploads((u) => [...u, { name: file.name, progress: 0 }]);
-      try {
-        const asset = await importFile(file, (progress) =>
-          setUploads((u) => u.map((x) => (x.name === file.name ? { ...x, progress } : x))));
-        addAsset(asset);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "ההעלאה נכשלה");
-      } finally {
-        setUploads((u) => u.filter((x) => x.name !== file.name));
-      }
-    }));
+  function handleFiles(files: FileList | null) {
+    if (!files?.length) return;
+    useUploads.getState().clearErrors();
+    useUploads.getState().enqueue([...files]);
   }
 
   return (
@@ -53,13 +44,22 @@ export function MediaBin() {
         onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
         className={cn("flex-1 space-y-2 overflow-y-auto p-3 transition", dragOver && "bg-blue-500/10 ring-2 ring-inset ring-blue-500")}
       >
+        {uploads.length > 0 && (
+          <p className="rounded-md bg-amber-500/10 p-2 text-[11px] leading-relaxed text-amber-200">
+            כדאי להשאיר את המסך פתוח עד שההעלאה מסתיימת.
+          </p>
+        )}
         {uploads.map((u) => (
-          <div key={u.name} className="rounded-md border border-zinc-800 p-2 text-xs">
-            <div className="flex items-center gap-2 truncate"><Loader2 className="size-3 animate-spin" />{u.name}</div>
-            <div className="mt-1.5 h-1 rounded bg-zinc-800"><div className="h-full rounded bg-blue-500" style={{ width: `${u.progress}%` }} /></div>
+          <div key={u.id} className="rounded-md border border-zinc-800 p-2 text-xs">
+            <div className="flex items-center gap-2">
+              {u.stage === "waiting" ? <span className="size-3" /> : <Loader2 className="size-3 shrink-0 animate-spin" />}
+              <span className="min-w-0 flex-1 truncate">{u.name}</span>
+              <span className="shrink-0 text-zinc-500">{UPLOAD_STAGE[u.stage]} {u.stage !== "waiting" && `${u.progress}%`}</span>
+            </div>
+            <div className="mt-1.5 h-1 rounded bg-zinc-800"><div className="h-full rounded bg-blue-500 transition-[width]" style={{ width: `${u.progress}%` }} /></div>
           </div>
         ))}
-        {error && <p className="rounded-md bg-red-500/10 p-2 text-xs text-red-300">{error}</p>}
+        {errors.map((e) => <p key={e} className="rounded-md bg-red-500/10 p-2 text-xs text-red-300">{e}</p>)}
 
         {/* תוצאות AI מופיעות בפאנל הווריאציות, לא בספרייה */}
         {Object.values(assets).filter((a) => a.origin !== "ai_variant" && a.origin !== "library").map((a) => (

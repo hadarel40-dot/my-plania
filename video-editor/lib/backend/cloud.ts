@@ -73,7 +73,12 @@ export function createCloudBackend(projectId: string, userId: string): ProjectBa
             cacheControl: "3600",
           },
           chunkSize: 6 * 1024 * 1024, // Supabase דורש בדיוק 6MB לחלק
-          onError: reject,
+          onError: (err) => {
+            const status = (err as { originalResponse?: { getStatus(): number } | null }).originalResponse?.getStatus();
+            reject(new Error(status === 413
+              ? "הקובץ גדול מדי לאחסון (המקסימום 50MB)"
+              : "ההעלאה נכשלה. כדאי לבדוק את החיבור לאינטרנט ולנסות שוב."));
+          },
           onProgress: (sent, total) => onProgress?.(Math.round((sent / total) * 100)),
           onSuccess: () => resolve(),
         });
