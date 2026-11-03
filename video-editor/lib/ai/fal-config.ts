@@ -7,6 +7,8 @@ export interface CloudConfig {
   /** מודל תמלול, או null אם אין מפתח */
   transcribe: string | null;
   transcribeLanguage: string | null;
+  /** עריכה חכמה עם Claude (יש ANTHROPIC_API_KEY בשרת) */
+  smartEdit: boolean;
 }
 
 export function getCloudConfig(): CloudConfig {
@@ -22,5 +24,6 @@ export function getCloudConfig(): CloudConfig {
     videoExtraInput,
     transcribe: hasKey ? process.env.FAL_TRANSCRIBE_MODEL || "fal-ai/whisper" : null,
     transcribeLanguage: process.env.FAL_TRANSCRIBE_LANGUAGE || "he",
+    smartEdit: !!process.env.ANTHROPIC_API_KEY,
   };
 }

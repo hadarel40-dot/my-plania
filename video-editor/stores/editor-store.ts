@@ -87,7 +87,7 @@ interface EditorState {
 
   addSfx: (sfxId: SfxId, at: number) => void;
   /** מחיל תבנית רילס: צבע לכל הקליפים, טקסטים, אפקטים וסגנון כתוביות. צעד undo אחד */
-  applyTemplate: (templateId: string, options?: { hook?: string; extraOverlays?: Overlay[] }) => void;
+  applyTemplate: (templateId: string, options?: { hook?: string; extraOverlays?: Overlay[]; hookOnly?: boolean }) => void;
   addAudioClip: (assetId: string, at: number) => void;
   updateAudioClip: (id: string, patch: Partial<Omit<AudioClip, "id" | "assetId">>) => void;
 
@@ -305,6 +305,8 @@ export const useEditor = create<EditorState>()(
           const r = resolveTemplate(template, duration);
           // הטקסט הראשון של התבנית הוא ההוק: אם יש משפט מהתמלול, הוא נכנס במקום הטקסט לדוגמה
           if (options?.hook && r.overlays[0]) r.overlays[0].text = options.hook;
+          // בעריכה חכמה הטקסטים כתובים לפי התוכן, ולכן הטקסטים הכלליים של התבנית (מלבד ההוק) לא נכנסים
+          if (options?.hookOnly) r.overlays.splice(1);
           r.overlays.push(...(options?.extraOverlays ?? []));
           for (const clip of s.timeline.clips) clip.look = { ...clip.look, filter: r.look.filter };
           // טקסטים ואפקטים של תבנית קודמת מוחלפים, כדי שהחלפת תבנית לא תצבור כפילויות

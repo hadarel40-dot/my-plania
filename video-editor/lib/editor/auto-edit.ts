@@ -4,6 +4,11 @@ import { decodeAssetAudio } from "@/lib/audio/decode";
 import { findSpeech } from "@/lib/audio/silence";
 import { detectBeats } from "@/lib/audio/beats";
 import { emojiOverlays } from "./emoji-keywords";
+import { presetById } from "./overlay-presets";
+import { CLIP_STYLES } from "./clip-styles";
+import { layoutClips, uid } from "./timeline-utils";
+import type { Overlay } from "./types";
+import type { SmartPlan, SmartPlanRequest } from "@/lib/ai/smart-plan";
 import type { SourceRange } from "./timeline-utils";
 import { timelineDuration } from "./timeline-utils";
 
@@ -137,17 +142,29 @@ export async function autoEditAll(onStatus: (s: string) => void): Promise<AutoEd
       useEditor.getState().setError(null);
     }
   });
-  await step("עיצוב", async () => {
-    onStatus("4/5 · מעצב…");
-    const captions = useEditor.getState().timeline.captions;
-    // ההוק: תחילת המשפט הראשון (עד 6 מילים), כדי שבשנייה הראשונה יהיה ברור על מה הסרטון
-    const hook = captions.length
-      ? captions.map((c) => c.text).join(" ").split(/\s+/).slice(0, 6).join(" ")
-      : undefined;
-    const emojis = emojiOverlays(captions);
-    useEditor.getState().applyTemplate("talking", { hook, extraOverlays: emojis });
-    return `נוספו הוק בפתיחה, ${emojis.length ? `${emojis.length} אימוג'ים, ` : ""}אפקטי סאונד וצבע`;
-  });
+  const smart = !!useEditor.getState().cloud?.smartEdit && useEditor.getState().timeline.captions.length > 0;
+  let designed = false;
+  if (smart) {
+    await step("עריכה חכמה", async () => {
+      onStatus("4/5 · Claude עורך את הסרטון…");
+      const result = await applySmartPlan();
+      designed = true;
+      return result;
+    });
+  }
+  if (!designed) {
+    await step("עיצוב", async () => {
+      onStatus("4/5 · מעצב…");
+      const captions = useEditor.getState().timeline.captions;
+      // ההוק: תחילת המשפט הראשון (עד 6 מילים), כדי שבשנייה הראשונה יהיה ברור על מה הסרטון
+      const hook = captions.length
+        ? captions.map((c) => c.text).join(" ").split(/\s+/).slice(0, 6).join(" ")
+        : undefined;
+      const emojis = emojiOverlays(captions);
+      useEditor.getState().applyTemplate("talking", { hook, extraOverlays: emojis });
+      return `נוספו הוק בפתיחה, ${emojis.length ? `${emojis.length} אימוג'ים, ` : ""}אפקטי סאונד וצבע`;
+    });
+  }
   const hasMusic = useEditor.getState().timeline.audio.some((a) => a.out - a.in > 5);
   if (hasMusic) {
     await step("סנכרון לקצב", async () => {
@@ -156,4 +173,82 @@ export async function autoEditAll(onStatus: (s: string) => void): Promise<AutoEd
     });
   }
   return report;
+}
+
+/**
+ * עריכה חכמה: שולח את התמלול ל-Claude (דרך השרת) ומחיל את התוכנית שחזרה:
+ * מוחק טייקים כפולים ומילוי, מוסיף הוק, אימוג'ים, קריאה לפעולה, סגנון וצבע.
+ * הכל נשאר עריכה רגילה שאפשר לשנות.
+ */
+async function applySmartPlan(): Promise<string> {
+  const { timeline, setTitle, title } = useEditor.getState();
+  const captions = [...timeline.captions].sort((a, b) => a.start - b.start);
+  const body: SmartPlanRequest = {
+    segments: captions.map((c) => ({ start: c.start, end: c.end, text: c.text })),
+    duration: timelineDuration(timeline),
+    hasMusic: timeline.audio.some((a) => a.out - a.in > 5),
+  };
+  const response = await fetch("/api/smart-edit", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok || !data) throw new Error(data?.error ?? "השרת לא החזיר תוכנית");
+  const plan = data as SmartPlan;
+
+  // 1. חיתוך המקטעים שנבחרו (לפי זמני ציר הזמן), והכתוביות זזות איתם
+  const removeIds = new Set(plan.remove_segments.map((i) => captions[i]?.id).filter(Boolean));
+  const emojiIds = plan.emojis.map((e) => ({ id: captions[e.segment]?.id, emoji: e.emoji })).filter((e) => e.id);
+  const ranges = captions.filter((c) => removeIds.has(c.id)).map((c) => ({ start: c.start, end: c.end }));
+  const before = timelineDuration(useEditor.getState().timeline);
+  if (ranges.length) useEditor.getState().applyCuts(timelineRangesToPlan(ranges));
+  const cut = Math.max(0, before - timelineDuration(useEditor.getState().timeline));
+
+  // 2. אימוג'ים לפי הכתוביות ששרדו (המזהים נשמרים בחיתוך)
+  const after = useEditor.getState().timeline;
+  const base = presetById("emoji-fire").fields;
+  const positions = [{ x: 0.78, y: 0.3 }, { x: 0.22, y: 0.32 }];
+  const emojis: Overlay[] = emojiIds.flatMap(({ id, emoji }, i) => {
+    const cap = after.captions.find((c) => c.id === id);
+    return cap ? [{ ...base, ...positions[i % 2], id: uid("ovl"), text: emoji, start: cap.start, end: Math.max(cap.end, cap.start + 1.5), fromTemplate: true }] : [];
+  });
+  // 3. קריאה לפעולה בשלוש השניות האחרונות
+  const end = timelineDuration(after);
+  if (plan.cta.trim()) {
+    const cta = presetById("typewriter");
+    emojis.push({ ...cta.fields, id: uid("ovl"), text: plan.cta.trim(), start: Math.max(0, end - 3), end, fromTemplate: true });
+  }
+
+  // 4. תבנית, הוק, סגנון כתוביות וצבע
+  const { applyTemplate, styleAllCaptions, setClipLook } = useEditor.getState();
+  applyTemplate(plan.template, { hook: plan.hook, extraOverlays: emojis, hookOnly: true });
+  styleAllCaptions({ preset: plan.caption_style, accent: plan.accent });
+  const style = CLIP_STYLES.find((st) => st.id === plan.color_style);
+  if (style) for (const clip of useEditor.getState().timeline.clips) setClipLook(clip.id, { ...clip.look, filter: style.look(0.7).filter });
+  if (!title || title === "פרויקט חדש") setTitle(plan.title);
+
+  const parts = [cut > 0.05 ? `נחתכו ${cut.toFixed(1)} שניות (טייקים חוזרים ומילוי)` : null, `הוק: "${plan.hook}"`];
+  return [plan.summary, ...parts.filter(Boolean)].join(" · ");
+}
+
+/** טווחי זמן בציר הזמן שצריך להסיר, מתורגמים לקטעים שנשארים בכל קליפ (בזמן המקור) */
+function timelineRangesToPlan(remove: SourceRange[]) {
+  const plan = new Map<string, SourceRange[]>();
+  for (const { clip, start, end } of layoutClips(useEditor.getState().timeline.clips)) {
+    const hits = remove
+      .map((r) => ({ start: Math.max(r.start, start), end: Math.min(r.end, end) }))
+      .filter((r) => r.end - r.start > 0.05)
+      .sort((a, b) => a.start - b.start);
+    if (!hits.length) continue;
+    const keep: SourceRange[] = [];
+    let t = start;
+    for (const h of hits) {
+      if (h.start > t) keep.push({ start: clip.in + (t - start), end: clip.in + (h.start - start) });
+      t = Math.max(t, h.end);
+    }
+    if (t < end) keep.push({ start: clip.in + (t - start), end: clip.in + (end - start) });
+    plan.set(clip.id, keep);
+  }
+  return plan;
 }
