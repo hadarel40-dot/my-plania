@@ -54,24 +54,38 @@ async function compress(file: File, onProgress?: (p: number) => void): Promise<F
     const even = (n: number) => Math.max(2, Math.round((n * scale) / 2) * 2);
     const bitrate = Math.round(Math.min(target === 1080 ? 6_000_000 : 3_000_000, videoBudget * 0.92));
 
-    const output = new Output({ format: new Mp4OutputFormat({ fastStart: "in-memory" }), target: new BufferTarget() });
-    const conversion = await Conversion.init({
-      input,
-      output,
-      video: {
-        width: even(track.displayWidth),
-        height: even(track.displayHeight),
-        fit: "fill",
-        codec: "avc",
-        bitrate,
-        forceTranscode: true,
-        // הסיבוב נצרב בתמונה עצמה, כדי שכל נגן יציג אותה עומדת
-        allowTransformationMetadata: false,
-      },
-      audio: { codec: "aac" },
-    });
-    // אם הדפדפן לא יודע לכווץ (או שהקול היה הולך לאיבוד), אין טעם להמשיך
-    const lost = conversion.discardedTracks.filter((d) => d.reason !== "discarded_by_user").map((d) => `${d.track.type}:${d.reason}`);
+    // באייפון יש לפעמים כמה פסי קול (למשל קול מרחבי בפורמט שהדפדפן לא מכיר, ולידו AAC רגיל):
+    // שומרים את הראשון שאפשר לפענח. אם אין כזה, מעדיפים סרטון בלי קול על פני העלאה שנכשלת.
+    const setup = async (keepAudio: boolean) => {
+      let kept = false;
+      const output = new Output({ format: new Mp4OutputFormat({ fastStart: "in-memory" }), target: new BufferTarget() });
+      const conversion = await Conversion.init({
+        input,
+        output,
+        video: {
+          width: even(track.displayWidth),
+          height: even(track.displayHeight),
+          fit: "fill",
+          codec: "avc",
+          bitrate,
+          forceTranscode: true,
+          // הסיבוב נצרב בתמונה עצמה, כדי שכל נגן יציג אותה עומדת
+          allowTransformationMetadata: false,
+        },
+        audio: (audioTrack) => {
+          if (!keepAudio || kept || !audioTrack.codec) return { discard: true };
+          kept = true;
+          return { codec: "aac" };
+        },
+      });
+      const lost = conversion.discardedTracks.filter((d) => d.reason !== "discarded_by_user").map((d) => `${d.track.type}:${d.reason}`);
+      return { output, conversion, lost };
+    };
+    let { output, conversion, lost } = await setup(true);
+    if (conversion.isValid && lost.length && lost.every((l) => l.startsWith("audio:"))) {
+      logEvent("compress_audio_dropped", { reasons: lost });
+      ({ output, conversion, lost } = await setup(false));
+    }
     if (!conversion.isValid || lost.length) throw new Error(`conversion invalid ${lost.join(",")}`);
 
     // שומר: אם אין התקדמות חצי דקה, מבטלים במקום להיתקע לנצח
