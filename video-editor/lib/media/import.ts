@@ -1,6 +1,7 @@
 import type { MediaAsset } from "@/lib/editor/types";
 import { uid } from "@/lib/editor/timeline-utils";
 import { getBackend } from "@/lib/backend";
+import { errorText, logEvent } from "@/lib/telemetry";
 import { MAX_UPLOAD_BYTES, mb, prepareVideoForUpload } from "./compress";
 
 /**
@@ -18,20 +19,36 @@ export async function importFile(
   if (!isAudio && !isVideo) throw new Error("אפשר להעלות קבצי וידאו או שמע (MP4, MOV, MP3, WAV, M4A)");
   // בענן יש מגבלת גודל לקובץ: וידאו מכווצים קודם (חצי ראשון של ההתקדמות), ואז מעלים
   const cloud = getBackend().kind === "cloud";
+  const original = file;
   if (cloud && isVideo) {
     file = await prepareVideoForUpload(file, (p) => onProgress?.(Math.round(p * 50), "compress"));
   } else if (cloud && file.size > MAX_UPLOAD_BYTES) {
     throw new Error(`הקובץ גדול מדי (${mb(file.size)}MB, המקסימום 50MB)`);
   }
-  const base = cloud && isVideo ? 50 : 5;
+  const base = file !== original ? 50 : 5;
   const url = URL.createObjectURL(file);
-  const asset = isAudio
-    ? await probeAudio(url, file.name)
-    : await probeVideo(url, { name: file.name, origin: "upload" })
-        .catch((e) => probeVideoFile(file, url).catch(() => { throw e; }));
+  const asset = isAudio ? await probeAudio(url, file.name) : await probeUploadedVideo(file, url);
   onProgress?.(base, "upload");
   const stored = await getBackend().storeFile(asset.id, file, (p) => onProgress?.(base + Math.round((p * (100 - base)) / 100), "upload"));
   return { ...asset, ...stored };
+}
+
+/**
+ * מדידת וידאו שהועלה: קודם קוראים את המשך והמידות ישירות מהקובץ (הכי אמין בטלפון),
+ * ואז מנסים לייצר תמונה ממוזערת דרך נגן הדפדפן, עם זמן מקסימלי. בלי תמונה ממשיכים.
+ */
+async function probeUploadedVideo(file: File, url: string): Promise<MediaAsset> {
+  try {
+    const asset = await probeVideoFile(file, url);
+    const thumb = await Promise.race([
+      probeVideo(url, { name: file.name, origin: "upload" }).then((a) => a.thumbnailUrl),
+      new Promise<null>((r) => setTimeout(() => r(null), 10_000)),
+    ]).catch(() => null);
+    return { ...asset, thumbnailUrl: thumb };
+  } catch (e) {
+    logEvent("probe_file_failed", { size: file.size, type: file.type, error: errorText(e) });
+    return probeVideo(url, { name: file.name, origin: "upload" });
+  }
 }
 
 const VIDEO_EXT = ["mp4", "mov", "m4v", "webm", "3gp"];

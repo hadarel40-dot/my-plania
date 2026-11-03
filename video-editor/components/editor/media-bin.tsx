@@ -1,9 +1,10 @@
 "use client";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Film, Loader2, Music, Plus, Upload } from "lucide-react";
 import { usePlayback } from "@/stores/playback-store";
 import { useEditor } from "@/stores/editor-store";
 import { useUploads } from "@/stores/upload-store";
+import { logEvent } from "@/lib/telemetry";
 import { formatTime } from "@/lib/editor/timeline-utils";
 import { cn } from "@/lib/utils";
 
@@ -15,12 +16,12 @@ export function MediaBin() {
   // וידאו נכנס לסוף מסלול הווידאו; שמע נכנס למסלול הסאונד בנקודת הניגון
   const addToTimeline = (a: { id: string; kind?: string }) =>
     a.kind === "audio" ? addAudioClip(a.id, usePlayback.getState().currentTime) : addClip(a.id);
-  const inputRef = useRef<HTMLInputElement>(null);
   const uploads = useUploads((s) => s.items);
   const errors = useUploads((s) => s.errors);
   const [dragOver, setDragOver] = useState(false);
 
   function handleFiles(files: FileList | null) {
+    logEvent("files_selected", { count: files?.length ?? 0 });
     if (!files?.length) return;
     useUploads.getState().clearErrors();
     useUploads.getState().enqueue([...files]);
@@ -30,12 +31,11 @@ export function MediaBin() {
     <aside className="flex min-h-0 w-full flex-1 flex-col border-zinc-800 bg-zinc-900/40 md:w-64 md:flex-none md:shrink-0 md:border-e">
       <header className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
         <h2 className="flex items-center gap-2 text-sm font-semibold"><Film className="size-4" /> מדיה</h2>
-        <button onClick={() => inputRef.current?.click()}
-          className="flex items-center gap-1 rounded-md bg-zinc-800 px-2 py-1 text-xs hover:bg-zinc-700">
+        {/* label ולא כפתור שקורא ל-click(): באייפון זו הדרך האמינה לפתוח את בחירת הקבצים */}
+        <label className="flex cursor-pointer items-center gap-1 rounded-md bg-zinc-800 px-2 py-1 text-xs hover:bg-zinc-700">
           <Upload className="size-3.5" /> העלאה
-        </button>
-        <input ref={inputRef} type="file" accept="video/*,audio/*" multiple hidden
-          onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
+          <FileInput onFiles={handleFiles} />
+        </label>
       </header>
 
       <div
@@ -44,6 +44,10 @@ export function MediaBin() {
         onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
         className={cn("flex-1 space-y-2 overflow-y-auto p-3 transition", dragOver && "bg-blue-500/10 ring-2 ring-inset ring-blue-500")}
       >
+        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-zinc-700 py-4 text-sm text-zinc-300 hover:border-violet-500 hover:text-white md:hidden">
+          <Upload className="size-4" /> העלאת סרטונים מהטלפון
+          <FileInput onFiles={handleFiles} />
+        </label>
         {uploads.length > 0 && (
           <p className="rounded-md bg-amber-500/10 p-2 text-[11px] leading-relaxed text-amber-200">
             כדאי להשאיר את המסך פתוח עד שההעלאה מסתיימת.
@@ -90,5 +94,12 @@ export function MediaBin() {
         </p>
       </div>
     </aside>
+  );
+}
+
+function FileInput({ onFiles }: { onFiles: (files: FileList | null) => void }) {
+  return (
+    <input type="file" accept="video/*,audio/*" multiple className="sr-only"
+      onChange={(e) => { onFiles(e.target.files); e.target.value = ""; }} />
   );
 }

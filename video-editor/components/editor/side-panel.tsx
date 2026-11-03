@@ -154,7 +154,6 @@ function SoundTab() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const at = () => usePlayback.getState().currentTime;
 
   function preview(id: string, url: string) {
@@ -186,11 +185,13 @@ function SoundTab() {
   return (
     <div className="space-y-5 p-4">
       <Section title="מוזיקה">
-        <button onClick={() => inputRef.current?.click()} disabled={uploading}
-          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-zinc-700 py-2.5 text-sm text-zinc-300 hover:border-violet-500 disabled:opacity-50">
+        {/* label ולא click() מקוד: באייפון זו הדרך האמינה לפתוח את בחירת הקבצים */}
+        <label className={cn("flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-dashed border-zinc-700 py-2.5 text-sm text-zinc-300 hover:border-violet-500",
+          uploading && "pointer-events-none opacity-50")}>
           <Upload className="size-4" /> {uploading ? "מעלה…" : "העלאת מוזיקה (MP3)"}
-        </button>
-        <input ref={inputRef} type="file" accept="audio/*" hidden onChange={(e) => { upload(e.target.files); e.target.value = ""; }} />
+          <input type="file" accept="audio/*" className="sr-only" disabled={uploading}
+            onChange={(e) => { upload(e.target.files); e.target.value = ""; }} />
+        </label>
         {error && <p className="mt-2 text-xs text-red-300">{error}</p>}
         {music.map((a) => (
           <div key={a.id} className="mt-2 flex items-center gap-2 rounded-lg bg-zinc-950 p-2 text-sm">

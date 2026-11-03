@@ -1,4 +1,5 @@
 "use client";
+import { errorText, logEvent } from "@/lib/telemetry";
 import * as tus from "tus-js-client";
 import type { SavedProject } from "@/lib/editor/types";
 import { toStorable } from "@/lib/persistence";
@@ -75,6 +76,7 @@ export function createCloudBackend(projectId: string, userId: string): ProjectBa
           chunkSize: 6 * 1024 * 1024, // Supabase דורש בדיוק 6MB לחלק
           onError: (err) => {
             const status = (err as { originalResponse?: { getStatus(): number } | null }).originalResponse?.getStatus();
+            logEvent("tus_error", { status, size: file.size, error: errorText(err) });
             reject(new Error(status === 413
               ? "הקובץ גדול מדי לאחסון (המקסימום 50MB)"
               : "ההעלאה נכשלה. כדאי לבדוק את החיבור לאינטרנט ולנסות שוב."));
