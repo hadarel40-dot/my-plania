@@ -212,7 +212,8 @@ function ClipBlock({ clip, start, index, pps, selected, timeFromClientX }: {
     if (touchSelectOnly(e, selected)) return;
     const initial = clip[edge];
     const end = beginGesture();
-    startDrag(e, (dx) => trimClip(clip.id, edge, initial + dx / pps), end);
+    // קליפ מואץ: פיקסל בציר הזמן שווה ליותר זמן מקור
+    startDrag(e, (dx) => trimClip(clip.id, edge, initial + (dx / pps) * (clip.speed ?? 1)), end);
   };
 
   return (
@@ -237,11 +238,15 @@ function ClipBlock({ clip, start, index, pps, selected, timeFromClientX }: {
             <Sparkles className="size-2.5" />{activeLabel}
           </span>
         )}
+        {clip.speed && clip.speed !== 1 && <span className="rounded bg-sky-600 px-1 font-semibold" dir="ltr">{clip.speed}x</span>}
         <span className="truncate">{asset?.name ?? "מדיה חסרה"}</span>
         {variantCount > 0 && !activeLabel && <span className="text-violet-300">✨{variantCount}</span>}
       </div>
       <Handle side="left" onPointerDown={onEdgeDown("in")} />
       <Handle side="right" onPointerDown={onEdgeDown("out")} />
+      {clip.transitionIn && (
+        <span title="מעבר" className="pointer-events-none absolute left-0.5 top-0.5 grid size-4 place-items-center rounded-sm bg-white/90 text-[10px] text-zinc-900">⇄</span>
+      )}
     </div>
   );
 }

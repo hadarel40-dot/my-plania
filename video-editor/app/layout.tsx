@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { FONTS_CSS } from "@/lib/editor/fonts";
 
 export const metadata: Metadata = {
   title: "AI Video Editor",
@@ -11,7 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="he" dir="rtl" className="dark">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;900&display=swap" />
+        <link rel="stylesheet" href={FONTS_CSS} />
       </head>
       <body>{children}</body>
     </html>

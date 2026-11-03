@@ -18,7 +18,7 @@ import {
   type Variant,
   type VariantParams,
 } from "@/lib/editor/types";
-import { clipLength, cutClips, layoutClips, MIN_CLIP_SEC, uid, type SourceRange } from "@/lib/editor/timeline-utils";
+import { clipLength, clipSpeed, cutClips, layoutClips, MIN_CLIP_SEC, uid, videoEnd, type SourceRange } from "@/lib/editor/timeline-utils";
 import { initialProject, makeClip, normalizeProject } from "@/lib/editor/initial-project";
 import { splitCaptions } from "@/lib/editor/captions";
 import { TEMPLATES, resolveTemplate } from "@/lib/editor/templates";
@@ -85,6 +85,8 @@ interface EditorState {
 
   setClipLook: (clipId: string, look: Look) => void;
   setClipVolume: (clipId: string, volume: number) => void;
+  /** מהירות, מעבר, אפקט, התאמות ומילוי של קליפ */
+  updateClip: (clipId: string, patch: Partial<Pick<Clip, "speed" | "transitionIn" | "effect" | "adjust" | "fill">>) => void;
   /** נקודת המיקוד של קליפים (התאמה למסך עומד). צעד undo אחד */
   setClipFocus: (focus: Map<string, { x: number; y: number }>) => void;
 
@@ -221,10 +223,10 @@ export const useEditor = create<EditorState>()(
           const hit = layoutClips(s.timeline.clips).find(({ start, end }) => time > start && time < end);
           if (!hit) return;
           const { clip, start } = hit;
-          const cut = clip.in + (time - start);
+          const cut = clip.in + (time - start) * clipSpeed(clip);
           if (cut - clip.in < MIN_CLIP_SEC || clip.out - cut < MIN_CLIP_SEC) return;
           const index = s.timeline.clips.findIndex((c) => c.id === clip.id);
-          const second: Clip = { ...clip, id: uid("clip"), in: cut, activeVariantId: null };
+          const second: Clip = { ...clip, id: uid("clip"), in: cut, activeVariantId: null, transitionIn: undefined };
           s.timeline.clips[index].out = cut;
           s.timeline.clips.splice(index + 1, 0, second);
         }),
@@ -290,6 +292,16 @@ export const useEditor = create<EditorState>()(
           if (clip) clip.volume = Math.max(0, Math.min(1, volume));
         }),
 
+      updateClip: (clipId, patch) =>
+        set((s) => {
+          const clip = s.timeline.clips.find((c) => c.id === clipId);
+          if (!clip) return;
+          Object.assign(clip, patch);
+          if (patch.speed !== undefined) clip.speed = Math.max(0.25, Math.min(4, patch.speed));
+          // לקליפ הראשון אין ממה לעבור
+          if (s.timeline.clips[0]?.id === clipId) delete clip.transitionIn;
+        }),
+
       setClipFocus: (focus) =>
         set((s) => {
           for (const clip of s.timeline.clips) {
@@ -330,7 +342,7 @@ export const useEditor = create<EditorState>()(
       applyTemplate: (templateId, options) =>
         set((s) => {
           const template = TEMPLATES.find((t) => t.id === templateId);
-          const duration = s.timeline.clips.reduce((sum, c) => sum + clipLength(c), 0);
+          const duration = videoEnd(s.timeline.clips);
           if (!template || duration <= 0) return;
           const r = resolveTemplate(template, duration);
           // הטקסט הראשון של התבנית הוא ההוק: אם יש משפט מהתמלול, הוא נכנס במקום הטקסט לדוגמה

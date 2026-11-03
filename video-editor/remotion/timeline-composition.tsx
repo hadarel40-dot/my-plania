@@ -2,7 +2,8 @@ import { createContext, useContext } from "react";
 import { AbsoluteFill, Html5Audio, Html5Video, Sequence, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import type { AudioClip, Caption, Look, MediaAsset, Timeline } from "@/lib/editor/types";
 import { OverlayView } from "./overlay-view";
-import { layoutClips } from "@/lib/editor/timeline-utils";
+import { layoutClips, transitionOverlap } from "@/lib/editor/timeline-utils";
+import { ClipLayer } from "./clip-layer";
 import { wordTimes } from "@/lib/editor/captions";
 
 export interface CompositionProps extends Record<string, unknown> {
@@ -38,24 +39,22 @@ export function TimelineComposition({ timeline, assets, override }: CompositionP
   const { mode: mediaMode, Video: VideoTag, Audio: AudioTag } = useContext(MediaTagsContext);
   return (
     <AbsoluteFill style={{ backgroundColor: "black" }}>
-      {layoutClips(timeline.clips).map(({ clip, start, end }) => {
+      {layoutClips(timeline.clips).map(({ clip, start, end }, i, all) => {
         const ov = override?.clipId === clip.id ? override : null;
         const asset = assets[ov?.assetId ?? clip.assetId];
         const look = ov?.look ?? clip.look;
         const from = Math.round(start * fps);
         const duration = Math.max(1, Math.round(end * fps) - from);
         if (!asset) return null;
+        // מעבר: בחפיפה, אורך המעבר הוא בדיוק החפיפה עם הקליפ הקודם (layoutClips כבר הקדים את הקליפ)
+        const own = i > 0 ? clip.transitionIn : undefined;
+        const overlap = own ? transitionOverlap(clip, all[i - 1].end - all[i - 1].start) : 0;
+        const intro = own
+          ? { type: own.type, frames: Math.max(1, Math.round((overlap || Math.min(own.duration, (end - start) / 2)) * fps)) }
+          : null;
         return (
           <Sequence key={clip.id} from={from} durationInFrames={duration} premountFor={fps}>
-            <AbsoluteFill style={{ overflow: "hidden", transform: `scale(${look.zoom}) scaleX(${look.flip ? -1 : 1})` }}>
-              <VideoTag
-                src={asset.url}
-                trimBefore={Math.round(clip.in * fps)}
-                volume={clip.volume ?? 1}
-                {...(mediaMode === "html5" ? { pauseWhenBuffering: true } : { objectFit: "fill" as const })}
-                style={{ ...coverBox(asset, clip, width, height), filter: look.filter }}
-              />
-            </AbsoluteFill>
+            <ClipLayer clip={clip} asset={asset} look={look} duration={duration} fps={fps} mode={mediaMode} Video={VideoTag} intro={intro} />
           </Sequence>
         );
       })}
@@ -100,23 +99,6 @@ export function TimelineComposition({ timeline, assets, override }: CompositionP
 }
 
 /** עוצמה לפי פריים: דהייה פנימה בהתחלה ודהייה החוצה בסוף */
-/**
- * ממלא את המסגרת בסרטון (כמו object-fit: cover), אבל עם נקודת מיקוד: כשהסרטון רחב
- * מהמסך, focusX קובע איזה חלק ממנו נשאר בתמונה. גודל ומיקום מפורשים עובדים זהה
- * בנגן ובייצוא (רכיב הייצוא לא תומך ב-object-position).
- */
-function coverBox(asset: MediaAsset, clip: { focusX?: number; focusY?: number }, W: number, H: number): React.CSSProperties {
-  if (!asset.width || !asset.height) return { width: "100%", height: "100%", objectFit: "cover" };
-  const scale = Math.max(W / asset.width, H / asset.height);
-  const w = asset.width * scale;
-  const h = asset.height * scale;
-  const fx = clip.focusX ?? 0.5;
-  const fy = clip.focusY ?? 0.5;
-  // הפנים במרכז המסגרת, אבל בלי לחשוף שוליים ריקים
-  const left = Math.min(0, Math.max(W - w, W / 2 - fx * w));
-  const top = Math.min(0, Math.max(H - h, H / 2 - fy * h));
-  return { position: "absolute", left, top, width: w, height: h, maxWidth: "none", objectFit: "fill" };
-}
 
 /** דהייה בסוף הסרטון לשיר שממשיך אחרי שהווידאו נגמר */
 export const END_FADE_SEC = 1.2;

@@ -4,6 +4,7 @@ import type { CompositionProps } from "@/remotion/timeline-composition";
 import { ExportComposition } from "@/remotion/export-composition";
 import { ASPECT_SIZE, type MediaAsset, type Timeline } from "@/lib/editor/types";
 import { timelineDuration } from "@/lib/editor/timeline-utils";
+import { fontFamily } from "@/lib/editor/fonts";
 
 export type ExportQuality = "720p" | "1080p";
 
@@ -28,6 +29,11 @@ export async function renderToMp4(
   if (!check.canRender) {
     throw new Error("הדפדפן הזה לא יודע לייצר קובץ וידאו. הפרויקט שמור: אפשר לפתוח אותו במחשב (בכרום) ולייצא משם.");
   }
+
+  // הגופנים חייבים להיות טעונים לפני הרינדור, אחרת הטקסט ייצא בגופן ברירת המחדל
+  const families = [...new Set(timeline.overlays.map((o) => fontFamily(o.font).split(",")[0]))];
+  await Promise.all(families.map((f) => document.fonts.load(`700 64px ${f}`).catch(() => undefined)));
+  await document.fonts.ready;
 
   const inputProps: CompositionProps = { timeline, assets, override: null };
   const result = await renderMediaOnWeb({

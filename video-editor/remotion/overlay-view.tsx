@@ -1,5 +1,6 @@
 import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import type { Overlay } from "@/lib/editor/types";
+import { fontFamily } from "@/lib/editor/fonts";
 
 const OUT_SEC = 0.3;
 
@@ -84,7 +85,7 @@ export function OverlayView({ overlay: o, durationInFrames }: { overlay: Overlay
         textAlign: "center",
         whiteSpace: "pre-wrap",
         lineHeight: 1.15,
-        fontFamily: "'Heebo', 'Rubik', system-ui, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif",
+        fontFamily: fontFamily(o.font),
         fontSize,
         fontWeight: o.weight,
         color: o.color,

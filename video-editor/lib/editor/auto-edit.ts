@@ -6,8 +6,8 @@ import { detectBeats } from "@/lib/audio/beats";
 import { emojiOverlays } from "./emoji-keywords";
 import { presetById } from "./overlay-presets";
 import { CLIP_STYLES } from "./clip-styles";
-import { layoutClips, uid } from "./timeline-utils";
-import type { CaptionPreset, Overlay, Timeline } from "./types";
+import { clipLength, layoutClips, transitionOverlap, uid } from "./timeline-utils";
+import type { CaptionPreset, ClipEffect, Overlay, Timeline, TransitionType } from "./types";
 import { MUSIC_MOODS, type MusicMood } from "@/lib/music/moods";
 import type { SmartPlan, SmartPlanRequest, VibePlan, VibePlanRequest } from "@/lib/ai/smart-plan";
 import { pickShots, rankShots, sampleClip, type FrameSample, type Shot } from "@/lib/video/analyze";
@@ -71,13 +71,17 @@ export async function syncToBeat(onStatus: (s: string) => void): Promise<number>
 
   const plan = new Map<string, SourceRange[]>();
   let t = 0;
-  for (const clip of timeline.clips) {
-    const length = clip.out - clip.in;
+  let prevLength = 0;
+  for (const [k, clip] of timeline.clips.entries()) {
+    // מעבר חופף מקדים את הקליפ, ולכן מודדים מההתחלה האמיתית שלו
+    if (k > 0) t -= transitionOverlap(clip, prevLength);
+    const length = clipLength(clip);
     // הביט האחרון שלפני סוף הקליפ, אבל לא קצר מ-0.4 שניות
     const beat = [...onTimeline].reverse().find((b) => b <= t + length + 0.001 && b - t >= 0.4);
     const newLength = beat !== undefined ? beat - t : length;
-    plan.set(clip.id, [{ start: clip.in, end: clip.in + newLength }]);
+    plan.set(clip.id, [{ start: clip.in, end: clip.in + newLength * (clip.speed ?? 1) }]);
     t += newLength;
+    prevLength = newLength;
   }
   useEditor.getState().applyCuts(plan);
   return bpm;
@@ -187,12 +191,18 @@ async function looksLikeTalking(): Promise<boolean> {
 }
 
 /** עיצוב של גרסה בסרטון דיבור */
-interface TalkingLook { template: string; preset: CaptionPreset; accent: string; color: string; title: string; description: string }
+interface TalkingLook {
+  template: string; preset: CaptionPreset; accent: string; color: string; title: string; description: string;
+  /** זום לסירוגין בין החיתוכים */
+  punchZoom?: boolean;
+  /** מעבר בכל חיתוך */
+  cutTransition?: { type: TransitionType; duration: number };
+}
 
 const TALKING_LOOKS: TalkingLook[] = [
-  { template: "talking", preset: "word-pop", accent: "#facc15", color: "vivid", title: "קלאסי", description: "מילה קופצת בצהוב, צבעים חיים" },
-  { template: "tips", preset: "highlight-box", accent: "#22d3ee", color: "warm", title: "נקי ומסודר", description: "מילה במסגרת תכלת, גוון חם" },
-  { template: "energy", preset: "one-word", accent: "#f472b6", color: "cinematic", title: "אנרגטי", description: "מילה אחת גדולה בכל פעם, הרבה אפקטים" },
+  { template: "talking", preset: "word-pop", accent: "#facc15", color: "vivid", title: "קלאסי", description: "מילה קופצת בצהוב, זום לסירוגין בחיתוכים", punchZoom: true },
+  { template: "tips", preset: "highlight-box", accent: "#22d3ee", color: "warm", title: "נקי ומסודר", description: "מילה במסגרת תכלת, גוון חם, בלי קפיצות" },
+  { template: "energy", preset: "one-word", accent: "#f472b6", color: "cinematic", title: "אנרגטי", description: "מילה אחת גדולה, פאנץ' בכל חיתוך", punchZoom: true, cutTransition: { type: "punch", duration: 0.2 } },
   { template: "before-after", preset: "karaoke", accent: "#a3e635", color: "cold", title: "רגוע", description: "קריוקי בירוק, גוון קר" },
 ];
 
@@ -249,7 +259,7 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
 
   // הגרסאות: הראשונה לפי המוח (אם מחובר), והשאר בסגנונות אחרים
   const looks: TalkingLook[] = [];
-  if (s0) looks.push({ template: s0.plan.template, preset: s0.plan.caption_style, accent: s0.plan.accent, color: s0.plan.color_style, title: `הבחירה של ${brainName()}`, description: "הסגנון שהבינה המלאכותית בחרה לתוכן" });
+  if (s0) looks.push({ template: s0.plan.template, preset: s0.plan.caption_style, accent: s0.plan.accent, color: s0.plan.color_style, title: `הבחירה של ${brainName()}`, description: "הסגנון שהבינה המלאכותית בחרה לתוכן", punchZoom: true });
   for (const l of TALKING_LOOKS) if (looks.length < 3 && !looks.some((x) => x.template === l.template)) looks.push(l);
 
   onStatus("5/5 · בונה גרסאות…");
@@ -261,7 +271,14 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
     applyTemplate(look.template, { hook, extraOverlays: extras.map((o) => ({ ...o, id: uid("ovl") })), hookOnly: !!s0 });
     styleAllCaptions({ preset: look.preset, accent: look.accent });
     const style = CLIP_STYLES.find((st) => st.id === look.color);
-    if (style) for (const clip of useEditor.getState().timeline.clips) setClipLook(clip.id, { ...clip.look, filter: style.look(0.7).filter });
+    // זום לסירוגין בכל חיתוך (כמו ב-CapCut): הפנים קרובות יותר בקטע אחד ורחוקות בבא, והחיתוך מרגיש מכוון
+    useEditor.getState().timeline.clips.forEach((clip, k) => {
+      setClipLook(clip.id, { ...clip.look, filter: style ? style.look(0.7).filter : clip.look.filter, zoom: look.punchZoom && k % 2 ? 1.12 : 1 });
+    });
+    if (look.cutTransition) {
+      const { updateClip } = useEditor.getState();
+      useEditor.getState().timeline.clips.forEach((clip, k) => { if (k > 0) updateClip(clip.id, { transitionIn: look.cutTransition }); });
+    }
     if (musicClip()) await syncToBeat(() => undefined).catch(() => undefined);
     options.push({ id: `talk-${i}`, title: look.title, description: look.description, timeline: useEditor.getState().timeline });
   }
@@ -334,12 +351,13 @@ function timelineRangesToPlan(remove: SourceRange[]) {
       .sort((a, b) => a.start - b.start);
     if (!hits.length) continue;
     const keep: SourceRange[] = [];
+    const sp = clip.speed ?? 1;
     let t = start;
     for (const h of hits) {
-      if (h.start > t) keep.push({ start: clip.in + (t - start), end: clip.in + (h.start - start) });
+      if (h.start > t) keep.push({ start: clip.in + (t - start) * sp, end: clip.in + (h.start - start) * sp });
       t = Math.max(t, h.end);
     }
-    if (t < end) keep.push({ start: clip.in + (t - start), end: clip.in + (end - start) });
+    if (t < end) keep.push({ start: clip.in + (t - start) * sp, end: clip.in + (end - start) * sp });
     plan.set(clip.id, keep);
   }
   return plan;
@@ -355,6 +373,28 @@ interface VibeLook {
   color: string;
   /** להשתמש בסדר שהמוח בחר (רק בגרסה הראשונה) */
   useBrainOrder: boolean;
+  /** מעברים ותנועת מצלמה, מתחלפים מקליפ לקליפ */
+  motion: Motion;
+}
+
+/** סגנון תנועה לגרסה: אילו מעברים ואילו תנועות מצלמה, בסבב */
+interface Motion { transitions: { type: TransitionType; duration: number }[]; effects: ClipEffect[] }
+
+const MOTION = {
+  smooth: { transitions: [{ type: "fade", duration: 0.35 }], effects: ["zoom-in", "zoom-out"] },
+  energetic: { transitions: [{ type: "punch", duration: 0.25 }, { type: "flash", duration: 0.2 }, { type: "whip", duration: 0.25 }, { type: "glitch", duration: 0.2 }], effects: ["pulse", "none", "shake", "pulse"] },
+  cinematic: { transitions: [{ type: "fade", duration: 0.6 }, { type: "blur", duration: 0.5 }], effects: ["pan-left", "zoom-in", "pan-right", "zoom-out"] },
+} satisfies Record<string, Motion>;
+
+/** מוסיף לכל קליפ בציר הזמן מעבר ותנועה לפי הסגנון (בסבב, כדי שלא יהיה חד-גוני) */
+function applyMotion(motion: Motion) {
+  const { timeline, updateClip } = useEditor.getState();
+  timeline.clips.forEach((clip, i) => {
+    updateClip(clip.id, {
+      transitionIn: i > 0 && motion.transitions.length ? motion.transitions[(i - 1) % motion.transitions.length] : undefined,
+      effect: motion.effects.length ? motion.effects[i % motion.effects.length] : "none",
+    });
+  });
 }
 
 /**
@@ -428,9 +468,9 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditResu
   // 3. הגרסאות: מומלצת, קצבית, ורגועה-קולנועית. מצבי רוח שונים זה מזה
   const mainMood: MusicMood = plan?.music ?? moodFromNotes(notes) ?? "chill";
   const looks: VibeLook[] = [
-    { title: plan ? `הבחירה של ${brainName()}` : "מומלץ", description: "קטע של כשתי שניות מכל צילום", pace: [1.3, 2.6], mood: mainMood, color: plan?.color_style ?? "cinematic", useBrainOrder: true },
-    { title: "קצבי ואנרגטי", description: "חיתוכים מהירים של כשנייה, מוזיקה אנרגטית", pace: [0.7, 1.3], mood: mainMood === "energetic" ? "pop" : "energetic", color: "vivid", useBrainOrder: false },
-    { title: "רגוע וקולנועי", description: "קטעים ארוכים יותר, מוזיקה קולנועית", pace: [2.2, 3.4], mood: mainMood === "cinematic" ? "romantic" : "cinematic", color: "warm", useBrainOrder: false },
+    { title: plan ? `הבחירה של ${brainName()}` : "מומלץ", description: "קטע של כשתי שניות מכל צילום, מעברי המסה וזום עדין", pace: [1.3, 2.6], mood: mainMood, color: plan?.color_style ?? "cinematic", useBrainOrder: true, motion: MOTION.smooth },
+    { title: "קצבי ואנרגטי", description: "חיתוכים של כשנייה, הבזקים ופאנצ'ים, מוזיקה אנרגטית", pace: [0.7, 1.3], mood: mainMood === "energetic" ? "pop" : "energetic", color: "vivid", useBrainOrder: false, motion: MOTION.energetic },
+    { title: "רגוע וקולנועי", description: "קטעים ארוכים, תנועת מצלמה איטית ומעברים רכים", pace: [2.2, 3.4], mood: mainMood === "cinematic" ? "romantic" : "cinematic", color: "warm", useBrainOrder: false, motion: MOTION.cinematic },
   ];
 
   onStatus("4/4 · בונה גרסאות…");
@@ -451,6 +491,7 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditResu
       ? brainShots
       : pickShots(rankShots(samples, clips, Math.min(shotLen, footage), step), plan?.target_seconds || vibeTarget(footage, clips.length, shotLen), clipOrder);
     useEditor.getState().arrangeShots(chosen);
+    applyMotion(look.motion);
     if (musicClip()) {
       const { setClipVolume } = useEditor.getState();
       for (const clip of useEditor.getState().timeline.clips) setClipVolume(clip.id, 0);

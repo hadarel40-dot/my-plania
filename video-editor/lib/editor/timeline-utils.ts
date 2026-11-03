@@ -1,24 +1,42 @@
 import type { Clip, Timeline } from "./types";
 
-export const clipLength = (c: Clip) => c.out - c.in;
+/** מהירות הקליפ (1 = רגיל) */
+export const clipSpeed = (c: Clip) => c.speed ?? 1;
+/** האורך בציר הזמן: קליפ מהיר תופס פחות זמן ממה שצולם */
+export const clipLength = (c: Clip) => (c.out - c.in) / clipSpeed(c);
 
-/** מיקום כל קליפ על ציר הזמן, נגזר מהסדר (מסלול מגנטי) */
+/** מעברים שבהם שני הקליפים חופפים (הבא נכנס מעל הקודם), כמו ב-CapCut */
+export const OVERLAP_TRANSITIONS = ["fade", "slide", "zoom", "blur"] as const;
+
+/** כמה שניות הקליפ חופף לקודם בגלל מעבר (עד חצי מכל אחד מהם) */
+export function transitionOverlap(clip: Clip, prevLength: number) {
+  const t = clip.transitionIn;
+  if (!t || !(OVERLAP_TRANSITIONS as readonly string[]).includes(t.type)) return 0;
+  return Math.max(0, Math.min(t.duration, prevLength / 2, clipLength(clip) / 2));
+}
+
+/** מיקום כל קליפ על ציר הזמן, נגזר מהסדר (מסלול מגנטי). מעבר חופף מקדים את הקליפ */
 export function layoutClips(clips: Clip[]) {
   let t = 0;
-  return clips.map((clip) => {
-    const start = t;
-    t += clipLength(clip);
+  let prevLength = 0;
+  return clips.map((clip, i) => {
+    const start = i > 0 ? t - transitionOverlap(clip, prevLength) : t;
+    prevLength = clipLength(clip);
+    t = start + prevLength;
     return { clip, start, end: t };
   });
 }
 
+/** סוף הווידאו בציר הזמן (כולל החפיפות של המעברים) */
+export const videoEnd = (clips: Clip[]) => layoutClips(clips).at(-1)?.end ?? 0;
+
 export function timelineDuration(tl: Timeline) {
-  const videoEnd = tl.clips.reduce((sum, c) => sum + clipLength(c), 0);
+  const end = videoEnd(tl.clips);
   const captionsEnd = Math.max(0, ...tl.captions.map((c) => c.end));
   const overlaysEnd = Math.max(0, ...(tl.overlays ?? []).map((o) => o.end));
   // כשיש וידאו, הסרטון נגמר עם הווידאו: שיר ארוך לא מוסיף מסך שחור בסוף
   const audioEnd = tl.clips.length ? 0 : Math.max(0, ...(tl.audio ?? []).map((a) => a.start + a.out - a.in));
-  return Math.max(videoEnd, captionsEnd, overlaysEnd, audioEnd);
+  return Math.max(end, captionsEnd, overlaysEnd, audioEnd);
 }
 
 /** הקליפ שנמצא בזמן נתון, והזמן היחסי בתוכו */
@@ -70,23 +88,25 @@ export function cutClips(clips: Clip[], plan: Map<string, SourceRange[]>) {
     const ranges = (plan.get(clip.id) ?? [{ start: clip.in, end: clip.out }])
       .map((r) => ({ start: Math.max(clip.in, r.start), end: Math.min(clip.out, r.end) }))
       .filter((r) => r.end - r.start >= MIN_CLIP_SEC);
+    const speed = clipSpeed(clip);
     ranges.forEach((r, i) => {
       const piece: Clip = { ...clip, id: i === 0 ? clip.id : uid("clip"), in: r.start, out: r.end };
-      if (i > 0) piece.activeVariantId = null;
+      if (i > 0) { piece.activeVariantId = null; delete piece.transitionIn; }
       next.push(piece);
       pieces.push({ oldStart: start, clip, newStart: newT, srcIn: r.start, srcOut: r.end });
-      newT += r.end - r.start;
+      newT += (r.end - r.start) / speed;
     });
   }
-  const oldEnd = clips.reduce((s, c) => s + clipLength(c), 0);
+  const oldEnd = videoEnd(clips);
   const mapTime = (t: number) => {
     if (t >= oldEnd) return newT + (t - oldEnd);
     for (const p of pieces) {
-      const src = p.clip.in + (t - p.oldStart);
+      const speed = clipSpeed(p.clip);
+      const src = p.clip.in + (t - p.oldStart) * speed;
       if (t < p.oldStart) return p.newStart;
       if (src < p.srcOut && t < p.oldStart + clipLength(p.clip)) {
         if (src < p.srcIn) return p.newStart;
-        return p.newStart + (src - p.srcIn);
+        return p.newStart + (src - p.srcIn) / speed;
       }
     }
     return newT;

@@ -5,6 +5,7 @@ import { ANIM_IN_LABELS, ANIM_OUT_LABELS, LOOP_LABELS } from "@/lib/editor/overl
 import type { Overlay } from "@/lib/editor/types";
 import { uid } from "@/lib/editor/timeline-utils";
 import { cn } from "@/lib/utils";
+import { FONTS, fontFamily } from "@/lib/editor/fonts";
 import { IconButton, Section } from "./ui";
 
 const COLORS = ["#ffffff", "#111111", "#facc15", "#f43f5e", "#ef4444", "#22c55e", "#38bdf8", "#7c3aed", "#f97316"];
@@ -72,6 +73,18 @@ export function OverlayInspector({ id, onClose }: { id: string; onClose: () => v
 
         {o.kind === "text" && (
           <>
+            <Section title="גופן">
+              <div className="grid grid-cols-4 gap-1.5">
+                {FONTS.map((f) => (
+                  <button key={f.id} onClick={() => set({ font: f.id })}
+                    className={cn("rounded-md border px-1 py-1.5 text-center",
+                      (o.font ?? "heebo") === f.id ? "border-violet-500 bg-violet-500/15" : "border-zinc-700 hover:border-zinc-500")}>
+                    <span className="block text-lg leading-tight" style={{ fontFamily: fontFamily(f.id) }}>{o.text.slice(0, 4) || f.sample}</span>
+                    <span className="block text-[10px] text-zinc-500">{f.label}</span>
+                  </button>
+                ))}
+              </div>
+            </Section>
             <Section title="צבע">
               <Swatches value={o.color} options={COLORS} onChange={(c) => set({ color: c! })} />
             </Section>

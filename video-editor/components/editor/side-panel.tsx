@@ -16,6 +16,7 @@ import { AudioInspector } from "./audio-inspector";
 import { VariantsPanel } from "./variants-panel";
 import { SmartTab } from "./smart-tab";
 import { MusicLibrary } from "./music-library";
+import { ClipControls } from "./clip-controls";
 
 export type Tab = "smart" | "text" | "sound" | "style" | "ai";
 
@@ -252,6 +253,7 @@ function StyleTab() {
   const clip = useEditor((s) =>
     s.selection?.kind === "clip" ? s.timeline.clips.find((c) => c.id === s.selection!.id) ?? null : null);
   const asset = useEditor((s) => (clip ? s.assets[clip.assetId] : null));
+  const isFirst = useEditor((s) => s.timeline.clips[0]?.id === clip?.id);
   const { setClipLook, setClipVolume } = useEditor.getState();
 
   if (!clip) {
@@ -284,6 +286,8 @@ function StyleTab() {
           </label>
         )}
       </Section>
+
+      <ClipControls clip={clip} isFirst={isFirst} />
 
       <Section title="סאונד מקורי של הקליפ">
         <div className="flex items-center gap-2">

@@ -59,7 +59,24 @@ export interface Clip {
    */
   focusX?: number;
   focusY?: number;
+  /** מהירות: 0.25 (הילוך איטי) עד 4. האורך בציר הזמן הוא (out - in) / speed */
+  speed?: number;
+  /** המעבר מהקליפ הקודם אל הקליפ הזה */
+  transitionIn?: Transition;
+  /** תנועת מצלמה על כל הקליפ */
+  effect?: ClipEffect;
+  /** התאמות תמונה, כל אחת בין -1 ל-1 (0 = בלי שינוי) */
+  adjust?: Adjust;
+  /** כשהסרטון לא ממלא את המסך: חיתוך (ברירת מחדל) או רקע מטושטש מאותו סרטון */
+  fill?: "crop" | "blur";
 }
+
+export type TransitionType = "fade" | "slide" | "zoom" | "blur" | "flash" | "punch" | "glitch" | "whip";
+export interface Transition { type: TransitionType; /** שניות */ duration: number }
+
+export type ClipEffect = "none" | "zoom-in" | "zoom-out" | "pan-left" | "pan-right" | "shake" | "pulse";
+
+export interface Adjust { brightness: number; contrast: number; saturation: number; warmth: number }
 
 /** אנימציית כניסה של טקסט או אימוג'י */
 export type OverlayAnimIn = "pop" | "bounce" | "slide-up" | "slide-side" | "zoom" | "typewriter" | "fade" | "none";
@@ -87,6 +104,8 @@ export interface Overlay {
   /** קו מתאר שחור סביב האותיות */
   stroke: boolean;
   weight: 400 | 700 | 900;
+  /** גופן (מזהה מ-lib/editor/fonts). בלי: הגופן הרגיל */
+  font?: string;
   rotate: number;
   animIn: OverlayAnimIn;
   loop: OverlayLoop;
