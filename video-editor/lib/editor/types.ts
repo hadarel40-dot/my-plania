@@ -49,6 +49,12 @@ export interface Clip {
   activeVariantId: string | null;
   /** עוצמת הסאונד המקורי של הקליפ, 0..1 (ברירת מחדל 1) */
   volume?: number;
+  /**
+   * נקודת המיקוד כשהסרטון לא באותו יחס כמו המסך (למשל צולם לרוחב והמסך עומד):
+   * איזה חלק מהתמונה נשאר במסגרת. 0..1, ברירת מחדל 0.5 (מרכז)
+   */
+  focusX?: number;
+  focusY?: number;
 }
 
 /** אנימציית כניסה של טקסט או אימוג'י */
@@ -59,6 +65,8 @@ export type OverlayAnimOut = "fade" | "pop" | "slide-down" | "none";
 
 /** טקסט או אימוג'י שמונח מעל הווידאו, עם אנימציה */
 export interface Overlay {
+  /** נוסף מתבנית (מוחלף כשבוחרים תבנית אחרת) */
+  fromTemplate?: boolean;
   id: string;
   kind: "text" | "emoji";
   text: string;
@@ -83,6 +91,8 @@ export interface Overlay {
 
 /** קטע שמע במסלול הסאונד: מוזיקת רקע או אפקט */
 export interface AudioClip {
+  /** נוסף מתבנית (מוחלף כשבוחרים תבנית אחרת) */
+  fromTemplate?: boolean;
   id: string;
   assetId: string;
   /** מיקום על ציר הזמן, בשניות */
@@ -95,7 +105,7 @@ export interface AudioClip {
   fadeOut: number;
 }
 
-export type CaptionPreset = "bold-pop" | "minimal" | "karaoke";
+export type CaptionPreset = "word-pop" | "highlight-box" | "one-word" | "bold-pop" | "karaoke" | "minimal";
 
 export interface Caption {
   id: string;
@@ -103,10 +113,18 @@ export interface Caption {
   end: number;
   text: string;
   preset: CaptionPreset;
+  /** צבע ההדגשה של המילה הנאמרת (ברירת מחדל: צהוב) */
+  accent?: string;
+  /** גובה על המסך, 0 (למעלה) עד 1 (למטה). ברירת מחדל 0.78 */
+  y?: number;
 }
 
 /** מסלול הווידאו "מגנטי": קליפים צמודים זה לזה, והמיקום נגזר מהסדר */
+export type CaptionStyle = Pick<Caption, "preset" | "accent" | "y">;
+
 export interface Timeline {
+  /** הסגנון לכתוביות חדשות (מתבנית או מהבחירה האחרונה) */
+  captionStyle?: CaptionStyle;
   fps: number;
   aspect: Aspect;
   clips: Clip[];

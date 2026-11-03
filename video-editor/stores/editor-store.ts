@@ -7,6 +7,7 @@ import {
   type Aspect,
   type AudioClip,
   type Caption,
+  type CaptionStyle,
   type Clip,
   type Look,
   type Overlay,
@@ -17,8 +18,10 @@ import {
   type Variant,
   type VariantParams,
 } from "@/lib/editor/types";
-import { clipLength, layoutClips, MIN_CLIP_SEC, uid } from "@/lib/editor/timeline-utils";
+import { clipLength, cutClips, layoutClips, MIN_CLIP_SEC, uid, type SourceRange } from "@/lib/editor/timeline-utils";
 import { initialProject, makeClip, normalizeProject } from "@/lib/editor/initial-project";
+import { splitCaptions } from "@/lib/editor/captions";
+import { TEMPLATES, resolveTemplate } from "@/lib/editor/templates";
 import { presetById } from "@/lib/editor/overlay-presets";
 import { sfxAsset, type SfxId } from "@/lib/editor/sfx";
 import { mockProvider, type GenerateResult, type VariantProvider } from "@/lib/ai/provider";
@@ -67,11 +70,15 @@ interface EditorState {
   trimClip: (clipId: string, edge: "in" | "out", value: number) => void;
   splitAt: (time: number) => void;
   removeSelected: () => void;
+  /** מחליף קליפים בקטעים מתוכם (הסרת שתיקות / סנכרון לקצב), וממפה אחריהם טקסטים וכתוביות */
+  applyCuts: (plan: Map<string, SourceRange[]>) => void;
   setAspect: (aspect: Aspect) => void;
   setTitle: (title: string) => void;
 
   setClipLook: (clipId: string, look: Look) => void;
   setClipVolume: (clipId: string, volume: number) => void;
+  /** נקודת המיקוד של קליפים (התאמה למסך עומד). צעד undo אחד */
+  setClipFocus: (focus: Map<string, { x: number; y: number }>) => void;
 
   addOverlay: (presetId: string, at: number) => void;
   updateOverlay: (id: string, patch: Partial<Omit<Overlay, "id">>) => void;
@@ -79,11 +86,15 @@ interface EditorState {
   retimeItem: (kind: "overlay" | "caption", id: string, start: number, end: number) => void;
 
   addSfx: (sfxId: SfxId, at: number) => void;
+  /** מחיל תבנית רילס: צבע לכל הקליפים, טקסטים, אפקטים וסגנון כתוביות. צעד undo אחד */
+  applyTemplate: (templateId: string) => void;
   addAudioClip: (assetId: string, at: number) => void;
   updateAudioClip: (id: string, patch: Partial<Omit<AudioClip, "id" | "assetId">>) => void;
 
   setCaptions: (captions: Caption[]) => void;
   updateCaption: (id: string, patch: Partial<Omit<Caption, "id">>) => void;
+  /** אותו סגנון לכל הכתוביות (סגנון, צבע, מיקום) */
+  styleAllCaptions: (patch: Partial<Pick<Caption, "preset" | "accent" | "y">>) => void;
   addCaption: (start: number) => void;
 
   select: (selection: Selection) => void;
@@ -95,7 +106,14 @@ interface EditorState {
   revertClip: (clipId: string) => void;
   rateVariant: (variantId: string, rating: -1 | 1) => void;
   deleteVariant: (variantId: string) => void;
-  autoTranscribe: () => Promise<void>;
+  /** מחזיר כמה כתוביות נוספו; זורק שגיאה אם נכשל */
+  autoTranscribe: () => Promise<number>;
+}
+
+/** הסגנון לכתוביות חדשות: מה שנבחר אחרון, או מילה-מילה בצהוב */
+function currentCaptionStyle(tl: Timeline): CaptionStyle {
+  const like = tl.captions[0];
+  return tl.captionStyle ?? (like ? { preset: like.preset, accent: like.accent, y: like.y } : { preset: "word-pop" });
 }
 
 /** וריאציות שכבר עוקבים אחריהן, כדי לא להתחיל מעקב כפול */
@@ -203,6 +221,19 @@ export const useEditor = create<EditorState>()(
           s.timeline.clips.splice(index + 1, 0, second);
         }),
 
+      applyCuts: (plan) =>
+        set((s) => {
+          const { clips, mapTime } = cutClips(s.timeline.clips, plan);
+          s.timeline.clips = clips;
+          const remap = <T extends { start: number; end: number }>(items: T[]) =>
+            items
+              .map((it) => ({ ...it, start: +mapTime(it.start).toFixed(2), end: +mapTime(it.end).toFixed(2) }))
+              .filter((it) => it.end - it.start >= MIN_CLIP_SEC);
+          s.timeline.captions = remap(s.timeline.captions);
+          s.timeline.overlays = remap(s.timeline.overlays);
+          if (s.selection?.kind === "clip" && !clips.some((c) => c.id === s.selection!.id)) s.selection = null;
+        }),
+
       removeSelected: () =>
         set((s) => {
           const sel = s.selection;
@@ -227,6 +258,14 @@ export const useEditor = create<EditorState>()(
         set((s) => {
           const clip = s.timeline.clips.find((c) => c.id === clipId);
           if (clip) clip.volume = Math.max(0, Math.min(1, volume));
+        }),
+
+      setClipFocus: (focus) =>
+        set((s) => {
+          for (const clip of s.timeline.clips) {
+            const f = focus.get(clip.id);
+            if (f) { clip.focusX = +f.x.toFixed(3); clip.focusY = +f.y.toFixed(3); }
+          }
         }),
 
       addOverlay: (presetId, at) =>
@@ -258,6 +297,25 @@ export const useEditor = create<EditorState>()(
           s.timeline.audio.push(clip);
           s.selection = { kind: "audio", id: clip.id };
         }),
+      applyTemplate: (templateId) =>
+        set((s) => {
+          const template = TEMPLATES.find((t) => t.id === templateId);
+          const duration = s.timeline.clips.reduce((sum, c) => sum + clipLength(c), 0);
+          if (!template || duration <= 0) return;
+          const r = resolveTemplate(template, duration);
+          for (const clip of s.timeline.clips) clip.look = { ...clip.look, filter: r.look.filter };
+          // טקסטים ואפקטים של תבנית קודמת מוחלפים, כדי שהחלפת תבנית לא תצבור כפילויות
+          s.timeline.overlays = [...s.timeline.overlays.filter((o) => !o.fromTemplate), ...r.overlays.map((o) => ({ ...o, fromTemplate: true }))];
+          s.timeline.audio = s.timeline.audio.filter((a) => !a.fromTemplate);
+          for (const fx of r.sfx) {
+            const asset = sfxAsset(fx.id);
+            s.assets[asset.id] ??= asset;
+            s.timeline.audio.push({ id: uid("aud"), assetId: asset.id, start: fx.at, in: 0, out: asset.duration, volume: 1, fadeIn: 0, fadeOut: 0, fromTemplate: true });
+          }
+          for (const cap of s.timeline.captions) Object.assign(cap, r.captions);
+          s.timeline.captionStyle = r.captions;
+          s.selection = null;
+        }),
       addAudioClip: (assetId, at) =>
         set((s) => {
           const asset = s.assets[assetId];
@@ -288,9 +346,15 @@ export const useEditor = create<EditorState>()(
           const cap = s.timeline.captions.find((c) => c.id === id);
           if (cap) Object.assign(cap, patch);
         }),
+      styleAllCaptions: (patch) =>
+        set((s) => {
+          for (const cap of s.timeline.captions) Object.assign(cap, patch);
+          s.timeline.captionStyle = { ...currentCaptionStyle(s.timeline), ...patch };
+        }),
       addCaption: (start) =>
         set((s) => {
-          const cap: Caption = { id: uid("cap"), start, end: start + 2, text: "טקסט חדש", preset: "bold-pop" };
+          // כתובית חדשה מקבלת את הסגנון של הכתוביות הקיימות
+          const cap: Caption = { id: uid("cap"), start, end: start + 2, text: "טקסט חדש", ...currentCaptionStyle(s.timeline) };
           s.timeline.captions.push(cap);
           s.timeline.captions.sort((a, b) => a.start - b.start);
           s.selection = { kind: "caption", id: cap.id };
@@ -387,16 +451,22 @@ export const useEditor = create<EditorState>()(
         }),
 
       autoTranscribe: async () => {
-        if (get().transcribing || !engines.transcriber) return;
+        if (get().transcribing || !engines.transcriber) return 0;
         set((s) => { s.transcribing = true; s.transcribeStatus = null; s.error = null; });
         try {
           const { timeline, assets } = get();
           const captions = await engines.transcriber.transcribe(timeline, assets, (status) =>
             set((s) => { s.transcribeStatus = status; }));
-          if (captions.length === 0) set((s) => { s.error = "לא נמצא דיבור בסרטון, לכן לא נוספו כתוביות"; });
-          else set((s) => { s.timeline.captions = captions; });
+          if (captions.length === 0) throw new Error("לא נמצא דיבור בסרטון, לכן לא נוספו כתוביות");
+          // שומרים על הסגנון שכבר נבחר לכתוביות; ברירת מחדל: מילה-מילה בהדגשה
+          const style = currentCaptionStyle(get().timeline);
+          const styled = splitCaptions(captions).map((c) => ({ ...c, ...style }));
+          set((s) => { s.timeline.captions = styled; });
+          return styled.length;
         } catch (e) {
-          set((s) => { s.error = `התמלול נכשל: ${e instanceof Error ? e.message : String(e)}`; });
+          const message = e instanceof Error ? e.message : String(e);
+          set((s) => { s.error = `התמלול נכשל: ${message}`; });
+          throw new Error(message);
         } finally {
           set((s) => { s.transcribing = false; s.transcribeStatus = null; });
         }

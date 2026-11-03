@@ -2,11 +2,18 @@
 import type { Caption, MediaAsset } from "@/lib/editor/types";
 import { layoutClips, uid } from "@/lib/editor/timeline-utils";
 import type { Transcriber } from "./transcriber";
+import { decodeAssetAudio } from "@/lib/audio/decode";
 
-/** "small" מדויק יותר בעברית; "base" מהיר וקל יותר להורדה */
-export const WHISPER_MODEL = process.env.NEXT_PUBLIC_WHISPER_MODEL || "onnx-community/whisper-small";
+/**
+ * "small" מדויק יותר בעברית אבל כבד (כ-250MB). בטלפון הוא איטי מאוד ועלול לקרוס
+ * מחוסר זיכרון, ולכן בטלפון משתמשים ב-"base", קל ומהיר יותר.
+ */
+function whisperModel() {
+  if (process.env.NEXT_PUBLIC_WHISPER_MODEL) return process.env.NEXT_PUBLIC_WHISPER_MODEL;
+  const phone = typeof window !== "undefined" && window.matchMedia("(pointer: coarse) and (max-width: 900px)").matches;
+  return phone ? "onnx-community/whisper-base" : "onnx-community/whisper-small";
+}
 const LANGUAGE = process.env.NEXT_PUBLIC_WHISPER_LANGUAGE || "hebrew";
-const SAMPLE_RATE = 16000;
 
 interface Segment { start: number; end: number; text: string }
 
@@ -16,26 +23,6 @@ let nextId = 1;
 function getWorker() {
   worker ??= new Worker(new URL("./whisper.worker.ts", import.meta.url), { type: "module" });
   return worker;
-}
-
-/** מפענח את פס הקול של קובץ לגל מונו ב-16kHz, כפי ש-Whisper מצפה לקבל */
-async function decodeAudio(url: string): Promise<Float32Array> {
-  const data = await (await fetch(url)).arrayBuffer();
-  const ctx = new AudioContext({ sampleRate: SAMPLE_RATE });
-  try {
-    const buf = await ctx.decodeAudioData(data);
-    if (buf.numberOfChannels === 1) return buf.getChannelData(0);
-    const mono = new Float32Array(buf.length);
-    for (let c = 0; c < buf.numberOfChannels; c++) {
-      const ch = buf.getChannelData(c);
-      for (let i = 0; i < ch.length; i++) mono[i] += ch[i] / buf.numberOfChannels;
-    }
-    return mono;
-  } catch {
-    throw new Error("לא הצלחתי לקרוא את הסאונד מהקובץ (אולי אין בו פס קול)");
-  } finally {
-    ctx.close();
-  }
 }
 
 function runWhisper(audio: Float32Array, onStatus: (s: string) => void): Promise<Segment[]> {
@@ -70,7 +57,9 @@ function runWhisper(audio: Float32Array, onStatus: (s: string) => void): Promise
       }
     };
     w.addEventListener("message", onMessage);
-    w.postMessage({ type: "transcribe", id, audio, model: WHISPER_MODEL, language: LANGUAGE }, [audio.buffer]);
+    // עותק: הגל המקורי שמור במטמון ומשמש גם לניתוחים אחרים
+    const copy = audio.slice();
+    w.postMessage({ type: "transcribe", id, audio: copy, model: whisperModel(), language: LANGUAGE }, [copy.buffer]);
   });
 }
 
@@ -86,7 +75,7 @@ export function createBrowserTranscriber(): Transcriber {
     if (!pending) {
       pending = (async () => {
         onStatus("קורא את הסאונד…");
-        return runWhisper(await decodeAudio(asset.url), onStatus);
+        return runWhisper(await decodeAssetAudio(asset), onStatus);
       })();
       pending.catch(() => cache.delete(asset.id));
       cache.set(asset.id, pending);

@@ -1,16 +1,32 @@
 "use client";
 import { useRef, useState } from "react";
-import { Download, Film, Loader2, X } from "lucide-react";
+import { Download, Film, Loader2, Share2, X } from "lucide-react";
 import { useEditor } from "@/stores/editor-store";
 import type { ExportQuality } from "@/lib/export/render-video";
 import { cn } from "@/lib/utils";
+import { keepAwake } from "@/lib/keep-awake";
+import { errorText, logEvent } from "@/lib/telemetry";
 
-type Phase = { kind: "idle" } | { kind: "rendering"; progress: number } | { kind: "done"; url: string; size: number } | { kind: "error"; message: string };
+/** בטלפון: תפריט השיתוף של המכשיר, שבו יש "שמירת סרטון" לגלריה (ואינסטגרם, וואטסאפ...) */
+function canShareFile(blob: Blob, name: string) {
+  if (typeof navigator === "undefined" || !navigator.canShare) return false;
+  try { return navigator.canShare({ files: [new File([blob], name, { type: "video/mp4" })] }); } catch { return false; }
+}
+
+async function shareFile(blob: Blob, name: string) {
+  try {
+    await navigator.share({ files: [new File([blob], name, { type: "video/mp4" })] });
+  } catch { /* המשתמש סגר את התפריט */ }
+}
+
+type Phase = { kind: "idle" } | { kind: "rendering"; progress: number } | { kind: "done"; url: string; size: number; blob: Blob } | { kind: "error"; message: string };
 
 /** ייצוא הפרויקט לקובץ MP4, כולו בתוך הדפדפן */
 export function ExportDialog({ onClose }: { onClose: () => void }) {
   const title = useEditor((s) => s.title);
-  const [quality, setQuality] = useState<ExportQuality>("1080p");
+  // בטלפון 720p כברירת מחדל: מהיר יותר ופחות עומס על הזיכרון
+  const [quality, setQuality] = useState<ExportQuality>(() =>
+    typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches ? "720p" : "1080p");
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const abortRef = useRef<AbortController | null>(null);
 
@@ -19,6 +35,9 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
     const controller = new AbortController();
     abortRef.current = controller;
     setPhase({ kind: "rendering", progress: 0 });
+    const release = keepAwake();
+    const started = Date.now();
+    logEvent("export_start", { quality, clips: timeline.clips.length });
     try {
       // מנוע הייצוא כבד, ולכן נטען רק כשמייצאים
       const { renderToMp4 } = await import("@/lib/export/render-video");
@@ -27,10 +46,16 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
         signal: controller.signal,
         onProgress: (progress) => setPhase({ kind: "rendering", progress }),
       });
-      setPhase({ kind: "done", url: URL.createObjectURL(blob), size: blob.size });
+      logEvent("export_done", { quality, size: blob.size, ms: Date.now() - started });
+      setPhase({ kind: "done", url: URL.createObjectURL(blob), size: blob.size, blob });
     } catch (e) {
       if (controller.signal.aborted) setPhase({ kind: "idle" });
-      else setPhase({ kind: "error", message: e instanceof Error ? e.message : "הייצוא נכשל" });
+      else {
+        logEvent("export_failed", { quality, ms: Date.now() - started, error: errorText(e) });
+        setPhase({ kind: "error", message: e instanceof Error ? e.message : "הייצוא נכשל" });
+      }
+    } finally {
+      release();
     }
   }
 
@@ -84,6 +109,12 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
         {phase.kind === "done" && (
           <div className="space-y-3">
             <video src={phase.url} controls className="max-h-64 w-full rounded-lg bg-black" />
+            {canShareFile(phase.blob, fileName) && (
+              <button onClick={() => shareFile(phase.blob, fileName)}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-violet-600 py-2.5 text-sm font-medium hover:bg-violet-500">
+                <Share2 className="size-4" /> שמירה לגלריה או שיתוף
+              </button>
+            )}
             <a href={phase.url} download={fileName}
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 py-2.5 text-sm font-medium hover:bg-emerald-500">
               <Download className="size-4" /> הורדת הסרטון ({(phase.size / 1024 / 1024).toFixed(1)}MB)

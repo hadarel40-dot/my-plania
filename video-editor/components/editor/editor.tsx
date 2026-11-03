@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { AlertTriangle, Check, FileJson, ChevronRight, Clapperboard, Cloud, Download, Film, FilePlus2, GanttChart, Loader2, LogOut, Music, Palette, Pencil, Sparkles, Type, X } from "lucide-react";
+import { AlertTriangle, Check, FileJson, ChevronRight, Clapperboard, Cloud, Download, Film, FilePlus2, GanttChart, Loader2, LogOut, Music, Palette, Pencil, Sparkles, Type, Wand2, X } from "lucide-react";
 import { redo, undo, useEditor, type AiMode } from "@/stores/editor-store";
 import { usePlayback } from "@/stores/playback-store";
 import { useUploads } from "@/stores/upload-store";
@@ -82,6 +82,7 @@ function PhoneLayout({ top }: { top: React.ReactNode }) {
     { id: null, label: "ציר הזמן", icon: <GanttChart className="size-5" /> },
     ...(editable ? [{ id: "edit" as Sheet, label: "עריכה", icon: <Pencil className="size-5" /> }] : []),
     { id: "media", label: "מדיה", icon: uploading ? <Loader2 className="size-5 animate-spin text-blue-400" /> : <Film className="size-5" /> },
+    { id: "smart", label: "חכם", icon: <Wand2 className="size-5" /> },
     { id: "text", label: "טקסט", icon: <Type className="size-5" /> },
     { id: "sound", label: "סאונד", icon: <Music className="size-5" /> },
     { id: "style", label: "סגנון", icon: <Palette className="size-5" /> },

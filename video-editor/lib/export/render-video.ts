@@ -26,7 +26,7 @@ export async function renderToMp4(
 
   const check = await canRenderMediaOnWeb({ width, height, container: "mp4", videoCodec: "h264" });
   if (!check.canRender) {
-    throw new Error("הדפדפן הזה לא תומך בייצוא וידאו. כדאי לנסות ב-Chrome או Edge במחשב.");
+    throw new Error("הדפדפן הזה לא יודע לייצר קובץ וידאו. הפרויקט שמור: אפשר לפתוח אותו במחשב (בכרום) ולייצא משם.");
   }
 
   const inputProps: CompositionProps = { timeline, assets, override: null };

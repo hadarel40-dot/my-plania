@@ -53,3 +53,42 @@ export function assignLanes(items: { id: string; start: number; end: number }[])
   }
   return { lanes, count: Math.max(1, laneEnds.length) };
 }
+
+export interface SourceRange { start: number; end: number }
+
+/**
+ * מחליף קליפים בקטעים מתוכם (בזמן המקור), למשל אחרי הסרת שתיקות. מחזיר את
+ * הקליפים החדשים ופונקציה שממפה זמן מציר הזמן הישן לחדש, כדי להזיז אחריהם
+ * כתוביות וטקסטים. זמן שנפל בקטע שנחתך עובר לתחילת הקטע הבא.
+ */
+export function cutClips(clips: Clip[], plan: Map<string, SourceRange[]>) {
+  const pieces: { oldStart: number; clip: Clip; newStart: number; srcIn: number; srcOut: number }[] = [];
+  const next: Clip[] = [];
+  let newT = 0;
+  for (const { clip, start } of layoutClips(clips)) {
+    const ranges = (plan.get(clip.id) ?? [{ start: clip.in, end: clip.out }])
+      .map((r) => ({ start: Math.max(clip.in, r.start), end: Math.min(clip.out, r.end) }))
+      .filter((r) => r.end - r.start >= MIN_CLIP_SEC);
+    ranges.forEach((r, i) => {
+      const piece: Clip = { ...clip, id: i === 0 ? clip.id : uid("clip"), in: r.start, out: r.end };
+      if (i > 0) piece.activeVariantId = null;
+      next.push(piece);
+      pieces.push({ oldStart: start, clip, newStart: newT, srcIn: r.start, srcOut: r.end });
+      newT += r.end - r.start;
+    });
+  }
+  const oldEnd = clips.reduce((s, c) => s + clipLength(c), 0);
+  const mapTime = (t: number) => {
+    if (t >= oldEnd) return newT + (t - oldEnd);
+    for (const p of pieces) {
+      const src = p.clip.in + (t - p.oldStart);
+      if (t < p.oldStart) return p.newStart;
+      if (src < p.srcOut && t < p.oldStart + clipLength(p.clip)) {
+        if (src < p.srcIn) return p.newStart;
+        return p.newStart + (src - p.srcIn);
+      }
+    }
+    return newT;
+  };
+  return { clips: next, mapTime };
+}

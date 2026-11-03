@@ -4,6 +4,7 @@ import { importFile } from "@/lib/media/import";
 import { uid } from "@/lib/editor/timeline-utils";
 import { errorText, logEvent } from "@/lib/telemetry";
 import { useEditor } from "./editor-store";
+import { keepAwake } from "@/lib/keep-awake";
 
 export interface UploadItem {
   id: string;
@@ -41,7 +42,6 @@ let running = false;
 async function run() {
   running = true;
   const release = keepAwake();
-  window.addEventListener("beforeunload", warnOnLeave);
   try {
     while (queue.length) {
       const { file, item } = queue.shift()!;
@@ -66,31 +66,8 @@ async function run() {
       }
     }
   } finally {
-    window.removeEventListener("beforeunload", warnOnLeave);
     release();
     running = false;
   }
 }
 
-function warnOnLeave(e: BeforeUnloadEvent) {
-  e.preventDefault();
-}
-
-/**
- * מונע מהמסך להיכבות באמצע כיווץ והעלאה (בטלפון זה עוצר את הכל).
- * לא מחכים לבקשה: אם הדפדפן מתעכב או מסרב, ההעלאה מתחילה בכל מקרה.
- */
-function keepAwake(): () => void {
-  let lock: WakeLockSentinel | null = null;
-  const acquire = async () => {
-    try { lock = await navigator.wakeLock?.request("screen"); } catch { /* לא נתמך או נדחה */ }
-  };
-  // הנעילה משתחררת כשהלשונית מוסתרת, ולכן מבקשים אותה שוב כשחוזרים
-  const onVisible = () => { if (document.visibilityState === "visible") void acquire(); };
-  void acquire();
-  document.addEventListener("visibilitychange", onVisible);
-  return () => {
-    document.removeEventListener("visibilitychange", onVisible);
-    void lock?.release().catch(() => undefined);
-  };
-}

@@ -80,7 +80,7 @@ export function TimelinePanel() {
         <Sep />
         <ToolBtn label="הוסף כתובית בנקודת הניגון" onClick={() => addCaption(currentTime)}><Plus className="size-4" /></ToolBtn>
         <button
-          onClick={autoTranscribe}
+          onClick={() => autoTranscribe().catch(() => undefined)}
           disabled={transcribing || timeline.clips.length === 0}
           className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"
         >

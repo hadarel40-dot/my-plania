@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Music, Palette, Play, Plus, Sparkles, Square, Type, Upload, Volume2, VolumeX } from "lucide-react";
+import { Music, Palette, Play, Plus, Sparkles, Square, Type, Upload, Volume2, VolumeX, Wand2 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { useEditor } from "@/stores/editor-store";
 import { usePlayback } from "@/stores/playback-store";
@@ -14,8 +14,9 @@ import { CaptionInspector } from "./caption-inspector";
 import { OverlayInspector } from "./overlay-inspector";
 import { AudioInspector } from "./audio-inspector";
 import { VariantsPanel } from "./variants-panel";
+import { SmartTab } from "./smart-tab";
 
-export type Tab = "text" | "sound" | "style" | "ai";
+export type Tab = "smart" | "text" | "sound" | "style" | "ai";
 
 /**
  * הפאנל הצדדי. כשנבחר פריט בציר הזמן (טקסט, כתובית, סאונד) מוצג העורך שלו;
@@ -42,6 +43,7 @@ export function SidePanel({ tab: fixedTab, inspect = true }: {
   if (inspect && selection?.kind === "caption") return <CaptionPanel id={selection.id} />;
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
+    { id: "smart", label: "חכם", icon: <Wand2 className="size-4" /> },
     { id: "text", label: "טקסט", icon: <Type className="size-4" /> },
     { id: "sound", label: "סאונד", icon: <Music className="size-4" /> },
     { id: "style", label: "סגנון", icon: <Palette className="size-4" /> },
@@ -61,6 +63,7 @@ export function SidePanel({ tab: fixedTab, inspect = true }: {
     <Shell>
       {!fixedTab && <TabBar tabs={tabs} tab={tab} onTab={setTab} />}
       <div className="min-h-0 flex-1 overflow-y-auto">
+        {tab === "smart" && <SmartTab />}
         {tab === "text" && <TextTab />}
         {tab === "sound" && <SoundTab />}
         {tab === "style" && <StyleTab />}
