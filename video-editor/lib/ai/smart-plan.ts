@@ -25,3 +25,22 @@ export interface SmartPlanRequest {
   duration: number;
   hasMusic: boolean;
 }
+
+/** תוכנית לסרטון אווירה: אילו קטעים, באיזה סדר, ואיזו מוזיקה */
+export const VibePlanSchema = z.object({
+  order: z.array(z.number().int()).describe("מספרי הקטעים שנבחרו, בסדר שבו יופיעו בסרטון"),
+  music: z.enum(["happy", "chill", "energetic", "inspiring", "pop", "hiphop", "romantic", "cinematic", "acoustic"]),
+  color_style: z.enum(["none", "cinematic", "vivid", "warm", "cold", "vintage", "matte", "bw", "noir"]),
+  title: z.string().describe("שם קצר לפרויקט"),
+  text: z.string().describe("טקסט קצר ועדין על המסך בפתיחה (עד 5 מילים), או מחרוזת ריקה"),
+  summary: z.string().describe("משפט או שניים בעברית: מה נבחר ולמה"),
+});
+
+export type VibePlan = z.infer<typeof VibePlanSchema>;
+
+export interface VibePlanRequest {
+  shots: { id: number; start: number; end: number; clip: number; image: string }[];
+  /** כמה שניות בערך הסרטון הסופי */
+  target: number;
+  hasMusic: boolean;
+}

@@ -1,9 +1,10 @@
 "use client";
 import { useState } from "react";
+import { create } from "zustand";
 import { Captions, Crop, Loader2, Music2, Scissors, Sparkles } from "lucide-react";
 import { useEditor } from "@/stores/editor-store";
 import type { Timeline } from "@/lib/editor/types";
-import { autoEditAll, autoReframe, removeSilences, syncToBeat, type AutoEditReport } from "@/lib/editor/auto-edit";
+import { autoEditAll, autoReframe, removeSilences, syncToBeat, type AutoEditMode, type AutoEditReport } from "@/lib/editor/auto-edit";
 import { TEMPLATES } from "@/lib/editor/templates";
 import { Section } from "./ui";
 import { cn } from "@/lib/utils";
@@ -78,36 +79,67 @@ export function SmartTab() {
 }
 
 /** הכפתור הראשי: כל העריכה האוטומטית בלחיצה אחת, ודוח של מה נעשה */
-function AutoEditButton({ disabled }: { disabled: boolean }) {
-  const [busy, setBusy] = useState<string | null>(null);
-  const [report, setReport] = useState<AutoEditReport | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  // ציר הזמן לפני העריכה האוטומטית, כדי שאפשר יהיה לחזור אליו בלחיצה אחת
-  const [before, setBefore] = useState<Timeline | null>(null);
+/**
+ * מצב הריצה של העריכה האוטומטית. נשמר מחוץ לקומפוננטה, כי בזמן הריצה המסך יכול
+ * להתחלף (למשל בטלפון עוברים ללשונית אחרת) והדוח לא צריך ללכת לאיבוד.
+ */
+const useAutoEditRun = create<{
+  busy: string | null;
+  report: AutoEditReport | null;
+  error: string | null;
+  /** ציר הזמן לפני העריכה האוטומטית, כדי שאפשר יהיה לחזור אליו בלחיצה אחת */
+  before: Timeline | null;
+  mode: AutoEditMode;
+}>(() => ({ busy: null, report: null, error: null, before: null, mode: "auto" }));
 
-  async function run() {
-    setReport(null);
-    setError(null);
-    setBefore(useEditor.getState().timeline);
-    setBusy("מתחיל…");
-    try {
-      setReport(await autoEditAll(setBusy));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "משהו השתבש");
-    } finally {
-      setBusy(null);
-    }
+async function runAutoEdit() {
+  const set = useAutoEditRun.setState;
+  set({ report: null, error: null, before: useEditor.getState().timeline, busy: "מתחיל…" });
+  try {
+    set({ report: await autoEditAll((busy) => set({ busy }), useAutoEditRun.getState().mode) });
+  } catch (e) {
+    set({ error: e instanceof Error ? e.message : "משהו השתבש" });
+  } finally {
+    set({ busy: null });
   }
+}
+
+function AutoEditButton({ disabled }: { disabled: boolean }) {
+  const { busy, report, error, before, mode } = useAutoEditRun();
+  const setMode = (m: AutoEditMode) => useAutoEditRun.setState({ mode: m });
+  const run = runAutoEdit;
+  const setReport = (r: AutoEditReport | null) => useAutoEditRun.setState({ report: r });
+  const setBefore = (b: Timeline | null) => useAutoEditRun.setState({ before: b });
+
+  const modes: { id: AutoEditMode; label: string }[] = [
+    { id: "auto", label: "לזהות לבד" },
+    { id: "talking", label: "🎤 דיבור" },
+    { id: "vibe", label: "🌅 אווירה" },
+  ];
 
   return (
     <div>
+      <div className="mb-2 flex flex-wrap items-center gap-1.5 text-xs">
+        <span className="text-zinc-500">סוג הסרטון:</span>
+        {modes.map((m) => (
+          <button key={m.id} onClick={() => setMode(m.id)} disabled={!!busy}
+            className={cn("rounded-full border px-2.5 py-1",
+              mode === m.id ? "border-violet-500 bg-violet-500/15 text-white" : "border-zinc-700 text-zinc-400 hover:border-zinc-500")}>
+            {m.label}
+          </button>
+        ))}
+      </div>
       <button onClick={run} disabled={disabled || !!busy}
         className="flex w-full items-center gap-3 rounded-xl bg-gradient-to-l from-violet-600 to-fuchsia-600 p-4 text-start shadow-lg transition hover:brightness-110 disabled:opacity-50">
         {busy ? <Loader2 className="size-7 shrink-0 animate-spin" /> : <Sparkles className="size-7 shrink-0" />}
         <span>
           <span className="block font-semibold">עריכה אוטומטית</span>
           <span className="block text-xs text-violet-100">
-            {busy ?? "לחיצה אחת: חיתוך שתיקות, כתוביות, הוק, אימוג'ים, אפקטים וצבע. אחר כך אפשר לשנות הכל."}
+            {busy ?? (mode === "vibe"
+              ? "לחיצה אחת: בחירת הקטעים הכי יפים, מוזיקה מתאימה, חיתוכים על הקצב וצבע. אחר כך אפשר לשנות הכל."
+              : mode === "talking"
+                ? "לחיצה אחת: חיתוך שתיקות, כתוביות, הוק, אימוג'ים, אפקטים וצבע. אחר כך אפשר לשנות הכל."
+                : "מזהה לבד אם מדברים בסרטון או שזה סרטון אווירה, ועורך בהתאם. אחר כך אפשר לשנות הכל.")}
           </span>
         </span>
       </button>

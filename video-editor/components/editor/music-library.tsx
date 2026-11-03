@@ -1,8 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { Check, Loader2, Play, Plus, Search, Square } from "lucide-react";
-import { useEditor } from "@/stores/editor-store";
-import { importFile } from "@/lib/media/import";
+import { addLibraryTrack, musicFileUrl, searchLibrary } from "@/lib/music/add";
 import type { MusicTrack } from "@/lib/music/openverse";
 import { IconButton } from "./ui";
 import { cn } from "@/lib/utils";
@@ -20,7 +19,6 @@ const MOODS: { label: string; query: string }[] = [
   { label: "אקוסטי", query: "acoustic guitar" },
 ];
 
-const fileUrl = (id: string) => `/api/music/file?id=${encodeURIComponent(id)}`;
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
 /**
@@ -45,10 +43,7 @@ export function MusicLibrary() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/music/search?q=${encodeURIComponent(q)}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setTracks(data.tracks);
+      setTracks(await searchLibrary(q));
     } catch (e) {
       setError(e instanceof Error && e.message ? e.message : "החיפוש נכשל");
       setTracks(null);
@@ -66,7 +61,7 @@ export function MusicLibrary() {
     el.onended = () => setPlaying(null);
     el.onerror = () => {
       // אם המקור לא מנגן, מנסים דרך השרת שלנו
-      if (el.src !== new URL(fileUrl(t.id), location.href).href) { el.src = fileUrl(t.id); el.play().catch(() => setPlaying(null)); return; }
+      if (el.src !== new URL(musicFileUrl(t.id), location.href).href) { el.src = musicFileUrl(t.id); el.play().catch(() => setPlaying(null)); return; }
       setPlaying(null);
       setError("לא הצלחתי להשמיע את השיר הזה");
     };
@@ -78,15 +73,7 @@ export function MusicLibrary() {
     setAdding(t.id);
     setError(null);
     try {
-      // קודם ישירות מהמקור; אם הוא חוסם הורדה מאתר אחר (CORS), דרך השרת שלנו
-      const res = await fetch(t.audio).then((r) => (r.ok ? r : Promise.reject(r))).catch(() => fetch(fileUrl(t.id)));
-      if (!res.ok) throw new Error("השיר לא זמין כרגע");
-      const name = `${t.title}${t.artist ? ` - ${t.artist}` : ""}.mp3`.replace(/[\\/:*?"<>|]+/g, " ");
-      const asset = await importFile(new File([await res.blob()], name, { type: "audio/mpeg" }));
-      const { addAsset, addAudioClip } = useEditor.getState();
-      addAsset({ ...asset, name, credit: t.needsCredit ? t.credit : undefined });
-      // מוזיקת רקע מתחילה מתחילת הסרטון (בעוצמה נמוכה ודהייה, כמו כל שיר ארוך)
-      addAudioClip(asset.id, 0);
+      await addLibraryTrack(t);
       setAdded((s) => new Set(s).add(t.id));
     } catch (e) {
       setError(e instanceof Error ? e.message : "ההוספה נכשלה");

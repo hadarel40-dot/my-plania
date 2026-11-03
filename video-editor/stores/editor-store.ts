@@ -70,6 +70,11 @@ interface EditorState {
   trimClip: (clipId: string, edge: "in" | "out", value: number) => void;
   splitAt: (time: number) => void;
   removeSelected: () => void;
+  /**
+   * בונה את מסלול הווידאו מחדש מקטעים נבחרים, בסדר הנתון (סרטון אווירה).
+   * כל קטע הוא חלק מקליפ קיים. צעד undo אחד
+   */
+  arrangeShots: (shots: { clipId: string; start: number; end: number }[]) => void;
   /** מחליף קליפים בקטעים מתוכם (הסרת שתיקות / סנכרון לקצב), וממפה אחריהם טקסטים וכתוביות */
   applyCuts: (plan: Map<string, SourceRange[]>) => void;
   setAspect: (aspect: Aspect) => void;
@@ -88,7 +93,7 @@ interface EditorState {
   addSfx: (sfxId: SfxId, at: number) => void;
   /** מחיל תבנית רילס: צבע לכל הקליפים, טקסטים, אפקטים וסגנון כתוביות. צעד undo אחד */
   applyTemplate: (templateId: string, options?: { hook?: string; extraOverlays?: Overlay[]; hookOnly?: boolean }) => void;
-  addAudioClip: (assetId: string, at: number) => void;
+  addAudioClip: (assetId: string, at: number, options?: { select?: boolean }) => void;
   updateAudioClip: (id: string, patch: Partial<Omit<AudioClip, "id" | "assetId">>) => void;
 
   setCaptions: (captions: Caption[]) => void;
@@ -221,6 +226,27 @@ export const useEditor = create<EditorState>()(
           s.timeline.clips.splice(index + 1, 0, second);
         }),
 
+      arrangeShots: (shots) =>
+        set((s) => {
+          const byId = new Map(s.timeline.clips.map((c) => [c.id, c]));
+          const used = new Set<string>();
+          const next: Clip[] = [];
+          for (const shot of shots) {
+            const src = byId.get(shot.clipId);
+            if (!src || shot.end - shot.start < MIN_CLIP_SEC) continue;
+            // הקטע הראשון מכל קליפ שומר על המזהה שלו; השאר מקבלים חדש
+            const id = used.has(src.id) ? uid("clip") : src.id;
+            used.add(src.id);
+            next.push({ ...src, id, in: shot.start, out: shot.end, activeVariantId: id === src.id ? src.activeVariantId : null });
+          }
+          if (!next.length) return;
+          s.timeline.clips = next;
+          // בסרטון אווירה אין דיבור: כתוביות ישנות לא מתאימות לסדר החדש
+          s.timeline.captions = [];
+          s.timeline.overlays = s.timeline.overlays.filter((o) => !o.fromTemplate);
+          s.selection = null;
+        }),
+
       applyCuts: (plan) =>
         set((s) => {
           const { clips, mapTime } = cutClips(s.timeline.clips, plan);
@@ -321,7 +347,7 @@ export const useEditor = create<EditorState>()(
           s.timeline.captionStyle = r.captions;
           s.selection = null;
         }),
-      addAudioClip: (assetId, at) =>
+      addAudioClip: (assetId, at, options) =>
         set((s) => {
           const asset = s.assets[assetId];
           if (!asset) return;
@@ -332,7 +358,7 @@ export const useEditor = create<EditorState>()(
             volume: long ? 0.6 : 1, fadeIn: long ? 1 : 0, fadeOut: long ? 2 : 0,
           };
           s.timeline.audio.push(clip);
-          s.selection = { kind: "audio", id: clip.id };
+          if (options?.select !== false) s.selection = { kind: "audio", id: clip.id };
         }),
       updateAudioClip: (id, patch) =>
         set((s) => {

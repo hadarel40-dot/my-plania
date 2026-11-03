@@ -8,7 +8,10 @@ import { presetById } from "./overlay-presets";
 import { CLIP_STYLES } from "./clip-styles";
 import { layoutClips, uid } from "./timeline-utils";
 import type { Overlay } from "./types";
-import type { SmartPlan, SmartPlanRequest } from "@/lib/ai/smart-plan";
+import { MUSIC_MOODS } from "@/lib/music/moods";
+import type { SmartPlan, SmartPlanRequest, VibePlan, VibePlanRequest } from "@/lib/ai/smart-plan";
+import { pickShots, rankShots, sampleClip, type FrameSample, type Shot } from "@/lib/video/analyze";
+import { addLibraryTrack, searchLibrary } from "@/lib/music/add";
 import type { SourceRange } from "./timeline-utils";
 import { timelineDuration } from "./timeline-utils";
 
@@ -108,7 +111,42 @@ export interface AutoEditReport { done: string[]; skipped: string[] }
  * הוק מהמשפט הראשון, אימוג'ים לפי המילים, אפקטים, צבע וסנכרון לקצב (אם יש מוזיקה).
  * כל שלב שנכשל מדולג, והשאר ממשיך. התוצאה נשארת עריכה רגילה שאפשר לשנות.
  */
-export async function autoEditAll(onStatus: (s: string) => void): Promise<AutoEditReport> {
+export type AutoEditMode = "auto" | "talking" | "vibe";
+
+export async function autoEditAll(onStatus: (s: string) => void, mode: AutoEditMode = "auto"): Promise<AutoEditReport> {
+  if (!useEditor.getState().timeline.clips.length) throw new Error("קודם מעלים סרטון");
+  if (mode === "auto") {
+    onStatus("בודק אם מדברים בסרטון…");
+    mode = (await looksLikeTalking()) ? "talking" : "vibe";
+  }
+  if (mode === "vibe") return autoEditVibe(onStatus);
+  return autoEditTalking(onStatus);
+}
+
+/**
+ * האם זה סרטון דיבור: יש קטעי דיבור עם הפסקות ביניהם, על לפחות שליש מהזמן.
+ * סאונד רציף (מוזיקה, רוח, רחוב) או בלי פס קול בכלל = סרטון אווירה.
+ */
+async function looksLikeTalking(): Promise<boolean> {
+  const { timeline, assets } = useEditor.getState();
+  let total = 0, speech = 0, segments = 0;
+  for (const clip of timeline.clips) {
+    const len = clip.out - clip.in;
+    total += len;
+    const asset = assets[clip.assetId];
+    if (!asset) continue;
+    try {
+      const ranges = findSpeech(await decodeAssetAudio(asset), { from: clip.in, to: clip.out });
+      const covered = ranges.reduce((sum, r) => sum + r.end - r.start, 0);
+      if (ranges.length === 1 && covered >= len * 0.95) continue;
+      speech += covered;
+      segments += ranges.length;
+    } catch { /* אין פס קול */ }
+  }
+  return total > 0 && speech / total > 0.3 && segments >= 2;
+}
+
+async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditReport> {
   const report: AutoEditReport = { done: [], skipped: [] };
   const step = async (label: string, run: () => Promise<string | null>) => {
     try {
@@ -118,7 +156,6 @@ export async function autoEditAll(onStatus: (s: string) => void): Promise<AutoEd
       report.skipped.push(`${label}: ${e instanceof Error ? e.message : "נכשל"}`);
     }
   };
-  if (!useEditor.getState().timeline.clips.length) throw new Error("קודם מעלים סרטון");
   // עובדים על כל הסרטון, גם אם נבחר קליפ
   useEditor.getState().select(null);
 
@@ -251,4 +288,125 @@ function timelineRangesToPlan(remove: SourceRange[]) {
     plan.set(clip.id, keep);
   }
   return plan;
+}
+
+/**
+ * סרטון אווירה (בלי דיבור): בוחר את הרגעים היפים מכל הצילומים, מסדר אותם,
+ * מוסיף מוזיקה שמתאימה ומסנכרן את החיתוכים לקצב. עם Claude, הוא רואה את
+ * הקטעים ובוחר כמו עורך; בלעדיו, הבחירה לפי חדות, תאורה, צבע ותנועה.
+ */
+async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditReport> {
+  const report: AutoEditReport = { done: ["זוהה סרטון אווירה: בוחר את הקטעים הכי יפים"], skipped: [] };
+  useEditor.getState().select(null);
+  try {
+    const { reframed } = await autoReframe((st) => onStatus(`1/5 · ${st}`));
+    if (reframed) report.done.push("הותאם למסך עומד");
+  } catch (e) {
+    report.skipped.push(`התאמה למסך עומד: ${e instanceof Error ? e.message : "נכשל"}`);
+  }
+
+  // 1. ניתוח כל הצילומים
+  const { timeline, assets } = useEditor.getState();
+  const clips = timeline.clips;
+  const footage = clips.reduce((sum, c) => sum + c.out - c.in, 0);
+  const step = Math.min(1, Math.max(0.25, footage / 200));
+  const expected = Math.max(1, Math.round(footage / step));
+  let done = 0;
+  const samples: FrameSample[] = [];
+  for (const clip of clips) {
+    const asset = assets[clip.assetId];
+    if (!asset) continue;
+    samples.push(...await sampleClip(asset, clip.id, clip.in, clip.out, step, () => {
+      done++;
+      onStatus(`2/5 · מנתח את הצילומים ${Math.min(99, Math.round((done / expected) * 100))}%`);
+    }));
+  }
+  if (!samples.length) throw new Error("לא הצלחתי לקרוא את הסרטונים");
+
+  // 2. אורך כל קטע: 4 ביטים אם כבר יש מוזיקה, אחרת כשתי שניות
+  const music = musicClip();
+  let shotLen = 1.8;
+  if (music) {
+    const { bpm } = detectBeats(await decodeAssetAudio(useEditor.getState().assets[music.assetId]));
+    if (bpm) shotLen = Math.min(2.8, Math.max(1.2, (60 / bpm) * 4));
+  }
+  const target = footage < 8 ? footage * 0.85 : Math.min(15, Math.max(6, footage * 0.5));
+  const shots = rankShots(samples, clips, Math.min(shotLen, footage), step);
+  if (!shots.length) throw new Error("הצילומים קצרים מדי לבחירת קטעים");
+  const clipOrder = clips.map((c) => c.id);
+
+  // 3. בחירה: Claude רואה את המועמדים הטובים ובוחר; בלעדיו, לפי הציון
+  let chosen = pickShots(shots, target, clipOrder);
+  let plan: VibePlan | null = null;
+  if (useEditor.getState().cloud?.smartEdit) {
+    onStatus("3/5 · Claude בוחר את הקטעים הכי יפים…");
+    try {
+      const candidates = pickShots(shots, target * 2.2, clipOrder).slice(0, 24);
+      const body: VibePlanRequest = {
+        shots: candidates.map((c) => ({ id: c.id, start: c.start, end: c.end, clip: clipOrder.indexOf(c.clipId), image: c.thumb })),
+        target,
+        hasMusic: !!music,
+      };
+      const res = await fetch("/api/smart-vibe", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data) throw new Error(data?.error ?? "השרת לא החזיר תוכנית");
+      plan = data as VibePlan;
+      const byId = new Map(candidates.map((c) => [c.id, c]));
+      const ordered = plan.order.map((id) => byId.get(id)).filter((c): c is Shot => !!c);
+      if (ordered.length >= 2) chosen = ordered;
+      if (plan.summary) report.done.push(plan.summary);
+    } catch (e) {
+      report.skipped.push(`בחירה עם Claude: ${e instanceof Error ? e.message : "נכשל"} (נבחר לפי איכות התמונה)`);
+    }
+  }
+  useEditor.getState().arrangeShots(chosen);
+  const length = chosen.reduce((sum, c) => sum + c.end - c.start, 0);
+  report.done.push(`נבחרו ${chosen.length} קטעים (${length.toFixed(1)} שניות) מתוך ${footage.toFixed(0)} שניות צילום`);
+
+  // 4. מוזיקה: אם אין, מוסיפים מהספרייה לפי האווירה; הסאונד המקורי מושתק
+  if (!music) {
+    onStatus("4/5 · מחפש מוזיקה מתאימה…");
+    try {
+      const mood = plan?.music ?? "chill";
+      const tracks = await searchLibrary(MUSIC_MOODS[mood]);
+      const track = tracks.find((t) => t.duration >= length) ?? tracks[0];
+      if (!track) throw new Error("לא נמצא שיר");
+      await addLibraryTrack(track, { select: false });
+      report.done.push(`נוספה מוזיקה: ${track.title}${track.needsCredit ? " (צריך קרדיט בתיאור, ראו בלשונית סאונד)" : ""}`);
+    } catch (e) {
+      report.skipped.push(`מוזיקה: ${e instanceof Error ? e.message : "נכשל"}. אפשר להוסיף בלשונית סאונד`);
+    }
+  }
+  if (musicClip()) {
+    const { setClipVolume } = useEditor.getState();
+    for (const clip of useEditor.getState().timeline.clips) setClipVolume(clip.id, 0);
+    try {
+      const bpm = await syncToBeat((st) => onStatus(`5/5 · ${st}`));
+      report.done.push(`החיתוכים סונכרנו לקצב (${bpm} BPM)`);
+    } catch (e) {
+      report.skipped.push(`סנכרון לקצב: ${e instanceof Error ? e.message : "נכשל"}`);
+    }
+  }
+
+  // 5. צבע, טקסט עדין בפתיחה ושם
+  const style = CLIP_STYLES.find((st) => st.id === (plan?.color_style ?? "cinematic"));
+  const { setClipLook, setTitle, title } = useEditor.getState();
+  if (style) for (const clip of useEditor.getState().timeline.clips) setClipLook(clip.id, { ...clip.look, filter: style.look(0.6).filter });
+  if (plan?.text.trim()) {
+    const preset = presetById("typewriter");
+    useEditor.setState((st) => ({
+      timeline: { ...st.timeline, overlays: [...st.timeline.overlays, { ...preset.fields, y: 0.16, id: uid("ovl"), text: plan!.text.trim(), start: 0.3, end: 3, fromTemplate: true }] },
+    }));
+  }
+  if (plan?.title && (!title || title === "פרויקט חדש")) setTitle(plan.title);
+  report.done.push(`צבע: ${style?.label ?? "מקורי"}`);
+  return report;
+}
+
+/** קטע המוזיקה (הסאונד הארוך ביותר בציר הזמן), אם יש */
+function musicClip() {
+  const { timeline, assets } = useEditor.getState();
+  return [...timeline.audio]
+    .filter((a) => a.out - a.in > 5 && assets[a.assetId])
+    .sort((a, b) => b.out - b.in - (a.out - a.in))[0];
 }
