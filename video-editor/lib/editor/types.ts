@@ -18,6 +18,8 @@ export interface MediaAsset {
   width: number;
   height: number;
   origin: "sample" | "upload" | "ai_variant" | "library";
+  /** קרדיט ליוצר (מוזיקה מהספרייה החינמית, ברישיון שדורש ייחוס) */
+  credit?: string;
   /** וידאו (ברירת מחדל) או קובץ שמע: מוזיקה או אפקט סאונד */
   kind?: "video" | "audio";
   /** כתובת ציבורית בענן (למשל fal storage), כדי שמודלים יוכלו לקרוא את הקובץ */

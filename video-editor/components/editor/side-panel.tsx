@@ -15,6 +15,7 @@ import { OverlayInspector } from "./overlay-inspector";
 import { AudioInspector } from "./audio-inspector";
 import { VariantsPanel } from "./variants-panel";
 import { SmartTab } from "./smart-tab";
+import { MusicLibrary } from "./music-library";
 
 export type Tab = "smart" | "text" | "sound" | "style" | "ai";
 
@@ -148,6 +149,19 @@ function TextTab() {
 }
 
 /** ספריית אפקטים + העלאת מוזיקה */
+/** קרדיט שהרישיון של השיר דורש, עם כפתור העתקה לתיאור הפוסט */
+function CreditNote({ credit }: { credit: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="mt-2 rounded-lg border border-amber-900/50 bg-amber-950/30 p-2 text-[11px] leading-relaxed text-amber-200">
+      <p>לשיר הזה צריך לתת קרדיט. מעתיקים לתיאור הפוסט:</p>
+      <p className="mt-1 text-amber-100" dir="ltr">{credit}</p>
+      <button onClick={() => navigator.clipboard?.writeText(credit).then(() => setCopied(true))}
+        className="mt-1 underline hover:text-white">{copied ? "הועתק ✓" : "העתקה"}</button>
+    </div>
+  );
+}
+
 function SoundTab() {
   const addSfx = useEditor((s) => s.addSfx);
   const addAsset = useEditor((s) => s.addAsset);
@@ -187,7 +201,15 @@ function SoundTab() {
 
   return (
     <div className="space-y-5 p-4">
-      <Section title="מוזיקה">
+      <p className="rounded-lg bg-zinc-950 p-2.5 text-[11px] leading-relaxed text-zinc-400">
+        💡 רוצים שיר טרנדי מאינסטגרם? מייצאים את הסרטון בלי מוזיקה, ומוסיפים את השיר באפליקציה של אינסטגרם כשמעלים את הרילס
+        (שירים מספוטיפיי ומאינסטגרם מוגנים בזכויות יוצרים ואי אפשר להכניס אותם לעורך).
+      </p>
+      <Section title="ספריית מוזיקה חינמית" hint="לפי מצב רוח">
+        <MusicLibrary />
+      </Section>
+
+      <Section title="המוזיקה שלי">
         {/* label ולא click() מקוד: באייפון זו הדרך האמינה לפתוח את בחירת הקבצים */}
         <label className={cn("flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-dashed border-zinc-700 py-2.5 text-sm text-zinc-300 hover:border-violet-500",
           uploading && "pointer-events-none opacity-50")}>
@@ -205,6 +227,7 @@ function SoundTab() {
             <IconButton label="הוסף בנקודת הניגון" onClick={() => addAudioClip(a.id, at())}><Plus className="size-4" /></IconButton>
           </div>
         ))}
+        {music.filter((a) => a.credit).map((a) => <CreditNote key={`c-${a.id}`} credit={a.credit!} />)}
       </Section>
 
       <Section title="אפקטים" hint="▶ להאזנה, + להוספה">
