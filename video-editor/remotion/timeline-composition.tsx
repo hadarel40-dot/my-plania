@@ -34,7 +34,7 @@ export const MediaTagsContext = createContext<MediaTags>({
  */
 export function TimelineComposition({ timeline, assets, override }: CompositionProps) {
   const { fps } = timeline;
-  const { width, height } = useVideoConfig();
+  const { width, height, durationInFrames: totalFrames } = useVideoConfig();
   const { mode: mediaMode, Video: VideoTag, Audio: AudioTag } = useContext(MediaTagsContext);
   return (
     <AbsoluteFill style={{ backgroundColor: "black" }}>
@@ -85,9 +85,13 @@ export function TimelineComposition({ timeline, assets, override }: CompositionP
         if (!asset) return null;
         const from = Math.round(a.start * fps);
         const duration = Math.max(1, Math.round((a.out - a.in) * fps));
+        // שיר שממשיך אחרי סוף הסרטון נחתך שם, עם דהייה קצרה במקום קטיעה
+        const cut = Math.max(1, Math.round(totalFrames - from));
+        const audible = Math.min(duration, cut);
+        const fade = audible < duration ? { ...a, fadeOut: Math.max(a.fadeOut, END_FADE_SEC) } : a;
         return (
-          <Sequence key={a.id} from={from} durationInFrames={duration} layout="none">
-            <AudioTag src={asset.url} trimBefore={Math.round(a.in * fps)} volume={(f: number) => audioVolume(a, f, duration, fps)} />
+          <Sequence key={a.id} from={from} durationInFrames={audible} layout="none">
+            <AudioTag src={asset.url} trimBefore={Math.round(a.in * fps)} volume={(f: number) => audioVolume(fade, f, audible, fps)} />
           </Sequence>
         );
       })}
@@ -113,6 +117,9 @@ function coverBox(asset: MediaAsset, clip: { focusX?: number; focusY?: number },
   const top = Math.min(0, Math.max(H - h, H / 2 - fy * h));
   return { position: "absolute", left, top, width: w, height: h, maxWidth: "none", objectFit: "fill" };
 }
+
+/** דהייה בסוף הסרטון לשיר שממשיך אחרי שהווידאו נגמר */
+export const END_FADE_SEC = 1.2;
 
 function audioVolume(a: AudioClip, frame: number, duration: number, fps: number) {
   const fadeIn = a.fadeIn > 0 ? interpolate(frame, [0, a.fadeIn * fps], [0, 1], { extrapolateRight: "clamp" }) : 1;

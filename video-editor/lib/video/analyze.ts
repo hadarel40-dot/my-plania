@@ -151,12 +151,15 @@ export function rankShots(samples: FrameSample[], clips: { id: string; in: numbe
   let id = 0;
   for (const clip of clips) {
     const own = samples.filter((s) => s.clipId === clip.id).sort((a, b) => a.t - b.t);
-    const per = Math.max(1, Math.round(shotLen / step));
+    // צילום קצר מאורך הקטע: הקטע הוא כמעט כל הצילום (בלי השוליים)
+    const len = Math.min(shotLen, (clip.out - clip.in) * 0.9);
+    if (len < 0.5) continue;
+    const per = Math.max(1, Math.min(own.length, Math.round(len / step)));
     for (let i = 0; i + per <= own.length; i++) {
       const win = own.slice(i, i + per);
-      const start = Math.max(clip.in, win[0].t - step / 2);
-      const end = Math.min(clip.out, start + shotLen);
-      if (end - start < shotLen * 0.8) continue;
+      const start = Math.max(clip.in, Math.min(win[0].t - step / 2, clip.out - len));
+      const end = Math.min(clip.out, start + len);
+      if (end - start < len * 0.8) continue;
       // חיתוך סצנה באמצע הקטע (קפיצה חדה בתמונה) פוסל אותו
       const cutInside = win.slice(1).some((s) => s.motion > p90 * 2.2);
       const score = win.reduce((sum, s) => sum + sampleScore(s), 0) / win.length - (cutInside ? 3 : 0);

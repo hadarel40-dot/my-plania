@@ -45,20 +45,24 @@ const toTrack = (a: OpenverseAudio): MusicTrack => ({
   audio: a.url,
 });
 
-export async function searchMusic(query: string, page = 1): Promise<MusicTrack[]> {
+async function query(params: Record<string, string>): Promise<OpenverseAudio[]> {
   const url = new URL(API);
-  url.searchParams.set("q", query);
-  url.searchParams.set("category", "music");
-  url.searchParams.set("license_type", "commercial");
-  // MP3 בלבד: אייפון לא מנגן OGG
-  url.searchParams.set("extension", "mp3");
-  url.searchParams.set("page_size", "20");
-  url.searchParams.set("page", String(page));
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   const res = await fetch(url, { headers: { accept: "application/json" }, next: { revalidate: 3600 } });
   if (!res.ok) throw new Error(`openverse ${res.status}`);
-  const data = (await res.json()) as { results: OpenverseAudio[] };
-  // קטעים קצרים מ-10 שניות הם בדרך כלל אפקטים ולא שירים
-  return data.results.filter((a) => (a.duration ?? 0) >= 10_000 && a.url?.startsWith("https://")).map(toTrack);
+  return ((await res.json()) as { results: OpenverseAudio[] }).results ?? [];
+}
+
+export async function searchMusic(q: string, page = 1): Promise<MusicTrack[]> {
+  const base = { q, license_type: "commercial", page_size: "40", page: String(page) };
+  // קודם רק מוזיקה, ואם אין תוצאות, חיפוש רחב יותר (חלק מהשירים לא מסווגים)
+  let results = await query({ ...base, category: "music" });
+  if (!results.length) results = await query(base);
+  return results
+    // אייפון לא מנגן OGG/FLAC; קטעים קצרים מ-10 שניות הם בדרך כלל אפקטים ולא שירים
+    .filter((a) => (!a.filetype || a.filetype === "mp3") && (a.duration ?? 0) >= 10_000 && a.url?.startsWith("https://"))
+    .slice(0, 20)
+    .map(toTrack);
 }
 
 /** כתובת קובץ השמע של יצירה. נשלף מחדש מ-Openverse לפי מזהה, כדי שהשרת לא יהיה proxy פתוח */

@@ -4,7 +4,8 @@ import { create } from "zustand";
 import { Captions, Crop, Loader2, Music2, Scissors, Sparkles } from "lucide-react";
 import { useEditor } from "@/stores/editor-store";
 import type { Timeline } from "@/lib/editor/types";
-import { autoEditAll, autoReframe, removeSilences, syncToBeat, type AutoEditMode, type AutoEditReport } from "@/lib/editor/auto-edit";
+import { autoEditAll, autoReframe, removeSilences, syncToBeat, type AutoEditMode, type AutoEditReport, type EditOption } from "@/lib/editor/auto-edit";
+import { usePlayback } from "@/stores/playback-store";
 import { TEMPLATES } from "@/lib/editor/templates";
 import { Section } from "./ui";
 import { cn } from "@/lib/utils";
@@ -90,13 +91,17 @@ const useAutoEditRun = create<{
   /** ציר הזמן לפני העריכה האוטומטית, כדי שאפשר יהיה לחזור אליו בלחיצה אחת */
   before: Timeline | null;
   mode: AutoEditMode;
-}>(() => ({ busy: null, report: null, error: null, before: null, mode: "auto" }));
+  /** הגרסאות לבחירה, ואיזו מוצגת עכשיו */
+  options: EditOption[];
+  chosen: string | null;
+}>(() => ({ busy: null, report: null, error: null, before: null, mode: "auto", options: [], chosen: null }));
 
 async function runAutoEdit() {
   const set = useAutoEditRun.setState;
-  set({ report: null, error: null, before: useEditor.getState().timeline, busy: "מתחיל…" });
+  set({ report: null, error: null, options: [], chosen: null, before: useEditor.getState().timeline, busy: "מתחיל…" });
   try {
-    set({ report: await autoEditAll((busy) => set({ busy }), useAutoEditRun.getState().mode) });
+    const { report, options } = await autoEditAll((busy) => set({ busy }), useAutoEditRun.getState().mode);
+    set({ report, options, chosen: options[0]?.id ?? null });
   } catch (e) {
     set({ error: e instanceof Error ? e.message : "משהו השתבש" });
   } finally {
@@ -124,7 +129,12 @@ function EditorNotes() {
 }
 
 function AutoEditButton({ disabled }: { disabled: boolean }) {
-  const { busy, report, error, before, mode } = useAutoEditRun();
+  const { busy, report, error, before, mode, options, chosen } = useAutoEditRun();
+  const choose = (o: EditOption) => {
+    useEditor.setState({ timeline: o.timeline, selection: null });
+    usePlayback.getState().seek(0);
+    useAutoEditRun.setState({ chosen: o.id });
+  };
   const setMode = (m: AutoEditMode) => useAutoEditRun.setState({ mode: m });
   const run = runAutoEdit;
   const setReport = (r: AutoEditReport | null) => useAutoEditRun.setState({ report: r });
@@ -164,13 +174,34 @@ function AutoEditButton({ disabled }: { disabled: boolean }) {
         </span>
       </button>
       {error && <p className="mt-2 text-xs text-red-300">{error}</p>}
+      {options.length > 1 && (
+        <div className="mt-3">
+          <p className="text-sm font-medium">בחרו גרסה <span className="text-xs font-normal text-zinc-500">· לחיצה מציגה אותה בנגן</span></p>
+          <div className="mt-2 grid gap-2">
+            {options.map((o, i) => (
+              <button key={o.id} onClick={() => choose(o)}
+                className={cn("flex items-start gap-3 rounded-lg border p-3 text-start transition",
+                  chosen === o.id ? "border-violet-500 bg-violet-500/10" : "border-zinc-800 bg-zinc-950 hover:border-zinc-600")}>
+                <span className={cn("grid size-7 shrink-0 place-items-center rounded-full text-sm font-semibold",
+                  chosen === o.id ? "bg-violet-600 text-white" : "bg-zinc-800 text-zinc-300")}>{i + 1}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium">{o.title}</span>
+                  <span className="block text-xs text-zinc-500">{o.description}</span>
+                </span>
+                {chosen === o.id && <span className="text-xs text-violet-300">בנגן עכשיו</span>}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-[11px] text-zinc-500">הגרסה שמוצגת היא זו שנשמרת. אפשר לעבור ביניהן כמה שרוצים, ולערוך כל אחת אחר כך.</p>
+        </div>
+      )}
       {report && (
         <div className="mt-2 space-y-1 rounded-lg bg-zinc-950 p-3 text-xs">
           {report.done.map((d) => <p key={d} className="text-emerald-300">✓ {d}</p>)}
           {report.skipped.map((d) => <p key={d} className="text-amber-300">– {d}</p>)}
           <p className="pt-1 text-zinc-400">מכאן אפשר לשנות כל דבר: לחיצה על טקסט, כתובית או קליפ פותחת את העריכה שלו.</p>
           {before && (
-            <button onClick={() => { useEditor.setState({ timeline: before }); setReport(null); setBefore(null); }}
+            <button onClick={() => { useEditor.setState({ timeline: before }); setReport(null); setBefore(null); useAutoEditRun.setState({ options: [], chosen: null }); }}
               className="mt-1 text-zinc-400 underline hover:text-white">
               לא אהבתי, חזרה לסרטון כמו שהיה
             </button>

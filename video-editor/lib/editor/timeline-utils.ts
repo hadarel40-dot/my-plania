@@ -16,7 +16,8 @@ export function timelineDuration(tl: Timeline) {
   const videoEnd = tl.clips.reduce((sum, c) => sum + clipLength(c), 0);
   const captionsEnd = Math.max(0, ...tl.captions.map((c) => c.end));
   const overlaysEnd = Math.max(0, ...(tl.overlays ?? []).map((o) => o.end));
-  const audioEnd = Math.max(0, ...(tl.audio ?? []).map((a) => a.start + a.out - a.in));
+  // כשיש וידאו, הסרטון נגמר עם הווידאו: שיר ארוך לא מוסיף מסך שחור בסוף
+  const audioEnd = tl.clips.length ? 0 : Math.max(0, ...(tl.audio ?? []).map((a) => a.start + a.out - a.in));
   return Math.max(videoEnd, captionsEnd, overlaysEnd, audioEnd);
 }
 

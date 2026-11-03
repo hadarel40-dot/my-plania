@@ -7,7 +7,7 @@ import { emojiOverlays } from "./emoji-keywords";
 import { presetById } from "./overlay-presets";
 import { CLIP_STYLES } from "./clip-styles";
 import { layoutClips, uid } from "./timeline-utils";
-import type { Overlay } from "./types";
+import type { CaptionPreset, Overlay, Timeline } from "./types";
 import { MUSIC_MOODS, type MusicMood } from "@/lib/music/moods";
 import type { SmartPlan, SmartPlanRequest, VibePlan, VibePlanRequest } from "@/lib/ai/smart-plan";
 import { pickShots, rankShots, sampleClip, type FrameSample, type Shot } from "@/lib/video/analyze";
@@ -119,7 +119,24 @@ export interface AutoEditReport { done: string[]; skipped: string[] }
  */
 export type AutoEditMode = "auto" | "talking" | "vibe";
 
-export async function autoEditAll(onStatus: (s: string) => void, mode: AutoEditMode = "auto"): Promise<AutoEditReport> {
+/** גרסה של העריכה האוטומטית, לבחירה */
+export interface EditOption {
+  id: string;
+  title: string;
+  description: string;
+  timeline: Timeline;
+}
+
+export interface AutoEditResult {
+  report: AutoEditReport;
+  options: EditOption[];
+}
+
+/**
+ * עריכה אוטומטית שמחזירה כמה גרסאות לבחירה. העבודה הכבדה (ניתוח, כתוביות, Claude)
+ * נעשית פעם אחת, ומהתוצאה נבנות גרסאות שונות בקצב, במוזיקה ובעיצוב. הראשונה מוחלת.
+ */
+export async function autoEditAll(onStatus: (s: string) => void, mode: AutoEditMode = "auto"): Promise<AutoEditResult> {
   if (!useEditor.getState().timeline.clips.length) throw new Error("קודם מעלים סרטון");
   const auto = mode === "auto";
   if (auto) {
@@ -128,10 +145,11 @@ export async function autoEditAll(onStatus: (s: string) => void, mode: AutoEditM
   }
   const started = Date.now();
   try {
-    const report = mode === "vibe" ? await autoEditVibe(onStatus) : await autoEditTalking(onStatus);
-    if (auto && mode === "talking") report.done.unshift("זוהה סרטון דיבור (אם זה סרטון אווירה, בחרו \"אווירה\" ונסו שוב)");
-    logEvent("auto_edit_done", { mode, auto, ms: Date.now() - started, done: report.done.length, skipped: report.skipped });
-    return report;
+    const result = mode === "vibe" ? await autoEditVibe(onStatus) : await autoEditTalking(onStatus);
+    if (auto && mode === "talking") result.report.done.unshift("זוהה סרטון דיבור (אם זה סרטון אווירה, בחרו \"אווירה\" ונסו שוב)");
+    if (result.options[0]) useEditor.setState({ timeline: result.options[0].timeline, selection: null });
+    logEvent("auto_edit_done", { mode, auto, ms: Date.now() - started, options: result.options.length, skipped: result.report.skipped });
+    return result;
   } catch (e) {
     logEvent("auto_edit_failed", { mode, auto, ms: Date.now() - started, error: errorText(e) });
     throw e;
@@ -168,7 +186,17 @@ async function looksLikeTalking(): Promise<boolean> {
   return talking;
 }
 
-async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditReport> {
+/** עיצוב של גרסה בסרטון דיבור */
+interface TalkingLook { template: string; preset: CaptionPreset; accent: string; color: string; title: string; description: string }
+
+const TALKING_LOOKS: TalkingLook[] = [
+  { template: "talking", preset: "word-pop", accent: "#facc15", color: "vivid", title: "קלאסי", description: "מילה קופצת בצהוב, צבעים חיים" },
+  { template: "tips", preset: "highlight-box", accent: "#22d3ee", color: "warm", title: "נקי ומסודר", description: "מילה במסגרת תכלת, גוון חם" },
+  { template: "energy", preset: "one-word", accent: "#f472b6", color: "cinematic", title: "אנרגטי", description: "מילה אחת גדולה בכל פעם, הרבה אפקטים" },
+  { template: "before-after", preset: "karaoke", accent: "#a3e635", color: "cold", title: "רגוע", description: "קריוקי בירוק, גוון קר" },
+];
+
+async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditResult> {
   const report: AutoEditReport = { done: [], skipped: [] };
   const step = async (label: string, run: () => Promise<string | null>) => {
     try {
@@ -204,37 +232,41 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
       useEditor.getState().setError(null);
     }
   });
-  const smart = !!useEditor.getState().cloud?.smartEdit && useEditor.getState().timeline.captions.length > 0;
-  let designed = false;
-  if (smart) {
+
+  // Claude: חיתוך טייקים ותוכן (הוק, אימוג'ים, קריאה לפעולה), פעם אחת לכל הגרסאות
+  let smart: SmartCuts | null = null;
+  if (useEditor.getState().cloud?.smartEdit && useEditor.getState().timeline.captions.length > 0) {
     await step("עריכה חכמה", async () => {
       onStatus("4/5 · Claude עורך את הסרטון…");
-      const result = await applySmartPlan();
-      designed = true;
-      return result;
+      smart = await smartCuts();
+      return smart.summary;
     });
   }
-  if (!designed) {
-    await step("עיצוב", async () => {
-      onStatus("4/5 · מעצב…");
-      const captions = useEditor.getState().timeline.captions;
-      // ההוק: תחילת המשפט הראשון (עד 6 מילים), כדי שבשנייה הראשונה יהיה ברור על מה הסרטון
-      const hook = captions.length
-        ? captions.map((c) => c.text).join(" ").split(/\s+/).slice(0, 6).join(" ")
-        : undefined;
-      const emojis = /בלי אימוג|ללא אימוג/.test(notes) ? [] : emojiOverlays(captions);
-      useEditor.getState().applyTemplate("talking", { hook, extraOverlays: emojis });
-      return `נוספו הוק בפתיחה, ${emojis.length ? `${emojis.length} אימוג'ים, ` : ""}אפקטי סאונד וצבע`;
-    });
+  const s0 = smart as SmartCuts | null;
+  const captions = useEditor.getState().timeline.captions;
+  const hook = s0?.hook ?? (captions.length ? captions.map((c) => c.text).join(" ").split(/\s+/).slice(0, 6).join(" ") : undefined);
+  const extras = s0?.extras ?? (/בלי אימוג|ללא אימוג/.test(notes) ? [] : emojiOverlays(captions));
+
+  // הגרסאות: הראשונה לפי Claude (אם יש), והשאר בסגנונות אחרים
+  const looks: TalkingLook[] = [];
+  if (s0) looks.push({ template: s0.plan.template, preset: s0.plan.caption_style, accent: s0.plan.accent, color: s0.plan.color_style, title: "הבחירה של Claude", description: "הסגנון ש-Claude בחר לתוכן" });
+  for (const l of TALKING_LOOKS) if (looks.length < 3 && !looks.some((x) => x.template === l.template)) looks.push(l);
+
+  onStatus("5/5 · בונה גרסאות…");
+  const base = useEditor.getState().timeline;
+  const options: EditOption[] = [];
+  for (const [i, look] of looks.entries()) {
+    useEditor.setState({ timeline: base });
+    const { applyTemplate, styleAllCaptions, setClipLook } = useEditor.getState();
+    applyTemplate(look.template, { hook, extraOverlays: extras.map((o) => ({ ...o, id: uid("ovl") })), hookOnly: !!s0 });
+    styleAllCaptions({ preset: look.preset, accent: look.accent });
+    const style = CLIP_STYLES.find((st) => st.id === look.color);
+    if (style) for (const clip of useEditor.getState().timeline.clips) setClipLook(clip.id, { ...clip.look, filter: style.look(0.7).filter });
+    if (musicClip()) await syncToBeat(() => undefined).catch(() => undefined);
+    options.push({ id: `talk-${i}`, title: look.title, description: look.description, timeline: useEditor.getState().timeline });
   }
-  const hasMusic = useEditor.getState().timeline.audio.some((a) => a.out - a.in > 5);
-  if (hasMusic) {
-    await step("סנכרון לקצב", async () => {
-      const bpm = await syncToBeat((s) => onStatus(`5/5 · ${s}`));
-      return `המעברים סונכרנו למוזיקה (${bpm} BPM)`;
-    });
-  }
-  return report;
+  report.done.push(`נבנו ${options.length} גרסאות לבחירה`);
+  return { report, options };
 }
 
 /**
@@ -242,7 +274,13 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
  * מוחק טייקים כפולים ומילוי, מוסיף הוק, אימוג'ים, קריאה לפעולה, סגנון וצבע.
  * הכל נשאר עריכה רגילה שאפשר לשנות.
  */
-async function applySmartPlan(): Promise<string> {
+interface SmartCuts { plan: SmartPlan; hook: string; extras: Overlay[]; summary: string }
+
+/**
+ * עריכה חכמה: שולח את התמלול ל-Claude (דרך השרת), חותך את הטייקים החוזרים והמילוי
+ * שהוא סימן, ומכין את התוכן שלו (הוק, אימוג'ים, קריאה לפעולה) לגרסאות.
+ */
+async function smartCuts(): Promise<SmartCuts> {
   const { timeline, setTitle, title } = useEditor.getState();
   const captions = [...timeline.captions].sort((a, b) => a.start - b.start);
   const body: SmartPlanRequest = {
@@ -272,7 +310,7 @@ async function applySmartPlan(): Promise<string> {
   const after = useEditor.getState().timeline;
   const base = presetById("emoji-fire").fields;
   const positions = [{ x: 0.78, y: 0.3 }, { x: 0.22, y: 0.32 }];
-  const emojis: Overlay[] = emojiIds.flatMap(({ id, emoji }, i) => {
+  const extras: Overlay[] = emojiIds.flatMap(({ id, emoji }, i) => {
     const cap = after.captions.find((c) => c.id === id);
     return cap ? [{ ...base, ...positions[i % 2], id: uid("ovl"), text: emoji, start: cap.start, end: Math.max(cap.end, cap.start + 1.5), fromTemplate: true }] : [];
   });
@@ -280,19 +318,12 @@ async function applySmartPlan(): Promise<string> {
   const end = timelineDuration(after);
   if (plan.cta.trim()) {
     const cta = presetById("typewriter");
-    emojis.push({ ...cta.fields, id: uid("ovl"), text: plan.cta.trim(), start: Math.max(0, end - 3), end, fromTemplate: true });
+    extras.push({ ...cta.fields, id: uid("ovl"), text: plan.cta.trim(), start: Math.max(0, end - 3), end, fromTemplate: true });
   }
-
-  // 4. תבנית, הוק, סגנון כתוביות וצבע
-  const { applyTemplate, styleAllCaptions, setClipLook } = useEditor.getState();
-  applyTemplate(plan.template, { hook: plan.hook, extraOverlays: emojis, hookOnly: true });
-  styleAllCaptions({ preset: plan.caption_style, accent: plan.accent });
-  const style = CLIP_STYLES.find((st) => st.id === plan.color_style);
-  if (style) for (const clip of useEditor.getState().timeline.clips) setClipLook(clip.id, { ...clip.look, filter: style.look(0.7).filter });
   if (!title || title === "פרויקט חדש") setTitle(plan.title);
 
   const parts = [cut > 0.05 ? `נחתכו ${cut.toFixed(1)} שניות (טייקים חוזרים ומילוי)` : null, `הוק: "${plan.hook}"`];
-  return [plan.summary, ...parts.filter(Boolean)].join(" · ");
+  return { plan, hook: plan.hook, extras, summary: [plan.summary, ...parts.filter(Boolean)].join(" · ") };
 }
 
 /** טווחי זמן בציר הזמן שצריך להסיר, מתורגמים לקטעים שנשארים בכל קליפ (בזמן המקור) */
@@ -316,22 +347,35 @@ function timelineRangesToPlan(remove: SourceRange[]) {
   return plan;
 }
 
+/** גרסה של סרטון אווירה: קצב החיתוכים, מוזיקה וצבע */
+interface VibeLook {
+  title: string;
+  description: string;
+  /** טווח אורך קטע בשניות */
+  pace: [number, number];
+  mood: MusicMood;
+  color: string;
+  /** להשתמש בסדר ש-Claude בחר (רק בגרסה הראשונה) */
+  useClaudeOrder: boolean;
+}
+
 /**
  * סרטון אווירה (בלי דיבור): בוחר את הרגעים היפים מכל הצילומים, מסדר אותם,
  * מוסיף מוזיקה שמתאימה ומסנכרן את החיתוכים לקצב. עם Claude, הוא רואה את
  * הקטעים ובוחר כמו עורך; בלעדיו, הבחירה לפי חדות, תאורה, צבע ותנועה.
+ * הניתוח נעשה פעם אחת, ומבנים ממנו שלוש גרסאות בקצב ובאווירה שונים.
  */
-async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditReport> {
+async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditResult> {
   const report: AutoEditReport = { done: ["סרטון אווירה: נבחרים הקטעים הכי יפים מכל הצילומים"], skipped: [] };
   useEditor.getState().select(null);
   try {
-    const { reframed } = await autoReframe((st) => onStatus(`1/5 · ${st}`));
+    const { reframed } = await autoReframe((st) => onStatus(`1/4 · ${st}`));
     if (reframed) report.done.push("הותאם למסך עומד");
   } catch (e) {
     report.skipped.push(`התאמה למסך עומד: ${e instanceof Error ? e.message : "נכשל"}`);
   }
 
-  // 1. ניתוח כל הצילומים
+  // 1. ניתוח כל הצילומים (פעם אחת לכל הגרסאות)
   const { timeline, assets } = useEditor.getState();
   const clips = timeline.clips;
   const footage = clips.reduce((sum, c) => sum + c.out - c.in, 0);
@@ -344,102 +388,123 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditRepo
     if (!asset) continue;
     samples.push(...await sampleClip(asset, clip.id, clip.in, clip.out, step, () => {
       done++;
-      onStatus(`2/5 · מנתח את הצילומים ${Math.min(99, Math.round((done / expected) * 100))}%`);
+      onStatus(`2/4 · מנתח את הצילומים ${Math.min(99, Math.round((done / expected) * 100))}%`);
     }));
   }
   if (!samples.length) throw new Error("לא הצלחתי לקרוא את הסרטונים");
-
-  // 2. אורך כל קטע: כמה שניות, כמו בסרטוני אווירה. עם מוזיקה: מספר שלם של ביטים
-  const music = musicClip();
-  let shotLen = 2;
-  if (music) {
-    const asset = useEditor.getState().assets[music.assetId];
-    const bpm = asset.bpm ?? detectBeats(await decodeAssetAudio(asset)).bpm;
-    if (bpm) shotLen = beatsShot(bpm);
-  }
-  // אורך הסרטון: בערך קטע אחד-שניים מכל צילום, בין 6 ל-15 שניות
-  const target = footage < 8 ? footage * 0.85 : Math.min(15, Math.max(6, clips.length * shotLen * 1.5, footage * 0.3));
-  const shots = rankShots(samples, clips, Math.min(shotLen, footage), step);
-  if (!shots.length) throw new Error("הצילומים קצרים מדי לבחירת קטעים");
   const clipOrder = clips.map((c) => c.id);
+  const notes = useEditor.getState().notes;
+  const userMusic = musicClip();
+  const noMusic = !userMusic && /בלי מוזיקה|ללא מוזיקה|לא לשים מוזיקה|בלי שיר/.test(notes);
 
-  // 3. בחירה: Claude רואה את המועמדים הטובים ובוחר; בלעדיו, לפי הציון
-  let chosen = pickShots(shots, target, clipOrder);
+  // 2. Claude רואה את המועמדים הטובים ובוחר (פעם אחת)
   let plan: VibePlan | null = null;
+  let claudeShots: Shot[] = [];
   if (useEditor.getState().cloud?.smartEdit) {
-    onStatus("3/5 · Claude בוחר את הקטעים הכי יפים…");
+    onStatus("3/4 · Claude בוחר את הקטעים הכי יפים…");
     try {
+      const shots = rankShots(samples, clips, Math.min(2, footage), step);
+      const target = vibeTarget(footage, clips.length, 2);
       const candidates = pickShots(shots, target * 2.2, clipOrder).slice(0, 24);
       const body: VibePlanRequest = {
         shots: candidates.map((c) => ({ id: c.id, start: c.start, end: c.end, clip: clipOrder.indexOf(c.clipId), image: c.thumb })),
         target,
-        hasMusic: !!music,
-        notes: useEditor.getState().notes,
+        hasMusic: !!userMusic,
+        notes,
       };
       const res = await fetch("/api/smart-vibe", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data) throw new Error(data?.error ?? "השרת לא החזיר תוכנית");
       plan = data as VibePlan;
       const byId = new Map(candidates.map((c) => [c.id, c]));
-      const ordered = plan.order.map((id) => byId.get(id)).filter((c): c is Shot => !!c);
-      if (ordered.length >= 2) chosen = ordered;
+      claudeShots = plan.order.map((id) => byId.get(id)).filter((c): c is Shot => !!c);
       if (plan.summary) report.done.push(plan.summary);
     } catch (e) {
       report.skipped.push(`בחירה עם Claude: ${e instanceof Error ? e.message : "נכשל"} (נבחר לפי איכות התמונה)`);
     }
   }
-  useEditor.getState().arrangeShots(chosen);
-  const length = chosen.reduce((sum, c) => sum + c.end - c.start, 0);
-  report.done.push(`נבחרו ${chosen.length} קטעים (${length.toFixed(1)} שניות) מתוך ${footage.toFixed(0)} שניות צילום`);
 
-  // 4. מוזיקה: אם אין, מוסיפים מהספרייה לפי האווירה; הסאונד המקורי מושתק
-  const notes = useEditor.getState().notes;
-  if (!music && /בלי מוזיקה|ללא מוזיקה|לא לשים מוזיקה|בלי שיר/.test(notes)) {
-    report.done.push("לא נוספה מוזיקה, לפי ההוראות");
-  } else if (!music) {
-    onStatus("4/5 · מחפש מוזיקה מתאימה…");
-    const mood = plan?.music ?? moodFromNotes(notes) ?? "chill";
+  // 3. הגרסאות: מומלצת, קצבית, ורגועה-קולנועית. מצבי רוח שונים זה מזה
+  const mainMood: MusicMood = plan?.music ?? moodFromNotes(notes) ?? "chill";
+  const looks: VibeLook[] = [
+    { title: plan ? "הבחירה של Claude" : "מומלץ", description: "קטע של כשתי שניות מכל צילום", pace: [1.3, 2.6], mood: mainMood, color: plan?.color_style ?? "cinematic", useClaudeOrder: true },
+    { title: "קצבי ואנרגטי", description: "חיתוכים מהירים של כשנייה, מוזיקה אנרגטית", pace: [0.7, 1.3], mood: mainMood === "energetic" ? "pop" : "energetic", color: "vivid", useClaudeOrder: false },
+    { title: "רגוע וקולנועי", description: "קטעים ארוכים יותר, מוזיקה קולנועית", pace: [2.2, 3.4], mood: mainMood === "cinematic" ? "romantic" : "cinematic", color: "warm", useClaudeOrder: false },
+  ];
+
+  onStatus("4/4 · בונה גרסאות…");
+  const base = useEditor.getState().timeline;
+  const options: EditOption[] = [];
+  for (const [i, look] of looks.entries()) {
+    useEditor.setState({ timeline: base });
+    // מוזיקה: של המשתמשת אם יש; אחרת, בגרסה הראשונה מהספרייה הגדולה ובשאר מובנית
+    let bpm = 0;
+    if (userMusic) {
+      const a = useEditor.getState().assets[userMusic.assetId];
+      bpm = a.bpm ?? detectBeats(await decodeAssetAudio(a)).bpm;
+    } else if (!noMusic) {
+      bpm = await addVibeMusic(look.mood, i === 0, report);
+    }
+    const shotLen = bpm ? beatsShot(bpm, look.pace) : (look.pace[0] + look.pace[1]) / 2;
+    const chosen = look.useClaudeOrder && claudeShots.length >= 2
+      ? claudeShots
+      : pickShots(rankShots(samples, clips, Math.min(shotLen, footage), step), vibeTarget(footage, clips.length, shotLen), clipOrder);
+    useEditor.getState().arrangeShots(chosen);
+    if (musicClip()) {
+      const { setClipVolume } = useEditor.getState();
+      for (const clip of useEditor.getState().timeline.clips) setClipVolume(clip.id, 0);
+      await syncToBeat(() => undefined).catch(() => undefined);
+    }
+    const style = CLIP_STYLES.find((st) => st.id === look.color);
+    const { setClipLook } = useEditor.getState();
+    if (style) for (const clip of useEditor.getState().timeline.clips) setClipLook(clip.id, { ...clip.look, filter: style.look(0.6).filter });
+    if (plan?.text.trim()) {
+      const preset = presetById("typewriter");
+      useEditor.setState((st) => ({
+        timeline: { ...st.timeline, overlays: [...st.timeline.overlays, { ...preset.fields, y: 0.16, id: uid("ovl"), text: plan!.text.trim(), start: 0.3, end: 3, fromTemplate: true }] },
+      }));
+    }
+    const length = useEditor.getState().timeline.clips.reduce((sum, c) => sum + c.out - c.in, 0);
+    options.push({
+      id: `vibe-${i}`, title: look.title,
+      description: `${look.description} · ${useEditor.getState().timeline.clips.length} קטעים, ${Math.round(length)} שנ׳`,
+      timeline: useEditor.getState().timeline,
+    });
+  }
+  const { setTitle, title } = useEditor.getState();
+  if (plan?.title && (!title || title === "פרויקט חדש")) setTitle(plan.title);
+  report.done.push(`נבנו ${options.length} גרסאות לבחירה`);
+  return { report, options };
+}
+
+/** אורך הסרטון: בערך קטע אחד-שניים מכל צילום, בין 6 ל-15 שניות */
+function vibeTarget(footage: number, clipCount: number, shotLen: number) {
+  return footage < 8 ? footage * 0.85 : Math.min(15, Math.max(6, clipCount * shotLen * 1.5, footage * 0.3));
+}
+
+/**
+ * מוסיף מוזיקה לגרסה ומחזיר את הקצב. בגרסה הראשונה מנסים קודם את הספרייה הגדולה
+ * (עד 10 שניות); אחרת, ובכל כישלון, שיר מובנה שתמיד עובד.
+ */
+async function addVibeMusic(mood: MusicMood, tryLibrary: boolean, report: AutoEditReport): Promise<number> {
+  if (tryLibrary) {
     try {
-      // קודם מהספרייה הגדולה (עד 10 שניות), ואם היא לא זמינה, שיר מובנה שתמיד עובד
       const tracks = await Promise.race([
         searchLibrary(MUSIC_MOODS[mood]),
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 10_000)),
       ]);
-      const track = tracks.find((t) => t.duration >= length) ?? tracks[0];
+      const track = tracks[0];
       if (!track) throw new Error("לא נמצא שיר");
-      await addLibraryTrack(track, { select: false });
-      report.done.push(`נוספה מוזיקה: ${track.title}${track.needsCredit ? " (צריך קרדיט בתיאור, ראו בלשונית סאונד)" : ""}`);
+      const assetId = await addLibraryTrack(track, { select: false });
+      if (track.needsCredit) report.done.push(`השיר "${track.title}" דורש קרדיט בתיאור (ראו בלשונית סאונד)`);
+      return detectBeats(await decodeAssetAudio(useEditor.getState().assets[assetId])).bpm;
     } catch (e) {
-      const builtin = builtinForMood(mood);
-      addBuiltinTrack(builtin, { select: false });
-      report.done.push(`נוספה מוזיקה מובנית: ${builtin.title}`);
       logEvent("auto_edit_music_fallback", { mood, error: errorText(e) });
     }
   }
-  if (musicClip()) {
-    const { setClipVolume } = useEditor.getState();
-    for (const clip of useEditor.getState().timeline.clips) setClipVolume(clip.id, 0);
-    try {
-      const bpm = await syncToBeat((st) => onStatus(`5/5 · ${st}`));
-      report.done.push(`החיתוכים סונכרנו לקצב (${bpm} BPM)`);
-    } catch (e) {
-      report.skipped.push(`סנכרון לקצב: ${e instanceof Error ? e.message : "נכשל"}`);
-    }
-  }
-
-  // 5. צבע, טקסט עדין בפתיחה ושם
-  const style = CLIP_STYLES.find((st) => st.id === (plan?.color_style ?? "cinematic"));
-  const { setClipLook, setTitle, title } = useEditor.getState();
-  if (style) for (const clip of useEditor.getState().timeline.clips) setClipLook(clip.id, { ...clip.look, filter: style.look(0.6).filter });
-  if (plan?.text.trim()) {
-    const preset = presetById("typewriter");
-    useEditor.setState((st) => ({
-      timeline: { ...st.timeline, overlays: [...st.timeline.overlays, { ...preset.fields, y: 0.16, id: uid("ovl"), text: plan!.text.trim(), start: 0.3, end: 3, fromTemplate: true }] },
-    }));
-  }
-  if (plan?.title && (!title || title === "פרויקט חדש")) setTitle(plan.title);
-  report.done.push(`צבע: ${style?.label ?? "מקורי"}`);
-  return report;
+  const builtin = builtinForMood(mood);
+  addBuiltinTrack(builtin, { select: false });
+  return builtin.bpm;
 }
 
 /** בלי Claude: מצב הרוח של המוזיקה לפי מילים בהוראות */
@@ -458,10 +523,10 @@ function moodFromNotes(notes: string): MusicMood | null {
   return words.find(([re]) => re.test(notes))?.[1] ?? null;
 }
 
-/** אורך קטע בסרטון אווירה: מספר שלם של ביטים, קרוב לשתי שניות (בין 1.3 ל-2.6) */
-function beatsShot(bpm: number) {
+/** אורך קטע בסרטון אווירה: מספר שלם של ביטים, בתוך טווח הקצב של הגרסה */
+function beatsShot(bpm: number, [min, max]: [number, number] = [1.3, 2.6]) {
   const beat = 60 / bpm;
-  const n = [4, 2, 8, 3, 6].find((k) => k * beat >= 1.3 && k * beat <= 2.6) ?? 4;
+  const n = [4, 2, 8, 3, 6, 1].find((k) => k * beat >= min && k * beat <= max) ?? Math.max(1, Math.round((min + max) / 2 / beat));
   return n * beat;
 }
 
