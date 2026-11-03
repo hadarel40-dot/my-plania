@@ -3,6 +3,7 @@ import { useEditor } from "@/stores/editor-store";
 import { decodeAssetAudio } from "@/lib/audio/decode";
 import { findSpeech } from "@/lib/audio/silence";
 import { detectBeats } from "@/lib/audio/beats";
+import { emojiOverlays } from "./emoji-keywords";
 import type { SourceRange } from "./timeline-utils";
 import { timelineDuration } from "./timeline-utils";
 
@@ -93,4 +94,66 @@ export async function autoReframe(onStatus: (s: string) => void): Promise<{ face
   }
   useEditor.getState().setClipFocus(focus);
   return { faces: focus.size, reframed: clips.length };
+}
+
+export interface AutoEditReport { done: string[]; skipped: string[] }
+
+/**
+ * עריכה אוטומטית מלאה, בלחיצה אחת: התאמה למסך עומד, הסרת שתיקות, כתוביות,
+ * הוק מהמשפט הראשון, אימוג'ים לפי המילים, אפקטים, צבע וסנכרון לקצב (אם יש מוזיקה).
+ * כל שלב שנכשל מדולג, והשאר ממשיך. התוצאה נשארת עריכה רגילה שאפשר לשנות.
+ */
+export async function autoEditAll(onStatus: (s: string) => void): Promise<AutoEditReport> {
+  const report: AutoEditReport = { done: [], skipped: [] };
+  const step = async (label: string, run: () => Promise<string | null>) => {
+    try {
+      const result = await run();
+      if (result) report.done.push(result);
+    } catch (e) {
+      report.skipped.push(`${label}: ${e instanceof Error ? e.message : "נכשל"}`);
+    }
+  };
+  if (!useEditor.getState().timeline.clips.length) throw new Error("קודם מעלים סרטון");
+  // עובדים על כל הסרטון, גם אם נבחר קליפ
+  useEditor.getState().select(null);
+
+  await step("התאמה למסך עומד", async () => {
+    const { reframed, faces } = await autoReframe((s) => onStatus(`1/5 · ${s}`));
+    return reframed ? `הותאם למסך עומד${faces ? " עם הפנים במרכז" : ""}` : null;
+  });
+  await step("הסרת שתיקות", async () => {
+    const removed = await removeSilences((s) => onStatus(`2/5 · ${s}`));
+    return removed > 0.05 ? `הוסרו ${removed.toFixed(1)} שניות של שתיקה` : null;
+  });
+  await step("כתוביות", async () => {
+    const unsubscribe = useEditor.subscribe((st) => { if (st.transcribeStatus) onStatus(`3/5 · ${st.transcribeStatus}`); });
+    try {
+      onStatus("3/5 · כתוביות…");
+      const count = await useEditor.getState().autoTranscribe();
+      return `נוספו ${count} כתוביות`;
+    } finally {
+      unsubscribe();
+      // שגיאה כאן מופיעה בדוח של העריכה האוטומטית, לא צריך גם פס שגיאה
+      useEditor.getState().setError(null);
+    }
+  });
+  await step("עיצוב", async () => {
+    onStatus("4/5 · מעצב…");
+    const captions = useEditor.getState().timeline.captions;
+    // ההוק: תחילת המשפט הראשון (עד 6 מילים), כדי שבשנייה הראשונה יהיה ברור על מה הסרטון
+    const hook = captions.length
+      ? captions.map((c) => c.text).join(" ").split(/\s+/).slice(0, 6).join(" ")
+      : undefined;
+    const emojis = emojiOverlays(captions);
+    useEditor.getState().applyTemplate("talking", { hook, extraOverlays: emojis });
+    return `נוספו הוק בפתיחה, ${emojis.length ? `${emojis.length} אימוג'ים, ` : ""}אפקטי סאונד וצבע`;
+  });
+  const hasMusic = useEditor.getState().timeline.audio.some((a) => a.out - a.in > 5);
+  if (hasMusic) {
+    await step("סנכרון לקצב", async () => {
+      const bpm = await syncToBeat((s) => onStatus(`5/5 · ${s}`));
+      return `המעברים סונכרנו למוזיקה (${bpm} BPM)`;
+    });
+  }
+  return report;
 }

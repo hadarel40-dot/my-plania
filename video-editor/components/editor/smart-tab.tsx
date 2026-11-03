@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
-import { Captions, Crop, Loader2, Music2, Scissors } from "lucide-react";
+import { Captions, Crop, Loader2, Music2, Scissors, Sparkles } from "lucide-react";
 import { useEditor } from "@/stores/editor-store";
-import { autoReframe, removeSilences, syncToBeat } from "@/lib/editor/auto-edit";
+import type { Timeline } from "@/lib/editor/types";
+import { autoEditAll, autoReframe, removeSilences, syncToBeat, type AutoEditReport } from "@/lib/editor/auto-edit";
 import { TEMPLATES } from "@/lib/editor/templates";
 import { Section } from "./ui";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,7 @@ export function SmartTab() {
   return (
     <div className="space-y-5 p-4">
       {!hasClips && <p className="rounded-lg bg-zinc-900 p-3 text-sm text-zinc-400">קודם מעלים סרטון, ואז הכלים כאן עובדים עליו.</p>}
+      <AutoEditButton disabled={!hasClips} />
       <Section title="תבניות לרילס">
         <TemplatePicker disabled={!hasClips} />
       </Section>
@@ -71,6 +73,58 @@ export function SmartTab() {
           }}
         />
       </Section>
+    </div>
+  );
+}
+
+/** הכפתור הראשי: כל העריכה האוטומטית בלחיצה אחת, ודוח של מה נעשה */
+function AutoEditButton({ disabled }: { disabled: boolean }) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [report, setReport] = useState<AutoEditReport | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  // ציר הזמן לפני העריכה האוטומטית, כדי שאפשר יהיה לחזור אליו בלחיצה אחת
+  const [before, setBefore] = useState<Timeline | null>(null);
+
+  async function run() {
+    setReport(null);
+    setError(null);
+    setBefore(useEditor.getState().timeline);
+    setBusy("מתחיל…");
+    try {
+      setReport(await autoEditAll(setBusy));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "משהו השתבש");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <div>
+      <button onClick={run} disabled={disabled || !!busy}
+        className="flex w-full items-center gap-3 rounded-xl bg-gradient-to-l from-violet-600 to-fuchsia-600 p-4 text-start shadow-lg transition hover:brightness-110 disabled:opacity-50">
+        {busy ? <Loader2 className="size-7 shrink-0 animate-spin" /> : <Sparkles className="size-7 shrink-0" />}
+        <span>
+          <span className="block font-semibold">עריכה אוטומטית</span>
+          <span className="block text-xs text-violet-100">
+            {busy ?? "לחיצה אחת: חיתוך שתיקות, כתוביות, הוק, אימוג'ים, אפקטים וצבע. אחר כך אפשר לשנות הכל."}
+          </span>
+        </span>
+      </button>
+      {error && <p className="mt-2 text-xs text-red-300">{error}</p>}
+      {report && (
+        <div className="mt-2 space-y-1 rounded-lg bg-zinc-950 p-3 text-xs">
+          {report.done.map((d) => <p key={d} className="text-emerald-300">✓ {d}</p>)}
+          {report.skipped.map((d) => <p key={d} className="text-amber-300">– {d}</p>)}
+          <p className="pt-1 text-zinc-400">מכאן אפשר לשנות כל דבר: לחיצה על טקסט, כתובית או קליפ פותחת את העריכה שלו.</p>
+          {before && (
+            <button onClick={() => { useEditor.setState({ timeline: before }); setReport(null); setBefore(null); }}
+              className="mt-1 text-zinc-400 underline hover:text-white">
+              לא אהבתי, חזרה לסרטון כמו שהיה
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
