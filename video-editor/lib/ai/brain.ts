@@ -27,9 +27,9 @@ export interface BrainRequest<T extends z.ZodType> {
   search?: boolean;
 }
 
-/** שגיאה שמוצגת למשתמש כמו שהיא (בעברית) */
+/** שגיאה שמוצגת למשתמש כמו שהיא (בעברית). detail: ההודעה המקורית מהשירות, לאבחון */
 export class BrainError extends Error {
-  constructor(message: string, public status = 502) { super(message); }
+  constructor(message: string, public status = 502, public detail?: string) { super(message); }
 }
 
 export async function askBrain<T extends z.ZodType>(req: BrainRequest<T>): Promise<z.infer<T>> {
@@ -43,11 +43,32 @@ export async function askBrain<T extends z.ZodType>(req: BrainRequest<T>): Promi
 // GEMINI_API_BASE: רק לבדיקות (שרת מדומה)
 const GEMINI_API = process.env.GEMINI_API_BASE || "https://generativelanguage.googleapis.com/v1beta/models";
 
+/**
+ * גרסאות Gemini לפי סדר. אם גרסה אחת לא כלולה במכסה החינמית של המפתח (429 עם limit 0)
+ * או לא קיימת (404), עוברים לבאה בתור.
+ */
+const GEMINI_MODELS = [
+  ...(process.env.GEMINI_MODEL ? [process.env.GEMINI_MODEL] : []),
+  "gemini-flash-latest", "gemini-2.5-flash", "gemini-flash-lite-latest", "gemini-2.5-flash-lite",
+];
+
 async function geminiCall(body: unknown): Promise<string> {
-  const model = process.env.GEMINI_MODEL || "gemini-flash-latest";
+  let last: BrainError | null = null;
+  for (const model of [...new Set(GEMINI_MODELS)]) {
+    try {
+      return await geminiModelCall(model, body);
+    } catch (e) {
+      if (!(e instanceof BrainError) || (e.status !== 429 && e.status !== 404)) throw e;
+      last = e;
+    }
+  }
+  throw last ?? new BrainError("Gemini לא זמין כרגע");
+}
+
+async function geminiModelCall(model: string, body: unknown): Promise<string> {
   const key = process.env.GEMINI_API_KEY!.trim();
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 55_000);
+  const timer = setTimeout(() => controller.abort(), 50_000);
   const send = (auth: Record<string, string>) => fetch(`${GEMINI_API}/${model}:generateContent`, {
     method: "POST",
     headers: { "content-type": "application/json", ...auth },
@@ -71,13 +92,16 @@ async function geminiCall(body: unknown): Promise<string> {
     candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[];
   } | null;
   if (!res.ok) {
-    if (res.status === 429) throw new BrainError("המכסה החינמית היומית של Gemini נגמרה. אפשר לנסות שוב מחר (או בעוד כמה דקות)", 429);
-    if (res.status === 400 && /API key/i.test(data?.error?.message ?? "")) throw new BrainError("המפתח של Gemini לא תקין", 500);
-    if (res.status === 403) throw new BrainError("המפתח של Gemini לא מורשה (צריך מפתח מ-aistudio.google.com)", 500);
-    throw Object.assign(new BrainError(`שגיאה מ-Gemini (${res.status})`), { gemini: data?.error });
+    const detail = `${model}: ${res.status} ${data?.error?.message ?? ""}`.slice(0, 400);
+    console.warn("gemini error", detail);
+    if (res.status === 429) throw new BrainError("המכסה החינמית של Gemini נגמרה לבינתיים. אפשר לנסות שוב בעוד כמה דקות (או מחר)", 429, detail);
+    if (res.status === 404) throw new BrainError("הגרסה הזאת של Gemini לא זמינה", 404, detail);
+    if (res.status === 400 && /API key/i.test(data?.error?.message ?? "")) throw new BrainError("המפתח של Gemini לא תקין", 500, detail);
+    if (res.status === 401 || res.status === 403) throw new BrainError("המפתח של Gemini לא מורשה (צריך מפתח מ-aistudio.google.com)", 500, detail);
+    throw Object.assign(new BrainError(`שגיאה מ-Gemini (${res.status})`, 502, detail), { gemini: data?.error });
   }
   const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
-  if (!text) throw new BrainError("Gemini לא החזיר תשובה");
+  if (!text) throw new BrainError("Gemini לא החזיר תשובה", 502, `${model}: empty, finish ${data?.candidates?.[0]?.finishReason ?? "?"}`);
   return text;
 }
 
@@ -102,11 +126,18 @@ async function askGemini<T extends z.ZodType>({ system, parts, schema, search }:
 
   if (search) {
     // חיפוש בגוגל לא עובד יחד עם פלט מובנה: מבקשים JSON בטקסט, ואם הוא לא תקין, ממירים בקריאה שנייה
-    const text = await geminiCall({
-      system_instruction: { parts: [{ text: `${system}\n\nAnswer with a single JSON object that matches this JSON Schema, and nothing else:\n${JSON.stringify(jsonSchema)}` }] },
-      contents,
-      tools: [{ google_search: {} }],
-    });
+    let text: string;
+    try {
+      text = await geminiCall({
+        system_instruction: { parts: [{ text: `${system}\n\nAnswer with a single JSON object that matches this JSON Schema, and nothing else:\n${JSON.stringify(jsonSchema)}` }] },
+        contents,
+        tools: [{ google_search: {} }],
+      });
+    } catch (e) {
+      // חיפוש בגוגל לא תמיד כלול במכסה החינמית: אז עונים מהידע של המודל, בלי חיפוש
+      if (!(e instanceof BrainError) || (e.status !== 429 && e.status !== 404 && e.status !== 502)) throw e;
+      return askGemini({ system: `${system}\n\n(Web search is unavailable right now: answer from what you know about recent trends, and prefer patterns that stay popular.)`, parts, schema });
+    }
     try {
       return schema.parse(extractJson(text));
     } catch {

@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(trends);
   } catch (e) {
-    if (e instanceof BrainError) return NextResponse.json({ error: e.message }, { status: e.status });
+    if (e instanceof BrainError) return NextResponse.json({ error: e.message, detail: e.detail }, { status: e.status });
     throw e;
   }
 }

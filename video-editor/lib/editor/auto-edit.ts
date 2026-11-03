@@ -290,7 +290,10 @@ async function smartCuts(): Promise<SmartCuts> {
     body: JSON.stringify(body),
   });
   const data = await response.json().catch(() => null);
-  if (!response.ok || !data) throw new Error(data?.error ?? "השרת לא החזיר תוכנית");
+  if (!response.ok || !data) {
+    logEvent("brain_failed", { route: "smart-edit", status: response.status, error: data?.error, detail: data?.detail });
+    throw new Error(data?.error ?? "השרת לא החזיר תוכנית");
+  }
   const plan = data as SmartPlan;
 
   // 1. חיתוך המקטעים שנבחרו (לפי זמני ציר הזמן), והכתוביות זזות איתם
@@ -409,7 +412,10 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditResu
       };
       const res = await fetch("/api/smart-vibe", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => null);
-      if (!res.ok || !data) throw new Error(data?.error ?? "השרת לא החזיר תוכנית");
+      if (!res.ok || !data) {
+        logEvent("brain_failed", { route: "smart-vibe", status: res.status, error: data?.error, detail: data?.detail });
+        throw new Error(data?.error ?? "השרת לא החזיר תוכנית");
+      }
       plan = data as VibePlan;
       const byId = new Map(candidates.map((c) => [c.id, c]));
       brainShots = plan.order.map((id) => byId.get(id)).filter((c): c is Shot => !!c);

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { create } from "zustand";
 import { Captions, Crop, Loader2, Music2, Scissors, Sparkles, TrendingUp } from "lucide-react";
 import type { Trends, TrendsRequest } from "@/lib/ai/smart-plan";
+import { logEvent } from "@/lib/telemetry";
 import { useEditor } from "@/stores/editor-store";
 import type { Timeline } from "@/lib/editor/types";
 import { autoEditAll, autoReframe, removeSilences, syncToBeat, type AutoEditMode, type AutoEditReport, type EditOption } from "@/lib/editor/auto-edit";
@@ -265,7 +266,10 @@ function TrendsPanel() {
     try {
       const res = await fetch("/api/trends", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => null);
-      if (!res.ok || !data) throw new Error(data?.error ?? "החיפוש נכשל");
+      if (!res.ok || !data) {
+        logEvent("brain_failed", { route: "trends", status: res.status, error: data?.error, detail: data?.detail });
+        throw new Error(data?.error ?? "החיפוש נכשל");
+      }
       setTrends(data as Trends);
     } catch (e) {
       setError(e instanceof Error ? e.message : "החיפוש נכשל");
