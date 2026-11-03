@@ -2,7 +2,7 @@
 import { useRef, useState } from "react";
 import { Download, Film, Loader2, X } from "lucide-react";
 import { useEditor } from "@/stores/editor-store";
-import { renderToMp4, type ExportQuality } from "@/lib/export/render-video";
+import type { ExportQuality } from "@/lib/export/render-video";
 import { cn } from "@/lib/utils";
 
 type Phase = { kind: "idle" } | { kind: "rendering"; progress: number } | { kind: "done"; url: string; size: number } | { kind: "error"; message: string };
@@ -20,6 +20,8 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
     abortRef.current = controller;
     setPhase({ kind: "rendering", progress: 0 });
     try {
+      // מנוע הייצוא כבד, ולכן נטען רק כשמייצאים
+      const { renderToMp4 } = await import("@/lib/export/render-video");
       const blob = await renderToMp4(timeline, assets, {
         quality,
         signal: controller.signal,

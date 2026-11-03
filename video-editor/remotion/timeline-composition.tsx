@@ -1,6 +1,6 @@
+import { createContext, useContext } from "react";
 import { AbsoluteFill, Html5Audio, Html5Video, Sequence, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import type { AudioClip, Caption, Look, MediaAsset, Timeline } from "@/lib/editor/types";
-import { Audio as MediaAudio, Video as MediaVideo } from "@remotion/media";
 import { OverlayView } from "./overlay-view";
 import { layoutClips } from "@/lib/editor/timeline-utils";
 
@@ -9,21 +9,31 @@ export interface CompositionProps extends Record<string, unknown> {
   assets: Record<string, MediaAsset>;
   /** וריאציה בתצוגה מקדימה: מחליפה זמנית קליפ אחד בלי לשנות את ציר הזמן */
   override: { clipId: string; assetId: string; look: Look } | null;
-  /**
-   * html5: תגיות video/audio רגילות (לתצוגה בנגן). media: רכיבי @remotion/media,
-   * שנדרשים לרינדור לקובץ בתוך הדפדפן.
-   */
-  mediaMode?: "html5" | "media";
 }
+
+/**
+ * אילו רכיבי וידאו/שמע הקומפוזיציה משתמשת. בנגן: תגיות video/audio רגילות.
+ * בייצוא (remotion/export-composition) מוחלפים ברכיבי @remotion/media. דרך context,
+ * כדי ש-@remotion/media (כמעט 2MB) ייטען רק כשמייצאים ולא בפתיחת העורך.
+ */
+export interface MediaTags {
+  mode: "html5" | "media";
+  Video: React.ComponentType<Record<string, unknown>>;
+  Audio: React.ComponentType<Record<string, unknown>>;
+}
+export const MediaTagsContext = createContext<MediaTags>({
+  mode: "html5",
+  Video: Html5Video as unknown as MediaTags["Video"],
+  Audio: Html5Audio as unknown as MediaTags["Audio"],
+});
 
 /**
  * אותה קומפוזיציה משמשת לתצוגה החיה בדפדפן (Remotion Player, על ה-proxy)
  * ולרינדור הסופי בענן (Remotion Lambda, על קבצי המקור).
  */
-export function TimelineComposition({ timeline, assets, override, mediaMode = "html5" }: CompositionProps) {
+export function TimelineComposition({ timeline, assets, override }: CompositionProps) {
   const { fps } = timeline;
-  const VideoTag = mediaMode === "media" ? MediaVideo : Html5Video;
-  const AudioTag = mediaMode === "media" ? MediaAudio : Html5Audio;
+  const { mode: mediaMode, Video: VideoTag, Audio: AudioTag } = useContext(MediaTagsContext);
   return (
     <AbsoluteFill style={{ backgroundColor: "black" }}>
       {layoutClips(timeline.clips).map(({ clip, start, end }) => {
@@ -79,7 +89,7 @@ export function TimelineComposition({ timeline, assets, override, mediaMode = "h
         const duration = Math.max(1, Math.round((a.out - a.in) * fps));
         return (
           <Sequence key={a.id} from={from} durationInFrames={duration} layout="none">
-            <AudioTag src={asset.url} trimBefore={Math.round(a.in * fps)} volume={(f) => audioVolume(a, f, duration, fps)} />
+            <AudioTag src={asset.url} trimBefore={Math.round(a.in * fps)} volume={(f: number) => audioVolume(a, f, duration, fps)} />
           </Sequence>
         );
       })}

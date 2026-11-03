@@ -97,7 +97,7 @@ export function MediaBin() {
   );
 }
 
-function FileInput({ onFiles }: { onFiles: (files: FileList | null) => void }) {
+export function FileInput({ onFiles }: { onFiles: (files: FileList | null) => void }) {
   return (
     <input type="file" accept="video/*,audio/*" multiple className="sr-only"
       onChange={(e) => { onFiles(e.target.files); e.target.value = ""; }} />

@@ -31,7 +31,11 @@ export function PasswordCard({ email, dismissible }: { email: string; dismissibl
         ? "מטעמי אבטחה צריך להתחבר מחדש עם קישור מהמייל, ואז לבחור סיסמה"
         : /same|different/i.test(error.message) ? "זו כבר הסיסמה הנוכחית" : error.message);
       setState("error");
-    } else setState("saved");
+    } else {
+      // ה-JWT נושא את user_metadata: מרעננים כדי שהשרת יידע שכבר יש סיסמה
+      await getSupabaseBrowser().auth.refreshSession().catch(() => undefined);
+      setState("saved");
+    }
   }
 
   if (state === "saved") {

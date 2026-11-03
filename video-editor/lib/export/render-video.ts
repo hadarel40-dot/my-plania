@@ -1,6 +1,7 @@
 "use client";
 import { canRenderMediaOnWeb, renderMediaOnWeb } from "@remotion/web-renderer";
-import { TimelineComposition, type CompositionProps } from "@/remotion/timeline-composition";
+import type { CompositionProps } from "@/remotion/timeline-composition";
+import { ExportComposition } from "@/remotion/export-composition";
 import { ASPECT_SIZE, type MediaAsset, type Timeline } from "@/lib/editor/types";
 import { timelineDuration } from "@/lib/editor/timeline-utils";
 
@@ -28,11 +29,11 @@ export async function renderToMp4(
     throw new Error("הדפדפן הזה לא תומך בייצוא וידאו. כדאי לנסות ב-Chrome או Edge במחשב.");
   }
 
-  const inputProps: CompositionProps = { timeline, assets, override: null, mediaMode: "media" };
+  const inputProps: CompositionProps = { timeline, assets, override: null };
   const result = await renderMediaOnWeb({
     composition: {
       id: "export",
-      component: TimelineComposition as unknown as React.ComponentType<Record<string, unknown>>,
+      component: ExportComposition as unknown as React.ComponentType<Record<string, unknown>>,
       width,
       height,
       fps: timeline.fps,

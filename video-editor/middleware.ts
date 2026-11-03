@@ -29,7 +29,9 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  const { data: { user } } = await supabase.auth.getUser();
+  // getClaims בודק את החתימה מקומית (ומרענן סשן שפג תוקפו), בלי פנייה לשרת בכל בקשה
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims?.sub ?? null;
   const isPublic = PUBLIC_PATHS.some((p) => request.nextUrl.pathname.startsWith(p));
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();

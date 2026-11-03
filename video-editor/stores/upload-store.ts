@@ -54,6 +54,8 @@ async function run() {
       try {
         const asset = await importFile(file, (progress, stage) => { lastStage = stage; update({ progress, stage }); });
         useEditor.getState().addAsset(asset);
+        // סרטון שהועלה נכנס ישר לסוף ציר הזמן, כמו בעורכים בטלפון
+        if (asset.kind !== "audio") useEditor.getState().addClip(asset.id);
         logEvent("upload_done", { ...info, ms: Date.now() - started });
       } catch (e) {
         logEvent("upload_failed", { ...info, stage: lastStage, ms: Date.now() - started, error: errorText(e) });

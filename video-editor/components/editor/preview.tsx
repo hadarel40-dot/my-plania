@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef } from "react";
 import { Player, type PlayerRef } from "@remotion/player";
-import { Pause, Play, SkipBack, SkipForward } from "lucide-react";
+import { Pause, Play, SkipBack, SkipForward, Upload } from "lucide-react";
 import { TimelineComposition, type CompositionProps } from "@/remotion/timeline-composition";
 import { useEditor } from "@/stores/editor-store";
 import { usePlayback } from "@/stores/playback-store";
@@ -9,6 +9,8 @@ import { ASPECT_SIZE, type Aspect } from "@/lib/editor/types";
 import { formatTime, layoutClips, timelineDuration } from "@/lib/editor/timeline-utils";
 import { cn } from "@/lib/utils";
 import { OverlayHandles } from "./overlay-handles";
+import { FileInput } from "./media-bin";
+import { useUploads } from "@/stores/upload-store";
 
 export function Preview() {
   const playerRef = useRef<PlayerRef>(null);
@@ -85,8 +87,13 @@ export function Preview() {
               clickToPlay
             />
           ) : (
-            <div dir="rtl" className="grid h-full place-items-center px-6 text-center text-sm text-zinc-500">
-              הוסיפו קליפ מספריית המדיה לציר הזמן
+            <div dir="rtl" className="grid h-full place-items-center px-6 text-center text-sm text-zinc-400">
+              <label className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-dashed border-zinc-600 px-6 py-8 hover:border-violet-500 hover:text-white">
+                <Upload className="size-8 text-violet-400" />
+                <span className="font-medium">העלאת סרטונים</span>
+                <span className="text-xs text-zinc-500">הסרטונים נכנסים לציר הזמן לפי הסדר</span>
+                <FileInput onFiles={(files) => files?.length && useUploads.getState().enqueue([...files])} />
+              </label>
             </div>
           )}
           {duration > 0 && <OverlayHandles />}

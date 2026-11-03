@@ -19,8 +19,23 @@ export async function createSupabaseServer() {
   });
 }
 
-export async function getUser() {
+export interface SessionUser {
+  id: string;
+  email?: string;
+  user_metadata: Record<string, unknown>;
+}
+
+/**
+ * המשתמש המחובר, מתוך ה-JWT. החתימה נבדקת מקומית (מפתח ES256 של הפרויקט), בלי
+ * לפנות לשרת ההתחברות בכל טעינת עמוד: השרת של Supabase רחוק, וזה חוסך זמן ניכר.
+ */
+export async function getUser(): Promise<{ supabase: Awaited<ReturnType<typeof createSupabaseServer>>; user: SessionUser | null }> {
   const supabase = await createSupabaseServer();
-  const { data } = await supabase.auth.getUser();
-  return { supabase, user: data.user };
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (!claims?.sub) return { supabase, user: null };
+  return {
+    supabase,
+    user: { id: claims.sub, email: claims.email, user_metadata: (claims.user_metadata as Record<string, unknown>) ?? {} },
+  };
 }

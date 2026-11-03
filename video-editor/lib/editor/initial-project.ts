@@ -1,28 +1,11 @@
 import { NEUTRAL_LOOK, type Clip, type MediaAsset, type SavedProject } from "./types";
 import { uid } from "./timeline-utils";
 
-const SAMPLES: MediaAsset[] = [1, 2, 3].map((n) => ({
-  id: `sample_${n}`,
-  name: `דוגמה ${n}.mp4`,
-  url: `/samples/clip-${n}.mp4`,
-  thumbnailUrl: `/samples/clip-${n}.jpg`,
-  duration: 6,
-  width: 720,
-  height: 1280,
-  origin: "sample",
-}));
-
+/** פרויקט חדש מתחיל ריק: בלי סרטונים, טקסטים או סאונד */
 export const initialProject = (): SavedProject => ({
   title: "פרויקט חדש",
-  timeline: {
-    fps: 30,
-    aspect: "9:16",
-    clips: [makeClip(SAMPLES[0], 4), makeClip(SAMPLES[1], 5), makeClip(SAMPLES[2], 4)],
-    captions: [],
-    overlays: [],
-    audio: [],
-  },
-  assets: Object.fromEntries(SAMPLES.map((a) => [a.id, a])),
+  timeline: { fps: 30, aspect: "9:16", clips: [], captions: [], overlays: [], audio: [] },
+  assets: {},
   variants: {},
 });
 
@@ -31,8 +14,14 @@ export const initialProject = (): SavedProject => ({
  * כדי שפרויקט ישן ייפתח בלי שגיאות.
  */
 export function normalizeProject(project: SavedProject): SavedProject {
+  // סרטוני הדוגמה של גרסאות קודמות יוצאים מהספרייה, אלא אם הם עדיין בשימוש בציר הזמן
+  const used = new Set(project.timeline.clips.flatMap((c) => [c.sourceAssetId, c.assetId]));
+  const assets = Object.fromEntries(
+    Object.entries(project.assets).filter(([id, a]) => a.origin !== "sample" || used.has(id)),
+  );
   return {
     ...project,
+    assets,
     timeline: {
       ...project.timeline,
       captions: project.timeline.captions ?? [],
