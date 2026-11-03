@@ -448,7 +448,7 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditResu
     const shotLen = bpm ? beatsShot(bpm, look.pace) : (look.pace[0] + look.pace[1]) / 2;
     const chosen = look.useClaudeOrder && claudeShots.length >= 2
       ? claudeShots
-      : pickShots(rankShots(samples, clips, Math.min(shotLen, footage), step), vibeTarget(footage, clips.length, shotLen), clipOrder);
+      : pickShots(rankShots(samples, clips, Math.min(shotLen, footage), step), plan?.target_seconds || vibeTarget(footage, clips.length, shotLen), clipOrder);
     useEditor.getState().arrangeShots(chosen);
     if (musicClip()) {
       const { setClipVolume } = useEditor.getState();

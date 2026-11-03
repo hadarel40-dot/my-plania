@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { create } from "zustand";
-import { Captions, Crop, Loader2, Music2, Scissors, Sparkles } from "lucide-react";
+import { Captions, Crop, Loader2, Music2, Scissors, Sparkles, TrendingUp } from "lucide-react";
+import type { Trends, TrendsRequest } from "@/lib/ai/smart-plan";
 import { useEditor } from "@/stores/editor-store";
 import type { Timeline } from "@/lib/editor/types";
 import { autoEditAll, autoReframe, removeSilences, syncToBeat, type AutoEditMode, type AutoEditReport, type EditOption } from "@/lib/editor/auto-edit";
@@ -23,6 +24,9 @@ export function SmartTab() {
     <div className="space-y-5 p-4">
       {!hasClips && <p className="rounded-lg bg-zinc-900 p-3 text-sm text-zinc-400">קודם מעלים סרטון, ואז הכלים כאן עובדים עליו.</p>}
       <AutoEditButton disabled={!hasClips} />
+      <Section title="טרנדים עכשיו">
+        <TrendsPanel />
+      </Section>
       <Section title="תבניות לרילס">
         <TemplatePicker disabled={!hasClips} />
       </Section>
@@ -234,6 +238,96 @@ function TemplatePicker({ disabled }: { disabled: boolean }) {
         </p>
       )}
     </>
+  );
+}
+
+/**
+ * טרנדים: Claude מחפש ברשת מה עובד עכשיו ברילס, ומתאים לסרטון. כל רעיון אפשר
+ * להוסיף להוראות לעורך בלחיצה, וההוקים, התיאור וההאשטגים מוכנים להעתקה.
+ */
+function TrendsPanel() {
+  const smart = useEditor((s) => !!s.cloud?.smartEdit);
+  const [busy, setBusy] = useState(false);
+  const [trends, setTrends] = useState<Trends | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  async function load() {
+    setBusy(true); setError(null);
+    const { notes, title, timeline } = useEditor.getState();
+    const transcript = timeline.captions.map((c) => c.text).join(" ").slice(0, 800);
+    const body: TrendsRequest = {
+      topic: [title !== "פרויקט חדש" ? `שם: ${title}` : "", notes && `הוראות: ${notes}`, transcript && `תמלול: ${transcript}`].filter(Boolean).join("\n"),
+      kind: timeline.captions.length ? "talking" : "vibe",
+    };
+    try {
+      const res = await fetch("/api/trends", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data) throw new Error(data?.error ?? "החיפוש נכשל");
+      setTrends(data as Trends);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "החיפוש נכשל");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const addToNotes = (line: string) => {
+    const { notes, setNotes } = useEditor.getState();
+    setNotes(notes.trim() ? `${notes.trim()}\n${line}` : line);
+  };
+  const copy = (key: string, text: string) => navigator.clipboard?.writeText(text).then(() => setCopied(key));
+
+  if (!smart) {
+    return <p className="mt-2 rounded-lg bg-zinc-950 p-3 text-xs text-zinc-400">כדי לחפש טרנדים עדכניים צריך לחבר את Claude (מפתח ב-Vercel). הוא מחפש ברשת מה עובד עכשיו ברילס, ומתאים לסרטון שלך.</p>;
+  }
+  return (
+    <div className="mt-2 space-y-3">
+      <button onClick={load} disabled={busy}
+        className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-700 bg-zinc-950 py-2.5 text-sm hover:border-violet-500 disabled:opacity-60">
+        {busy ? <Loader2 className="size-4 animate-spin" /> : <TrendingUp className="size-4 text-violet-300" />}
+        {busy ? "Claude מחפש מה טרנדי עכשיו… (עד דקה)" : trends ? "לחפש שוב" : "מה טרנדי עכשיו?"}
+      </button>
+      {error && <p className="text-xs text-red-300">{error}</p>}
+      {trends && (
+        <>
+          {trends.trends.map((t) => (
+            <div key={t.name} className="rounded-lg bg-zinc-950 p-3 text-sm">
+              <p className="font-medium">{t.name}</p>
+              <p className="text-xs text-zinc-400">{t.why}</p>
+              <button onClick={() => addToNotes(t.how)} className="mt-1.5 text-xs text-violet-300 underline hover:text-white">
+                להוסיף להוראות: &quot;{t.how}&quot;
+              </button>
+            </div>
+          ))}
+          <div className="rounded-lg bg-zinc-950 p-3 text-sm">
+            <p className="font-medium">הוקים בסגנון של עכשיו</p>
+            {trends.hooks.map((h) => (
+              <button key={h} onClick={() => addToNotes(`הוק: ${h}`)} className="mt-1 block text-start text-xs text-zinc-300 hover:text-white">
+                ➕ {h}
+              </button>
+            ))}
+          </div>
+          <div className="rounded-lg bg-zinc-950 p-3 text-sm">
+            <p className="font-medium">תיאור לפוסט</p>
+            <p className="mt-1 whitespace-pre-line text-xs text-zinc-300">{trends.caption}</p>
+            <p className="mt-1 text-xs text-sky-300" dir="ltr">{trends.hashtags.join(" ")}</p>
+            <button onClick={() => copy("caption", `${trends.caption}\n\n${trends.hashtags.join(" ")}`)} className="mt-1 text-xs underline">
+              {copied === "caption" ? "הועתק ✓" : "העתקה"}
+            </button>
+          </div>
+          {trends.audio.length > 0 && (
+            <div className="rounded-lg bg-zinc-950 p-3 text-sm">
+              <p className="font-medium">צלילים טרנדיים (להוסיף באינסטגרם)</p>
+              {trends.audio.map((a) => (
+                <p key={a.title} className="mt-1 text-xs text-zinc-300">🎵 <span dir="auto">{a.title}</span>{a.artist ? <span dir="auto"> · {a.artist}</span> : null} <span className="text-zinc-500">· {a.note}</span></p>
+              ))}
+              <p className="mt-1 text-[11px] text-zinc-500">מייצאים בלי מוזיקה (או עם מוזיקה שקטה), ומוסיפים את הצליל באינסטגרם כשמעלים.</p>
+            </div>
+          )}
+        </>
+      )}
+    </div>
   );
 }
 

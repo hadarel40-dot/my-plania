@@ -35,6 +35,7 @@ export const VibePlanSchema = z.object({
   color_style: z.enum(["none", "cinematic", "vivid", "warm", "cold", "vintage", "matte", "bw", "noir"]),
   title: z.string().describe("שם קצר לפרויקט"),
   text: z.string().describe("טקסט קצר ועדין על המסך בפתיחה (עד 5 מילים), או מחרוזת ריקה"),
+  target_seconds: z.number().describe("אורך הסרטון שהיוצרת ביקשה בהוראות, בשניות; 0 אם לא ביקשה"),
   summary: z.string().describe("משפט או שניים בעברית: מה נבחר ולמה"),
 });
 
@@ -46,4 +47,26 @@ export interface VibePlanRequest {
   target: number;
   hasMusic: boolean;
   notes?: string;
+}
+
+/** טרנדים עכשוויים לסרטון, ש-Claude מצא בחיפוש ברשת */
+export const TrendsSchema = z.object({
+  trends: z.array(z.object({
+    name: z.string().describe("שם הטרנד בעברית, קצר"),
+    why: z.string().describe("משפט: מה זה ולמה זה עובד עכשיו"),
+    how: z.string().describe("הוראה קצרה לעורך איך להחיל את זה על הסרטון הזה"),
+  })).describe("3-5 טרנדים עדכניים שמתאימים לסרטון"),
+  hooks: z.array(z.string()).describe("3 הוקים בעברית בסגנון שעובד עכשיו, עד 8 מילים כל אחד"),
+  caption: z.string().describe("טקסט לתיאור הפוסט בעברית, 1-3 שורות, עם קריאה לפעולה"),
+  hashtags: z.array(z.string()).describe("5-10 האשטגים רלוונטיים, עם #"),
+  audio: z.array(z.object({ title: z.string(), artist: z.string(), note: z.string() }))
+    .describe("2-4 צלילים/שירים טרנדיים ברילס שמתאימים, להוספה באפליקציה של אינסטגרם"),
+});
+
+export type Trends = z.infer<typeof TrendsSchema>;
+
+export interface TrendsRequest {
+  /** על מה הסרטון: ההוראות, השם, ותחילת התמלול אם יש */
+  topic: string;
+  kind: "talking" | "vibe";
 }

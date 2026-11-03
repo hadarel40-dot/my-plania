@@ -21,7 +21,9 @@ Pick and order the shots for the final reel:
 - Order for a story: start with the strongest, most eye-catching shot (it is the hook), build through the middle, and end on a satisfying shot. Keeping shooting order is fine when it tells the story best.
 - music: the mood that fits the footage. color_style: a grade that suits it (cinematic, warm or vivid usually; none if it already looks great).
 - text: a short, soft line for the opening (place name, feeling), up to 5 words, in Hebrew, or an empty string if the shots speak for themselves.
-- summary: one or two plain Hebrew sentences for the creator about what you picked and why. Neutral gender forms.`;
+- target_seconds: the total length the creator asked for in her instructions, or 0 if she did not ask.
+- summary: one or two plain Hebrew sentences for the creator about what you picked and why. Neutral gender forms.
+The creator's instructions, when given, come first: follow them over these defaults (which shots to include or open with, length, mood, pace, text).`;
 
 /** בוחר ומסדר את הקטעים לסרטון אווירה לפי תמונות מהם, בעזרת Claude */
 export async function POST(request: Request) {
