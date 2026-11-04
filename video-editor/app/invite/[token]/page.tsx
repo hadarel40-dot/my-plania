@@ -36,8 +36,8 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
   }
 
   return (
-    <div className="grid min-h-dvh place-items-center bg-zinc-950 p-4 text-zinc-100">
-      <div className="w-full max-w-sm space-y-5 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-8">
+    <div className="grid min-h-dvh place-items-center p-4 text-zinc-100">
+      <div className="w-full max-w-sm space-y-5 rounded-3xl border border-zinc-800/80 bg-zinc-900/60 p-8 shadow-2xl shadow-violet-950/40 backdrop-blur-xl">
         <div className="flex items-center gap-2">
           <Clapperboard className="size-6 text-violet-400" />
           <h1 className="text-lg font-semibold">הוזמנת לעורך הווידאו 🎬</h1>

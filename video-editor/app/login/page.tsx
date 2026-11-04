@@ -66,11 +66,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="grid h-screen place-items-center bg-zinc-950 p-4 text-zinc-100">
-      <div className="w-full max-w-sm space-y-6 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-8">
-        <div className="flex items-center gap-2">
-          <Clapperboard className="size-6 text-violet-400" />
-          <h1 className="text-lg font-semibold">כניסה לעורך</h1>
+    <div className="grid h-screen place-items-center p-4 text-zinc-100">
+      <div className="w-full max-w-sm space-y-6 rounded-3xl border border-zinc-800/80 bg-zinc-900/60 p-8 shadow-2xl shadow-violet-950/40 backdrop-blur-xl">
+        <div className="space-y-2 text-center">
+          <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 shadow-lg shadow-violet-900/50">
+            <Clapperboard className="size-7 text-white" />
+          </div>
+          <h1 className="bg-gradient-to-l from-violet-200 to-fuchsia-200 bg-clip-text text-xl font-bold text-transparent">עורך הווידאו החכם</h1>
+          <p className="text-xs text-zinc-400">מעלים סרטונים, והעורך עושה את השאר ✨</p>
         </div>
 
         {!supabaseEnabled ? (

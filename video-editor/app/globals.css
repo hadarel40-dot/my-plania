@@ -1,7 +1,33 @@
 @import "tailwindcss";
 
+/*
+ * העיצוב: במקום אפור קר, גוונים כהים רכים עם נגיעה סגולה, גופן עגול ונעים (Rubik),
+ * וזוהר עדין ברקע. כל העורך משתמש בצבעים האלה, ולכן השינוי כאן חל על כל המסכים יחד.
+ */
 @theme {
-  --font-sans: "Heebo", system-ui, sans-serif;
+  --font-sans: "Rubik", "Heebo", system-ui, sans-serif;
+  --color-zinc-50: #faf9fd;
+  --color-zinc-100: #f2f0f8;
+  --color-zinc-200: #e2dfee;
+  --color-zinc-300: #c9c4dc;
+  --color-zinc-400: #a29cbb;
+  --color-zinc-500: #7a7394;
+  --color-zinc-600: #565071;
+  --color-zinc-700: #3b3552;
+  --color-zinc-800: #2a2540;
+  --color-zinc-900: #1a1729;
+  --color-zinc-950: #110f1c;
+  /* כחול של בחירה → סגול-תכלת רך שמתאים לשאר */
+  --color-blue-400: #93a5ff;
+  --color-blue-500: #7c8cff;
+  --color-blue-600: #6a77f0;
+  --color-violet-300: #d4c4ff;
+  --color-violet-400: #b69cff;
+  --color-violet-500: #9a7bff;
+  --color-violet-600: #8463f5;
+  --radius-md: 0.6rem;
+  --radius-lg: 0.85rem;
+  --radius-xl: 1.1rem;
 }
 
 html,
@@ -11,6 +37,19 @@ body {
   color: var(--color-zinc-100);
   overflow: hidden;
 }
+
+/* זוהר עדין ברקע (סגול למעלה, ורוד למטה) */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(60rem 30rem at 85% -10%, rgb(132 99 245 / 0.16), transparent 60%),
+    radial-gradient(50rem 28rem at 0% 110%, rgb(236 72 153 / 0.10), transparent 60%);
+}
+::selection { background: rgb(154 123 255 / 0.35); }
 
 body {
   font-family: var(--font-sans);
@@ -22,9 +61,10 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-zinc-800);
-  border-radius: 4px;
+  background: var(--color-zinc-700);
+  border-radius: 999px;
 }
+::-webkit-scrollbar-track { background: transparent; }
 
 /* תגובה מיידית ללחיצה בטלפון: הכפתור "נלחץ" עוד לפני שהפעולה מסתיימת */
 button:not(:disabled):active,

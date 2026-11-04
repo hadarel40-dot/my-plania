@@ -31,8 +31,8 @@ export function ProjectList({ email, projects, error, showPassword, hasPassword,
   admin: { pending: number } | null;
 }) {
   return (
-    <div className="h-screen overflow-y-auto bg-zinc-950 text-zinc-100">
-      <header className="flex h-14 items-center gap-3 border-b border-zinc-800 px-4 sm:px-6">
+    <div className="h-screen overflow-y-auto text-zinc-100">
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-zinc-800/70 bg-zinc-950/60 px-4 backdrop-blur-xl sm:px-6">
         <Clapperboard className="size-5 text-violet-400" />
         <h1 className="text-sm font-semibold">הפרויקטים שלי</h1>
         {projects.length > 0 && <span className="text-xs text-zinc-500">{projects.length}</span>}
@@ -79,8 +79,8 @@ function ProjectCard({ project: p }: { project: Row }) {
   const clipCount = meta.clipCount ?? 0;
 
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/50 transition hover:border-zinc-600">
-      <Link href={`/p/${p.id}`} className="absolute inset-0 z-10 rounded-xl" aria-label={`פתח ${p.title}`} />
+    <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60 shadow-lg shadow-black/20 transition hover:-translate-y-0.5 hover:border-violet-500/50 hover:shadow-violet-900/30">
+      <Link href={`/p/${p.id}`} className="absolute inset-0 z-10 rounded-2xl" aria-label={`פתח ${p.title}`} />
 
       <div className="relative h-40 overflow-hidden bg-zinc-900">
         {meta.thumbnail ? (

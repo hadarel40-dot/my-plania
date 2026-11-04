@@ -47,7 +47,7 @@ function Layout({ top }: { top: React.ReactNode }) {
   const phone = useMediaQuery("(max-width: 767px)");
   if (phone) return <PhoneLayout top={top} />;
   return (
-    <div className="flex h-dvh flex-col bg-zinc-950 text-zinc-100">
+    <div className="flex h-dvh flex-col text-zinc-100">
       {top}
       <ErrorBar />
       <div className="flex min-h-0 flex-1">
@@ -71,6 +71,8 @@ type Sheet = "edit" | "media" | Exclude<Tab, "ai"> | "ai";
 function PhoneLayout({ top }: { top: React.ReactNode }) {
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const editable = useEditor((s) => (s.selection && s.selection.kind !== "clip" ? s.selection.id : null));
+  // כמו במחשב: כשבוחרים קליפ, כפתור "סגנון" הופך ל"עריכת קליפ" (מהירות, אפקטים, צבע, מעבר)
+  const clipSelected = useEditor((s) => s.selection?.kind === "clip");
   const aiAvailable = useEditor((s) => !!s.cloud?.video);
   const uploading = useUploads((s) => s.items.length > 0);
 
@@ -93,12 +95,12 @@ function PhoneLayout({ top }: { top: React.ReactNode }) {
     { id: "smart", label: "חכם", icon: <Wand2 className="size-5" /> },
     { id: "text", label: "טקסט", icon: <Type className="size-5" /> },
     { id: "sound", label: "סאונד", icon: <Music className="size-5" /> },
-    { id: "style", label: "סגנון", icon: <Palette className="size-5" /> },
+    { id: "style", label: clipSelected ? "עריכת קליפ" : "סגנון", icon: <Palette className="size-5" /> },
     ...(aiAvailable ? [{ id: "ai" as Sheet, label: "AI", icon: <Sparkles className="size-5" /> }] : []),
   ];
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-zinc-950 text-zinc-100">
+    <div className="flex h-dvh flex-col overflow-hidden text-zinc-100">
       {top}
       <ErrorBar />
       <main className="flex min-h-0 flex-1 flex-col">
@@ -111,11 +113,11 @@ function PhoneLayout({ top }: { top: React.ReactNode }) {
       ) : (
         <TimelinePanel />
       )}
-      <nav className="flex shrink-0 border-t border-zinc-800 bg-zinc-950 pb-[env(safe-area-inset-bottom)]">
+      <nav className="flex shrink-0 gap-0.5 border-t border-zinc-800/70 bg-zinc-950/85 px-1 pt-1 pb-[max(env(safe-area-inset-bottom),4px)] backdrop-blur-xl">
         {buttons.map((b) => (
           <button key={b.id ?? "timeline"} onClick={() => setSheet((v) => (v === b.id ? null : b.id))}
-            className={cn("flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px]",
-              sheet === b.id ? "text-violet-300" : b.id === "edit" ? "text-amber-300" : "text-zinc-400")}>
+            className={cn("flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] transition",
+              sheet === b.id ? "bg-violet-500/15 text-violet-200" : b.id === "edit" || (b.id === "style" && clipSelected) ? "text-amber-300" : "text-zinc-400")}>
             {b.icon}{b.label}
           </button>
         ))}
@@ -162,7 +164,7 @@ function TopBar({ saveState, cloudSave, account }: {
   }
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-2 border-b border-zinc-800 px-2 sm:gap-3 sm:px-4">
+    <header className="flex h-12 shrink-0 items-center gap-2 border-b border-zinc-800/70 bg-zinc-950/60 px-2 backdrop-blur-xl sm:gap-3 sm:px-4">
       {account ? (
         <Link href="/" title="הפרויקטים שלי" className="flex items-center gap-1 rounded px-1 py-0.5 text-zinc-400 hover:bg-zinc-900 hover:text-white">
           <ChevronRight className="size-4" /><Clapperboard className="size-5 text-violet-400" />
@@ -190,11 +192,11 @@ function TopBar({ saveState, cloudSave, account }: {
           </button>
         )}
         <button onClick={exportJson} title="גיבוי הפרויקט כקובץ JSON" aria-label="גיבוי פרויקט"
-          className="hidden rounded-md p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white sm:block">
+          className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white">
           <FileJson className="size-4" />
         </button>
         <button onClick={() => setExporting(true)}
-          className="flex items-center gap-1.5 rounded-md bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-white">
+          className="flex items-center gap-1.5 rounded-full bg-gradient-to-l from-violet-600 to-fuchsia-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-lg shadow-violet-900/40 hover:brightness-110">
           <Download className="size-3.5" /> ייצוא<span className="hidden sm:inline"> סרטון</span>
         </button>
         {exporting && <ExportDialog onClose={() => setExporting(false)} />}
