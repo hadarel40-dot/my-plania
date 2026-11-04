@@ -2,7 +2,7 @@ name = "ig-autodm"
 main = "src/index.ts"
 compatibility_date = "2025-10-01"
 
-# כל 5 דקות: שליחת הודעות שחיכו בתור. פעם ביום: ניקוי תגובות ישנות וחידוש הטוקן של אינסטגרם
+# כל 5 דקות: שליחת הודעות שחיכו בתור. פעם ביום: ניקוי תגובות ישנות
 [triggers]
 crons = ["*/5 * * * *", "17 3 * * *"]
 
@@ -14,12 +14,16 @@ database_id = "REPLACE_WITH_DATABASE_ID"
 migrations_dir = "migrations"
 
 [vars]
-GRAPH_BASE = "https://graph.instagram.com/v23.0"
+GRAPH_BASE = "https://graph.facebook.com/v23.0"
 # כמה הודעות פרטיות לכל היותר בשעה. השאר מחכות בתור
 HOURLY_LIMIT = "150"
+# מזהה האפליקציה במטא (App ID, מופיע למעלה בלוח הבקרה). לא סודי
+META_APP_ID = ""
+# מזהה ה-Configuration של Unified login / Facebook Login for Business. לא סודי
+META_LOGIN_CONFIG_ID = ""
 
 # סודות (לא בקובץ הזה! מכניסים עם npx wrangler secret put <שם>):
-#   IG_APP_SECRET         ה-Instagram app secret מהגדרות האפליקציה במטא
-#   IG_ACCESS_TOKEN       טוקן הגישה של חשבון האינסטגרם (נשמר ומתחדש אוטומטית אחרי ההפעלה הראשונה)
+#   META_APP_SECRET       ה-App secret (App settings -> Basic)
 #   WEBHOOK_VERIFY_TOKEN  מילה סודית שתבחרי, ותדביקי גם בהגדרות ה-Webhook במטא
 #   ADMIN_PASSWORD        הסיסמה לדף הניהול
+# את חשבון האינסטגרם מחברים בכפתור "חיבור החשבון" בדף הניהול. הטוקן נשמר בבסיס הנתונים

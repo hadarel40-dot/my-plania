@@ -20,10 +20,13 @@
 - **מצב בדיקה פעיל כברירת מחדל:** הודעות נשלחות רק לחשבון הבדיקה שמוגדר בדף הניהול.
 - **מתג "המערכת פעילה"** עוצר את כל השליחה בלחיצה אחת.
 - **שמירת נתונים:** נשמרות רק תגובות שהתאימו לחוק, והן נמחקות אחרי 90 יום.
-- **הטוקן של אינסטגרם מתחדש אוטומטית** כל כמה ימים. הוא תקף 60 יום.
+- **הטוקן לא פג.** טוקן של system user וטוקן של דף לא דורשים חידוש.
 - **דף הניהול מוגן:** עוגייה חתומה, חסימה אחרי 8 ניסיונות כניסה שגויים, וחסימת טפסים שנשלחים מאתר אחר.
 
 ## התקנה (פעם אחת)
+
+אפליקציות חדשות במטא (מאוקטובר 2026) עובדות עם **Unified login** דרך graph.facebook.com. אין צורך להעתיק טוקנים:
+מחברים את החשבון בכפתור בדף הניהול.
 
 ```bash
 cd ig-autodm
@@ -31,19 +34,26 @@ npm install
 npx wrangler login
 npx wrangler d1 create ig-autodm      # מעתיקים את ה-database_id לקובץ wrangler.toml
 npm run db:init
-npx wrangler secret put IG_APP_SECRET
-npx wrangler secret put IG_ACCESS_TOKEN
+npx wrangler secret put META_APP_SECRET
 npx wrangler secret put WEBHOOK_VERIFY_TOKEN
 npx wrangler secret put ADMIN_PASSWORD
 npm run deploy
 ```
 
-הסודות נכנסים רק דרך הפקודות האלה. הם לא נשמרים בשום קובץ בתיקייה.
+ב-`wrangler.toml` ממלאים שני ערכים שאינם סודיים:
+- `META_APP_ID`: מזהה האפליקציה.
+- `META_LOGIN_CONFIG_ID`: מזהה ה-Configuration שנוצר במסך "API setup with Unified login".
 
-**במטא** (Meta for Developers → האפליקציה → Instagram → API setup with Instagram login):
-- Webhooks: ב-Callback URL שמים `https://<הכתובת שלך>.workers.dev/webhook`, ב-Verify token את אותה מילה שהכנסת ל-`WEBHOOK_VERIFY_TOKEN`, ונרשמים לשדה `comments`.
-- הרשאות: `instagram_business_basic`, `instagram_business_manage_comments`, `instagram_business_manage_messages`.
-- בדף הניהול לוחצים "להפעיל עכשיו" אם מופיעה ההודעה שהחשבון עוד לא מקבל התראות על תגובות.
+הסודות נכנסים רק דרך הפקודות שלמעלה, ולא נשמרים בשום קובץ בתיקייה.
+
+**במטא:**
+- **Configuration:** במסך "API setup with Unified login" יוצרים Configuration עם חשבון האינסטגרם.
+  אם קריאות לחשבון נכשלות בשגיאה 100/33, מוסיפים לו את ההרשאה `business_management`.
+- **Redirect URI:** ב-Valid OAuth Redirect URIs מוסיפים `https://<הכתובת שלך>.workers.dev/admin/callback`.
+- **Webhooks:** בוחרים באובייקט Instagram. ב-Callback URL שמים `https://<הכתובת שלך>.workers.dev/webhook`, ב-Verify token את אותה מילה שהכנסת ל-`WEBHOOK_VERIFY_TOKEN`, ונרשמים לשדה `comments`.
+- **חיבור:** בדף הניהול לוחצים "חיבור החשבון". המערכת שומרת את הטוקן, מוצאת את חשבון האינסטגרם ונרשמת להתראות על תגובות.
+
+ההודעה הפרטית נשלחת דרך הדף המקושר (`/{page-id}/messages`), ואם זה לא עובד, ישירות דרך חשבון האינסטגרם (`/{ig-id}/messages`).
 
 ## בדיקות
 
@@ -62,7 +72,8 @@ npm run lint      # TypeScript
 - גיבוי לטקסט כשהכפתור נדחה
 - ניסיון חוזר אחרי שגיאה זמנית
 - תגובה פומבית
-- חידוש הטוקן
+- חיבור החשבון (OAuth)
+- נפילה לכתובת השליחה השנייה
 
 **עדיין לא נבדק מול אינסטגרם אמיתי.**
 

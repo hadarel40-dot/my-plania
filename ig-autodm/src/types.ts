@@ -2,9 +2,14 @@ export interface Env {
   DB: D1Database;
   GRAPH_BASE: string;
   HOURLY_LIMIT: string;
-  IG_APP_SECRET: string;
-  IG_ACCESS_TOKEN: string;
+  META_APP_ID: string;
+  META_APP_SECRET: string;
+  /** מזהה ה-Configuration של Facebook Login for Business / Unified login (לא סודי) */
+  META_LOGIN_CONFIG_ID: string;
   WEBHOOK_VERIFY_TOKEN: string;
+  /** אופציונלי: חיבור ידני בלי כפתור החיבור */
+  IG_ACCESS_TOKEN?: string;
+  IG_USER_ID?: string;
   ADMIN_PASSWORD: string;
 }
 

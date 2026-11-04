@@ -10,7 +10,7 @@ const FAIL_WINDOW = 15 * MINUTE;
 
 /** החלפת הסיסמה מנתקת אוטומטית את כל החיבורים הקיימים */
 function sessionKey(env: Env) {
-  return `${env.ADMIN_PASSWORD}|${env.IG_APP_SECRET}|session`;
+  return `${env.ADMIN_PASSWORD}|${env.META_APP_SECRET}|session`;
 }
 
 export async function makeSessionCookie(env: Env): Promise<string> {

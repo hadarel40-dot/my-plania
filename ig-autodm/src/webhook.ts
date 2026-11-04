@@ -30,8 +30,8 @@ interface CommentChange {
 export async function handleWebhook(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const raw = await request.arrayBuffer();
   const signature = request.headers.get("X-Hub-Signature-256") ?? "";
-  if (!env.IG_APP_SECRET) return new Response("Not configured", { status: 500 });
-  const expected = "sha256=" + (await hmacHex(env.IG_APP_SECRET, raw));
+  if (!env.META_APP_SECRET) return new Response("Not configured", { status: 500 });
+  const expected = "sha256=" + (await hmacHex(env.META_APP_SECRET, raw));
   if (!timingSafeEqual(signature, expected)) return new Response("Bad signature", { status: 401 });
 
   let body: any;

@@ -2,7 +2,6 @@ import type { Env } from "./types";
 import { handleWebhook, verifySubscription } from "./webhook";
 import { handleAdmin } from "./admin";
 import { cleanup, processQueue } from "./sender";
-import { refreshTokenIfNeeded } from "./instagram";
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -20,7 +19,6 @@ export default {
   async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     if (event.cron === "17 3 * * *") {
       ctx.waitUntil(cleanup(env));
-      ctx.waitUntil(refreshTokenIfNeeded(env).catch((e) => console.error("token refresh", e)));
     }
     ctx.waitUntil(processQueue(env).catch((e) => console.error("processQueue", e)));
   },

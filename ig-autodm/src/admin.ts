@@ -14,11 +14,12 @@ import { checkLogin, clearSessionCookie, isLoggedIn, makeSessionCookie, sameOrig
 import { esc, page, redirect, timeAgo } from "./html";
 import { buildMessage, parseKeywords, parseVariants, validateRuleInput } from "./match";
 import {
-  getMe,
+  completeOAuth,
+  getConnection,
   getMedia,
-  getSubscriptions,
   listMedia,
   mediaThumb,
+  oauthDialogUrl,
   subscribeComments,
   type Media,
 } from "./instagram";
@@ -34,6 +35,8 @@ export async function handleAdmin(request: Request, env: Env, url: URL): Promise
     if (method === "POST") return loginPost(request, env);
     return loginPage();
   }
+  // החזרה מפייסבוק מגיעה מאתר אחר, אז עוגיית הכניסה (SameSite=Strict) לא נשלחת. מאמתים לפי עוגיית ה-state
+  if (path === "/admin/callback" && method === "GET") return oauthCallback(request, env, url);
   if (!(await isLoggedIn(request, env))) return redirect("/admin/login");
   if (method === "POST" && !sameOrigin(request)) return new Response("Forbidden", { status: 403 });
 
@@ -63,7 +66,16 @@ export async function handleAdmin(request: Request, env: Env, url: URL): Promise
           return redirect("/admin?msg=" + encodeURIComponent("ההגדרות נשמרו"));
         case "/admin/subscribe":
           await subscribeComments(env);
+          await setSetting(env, "subscribed", "1");
           return redirect("/admin?msg=" + encodeURIComponent("קבלת התגובות הופעלה"));
+        case "/admin/connect": {
+          if (!env.META_APP_ID || !env.META_APP_SECRET)
+            throw new Error("חסרים META_APP_ID או META_APP_SECRET בהגדרות השרת");
+          const state = [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, "0")).join("");
+          return redirect(oauthDialogUrl(env, url.origin + "/admin/callback", state), {
+            "Set-Cookie": `${STATE_COOKIE}=${state}; Path=/admin/callback; HttpOnly; Secure; SameSite=Lax; Max-Age=900`,
+          });
+        }
         case "/admin/retry":
           await env.DB.prepare(
             "UPDATE comments SET status = 'pending', attempts = 0, next_try_at = ? WHERE status = 'failed' AND received_at > ?",
@@ -84,6 +96,38 @@ export async function handleAdmin(request: Request, env: Env, url: URL): Promise
     );
   }
   return new Response("Not found", { status: 404 });
+}
+
+const STATE_COOKIE = "igdm_state";
+
+async function oauthCallback(request: Request, env: Env, url: URL): Promise<Response> {
+  const fail = (m: string) =>
+    page("חיבור", `<h1>החיבור לא הצליח</h1><div class="banner bad">${esc(m)}</div><a class="btn" href="/admin">חזרה</a>`, {
+      status: 400,
+      headers: { "Set-Cookie": `${STATE_COOKIE}=; Path=/admin/callback; HttpOnly; Secure; SameSite=Lax; Max-Age=0` },
+    });
+  const cookieState = (request.headers.get("Cookie") ?? "").match(new RegExp(`(?:^|;\\s*)${STATE_COOKIE}=([0-9a-f]{32})`))?.[1];
+  const state = url.searchParams.get("state") ?? "";
+  if (!cookieState || cookieState !== state) return fail("הקישור פג. מתחילים שוב מדף הניהול");
+  if (url.searchParams.get("error")) return fail(url.searchParams.get("error_description") || "בוטל");
+  const code = url.searchParams.get("code");
+  if (!code) return fail("לא התקבל קוד מפייסבוק");
+  try {
+    const conn = await completeOAuth(env, code, url.origin + "/admin/callback");
+    let msg = `מחובר ל-@${conn.igUsername}`;
+    try {
+      await subscribeComments(env);
+      await setSetting(env, "subscribed", "1");
+    } catch (e) {
+      await setSetting(env, "subscribed", "0");
+      msg += `. ההרשמה להתראות על תגובות לא הצליחה: ${(e as Error).message}`;
+    }
+    return redirect("/admin?msg=" + encodeURIComponent(msg), {
+      "Set-Cookie": `${STATE_COOKIE}=; Path=/admin/callback; HttpOnly; Secure; SameSite=Lax; Max-Age=0`,
+    });
+  } catch (e) {
+    return fail((e as Error).message);
+  }
 }
 
 function loginPage(error = "", status = 200): Response {
@@ -120,15 +164,16 @@ async function dashboard(env: Env, url: URL): Promise<Response> {
   ]);
 
   // פרטי החשבון ותמונות הריילס (כתובות התמונות של אינסטגרם פגות, אז מביאים מחדש)
-  let me: { username: string } | null = null;
+  const conn = await getConnection(env);
+  const connected = !!(conn.token && conn.igId);
+  const me = connected ? { username: conn.igUsername || conn.igId } : null;
   let igError = "";
-  let subscribed: boolean | null = null;
+  const subscribed = connected ? (await getSetting(env, "subscribed")) === "1" : null;
   const thumbs = new Map<string, string>();
   try {
-    me = await getMe(env);
-    const [media, subs] = await Promise.all([listMedia(env), getSubscriptions(env).catch(() => null)]);
+    if (!connected) throw new Error("");
+    const media = await listMedia(env);
     for (const m of media.data) thumbs.set(m.id, mediaThumb(m));
-    if (subs) subscribed = subs.data.some((d) => d.subscribed_fields?.includes("comments"));
     const missing = rules.filter((r) => !thumbs.has(r.media_id)).slice(0, 8);
     await Promise.all(
       missing.map((r) =>
@@ -144,8 +189,13 @@ async function dashboard(env: Env, url: URL): Promise<Response> {
   const msg = url.searchParams.get("msg");
   const banners: string[] = [];
   if (msg) banners.push(`<div class="banner ok">${esc(msg)}</div>`);
-  if (igError) banners.push(`<div class="banner bad">אין חיבור לאינסטגרם: ${esc(igError)}</div>`);
-  else if (tokenError) banners.push(`<div class="banner warn">בעיה בחידוש הטוקן: ${esc(tokenError)}</div>`);
+  const connectBtn = (label: string) =>
+    `<form class="inline" method="post" action="/admin/connect"><button class="btn small" type="submit">${label}</button></form>`;
+  if (!connected)
+    banners.push(`<div class="banner warn">חשבון האינסטגרם עוד לא מחובר. ${connectBtn("חיבור החשבון")}</div>`);
+  else if (igError)
+    banners.push(`<div class="banner bad">אין חיבור לאינסטגרם: ${esc(igError)} ${connectBtn("חיבור מחדש")}</div>`);
+  else if (tokenError) banners.push(`<div class="banner warn">בעיה בטוקן של אינסטגרם: ${esc(tokenError)}</div>`);
   if (subscribed === false)
     banners.push(`<div class="banner warn">החשבון עוד לא מקבל התראות על תגובות.
       <form class="inline" method="post" action="/admin/subscribe"><button class="btn small" type="submit">להפעיל עכשיו</button></form></div>`);
