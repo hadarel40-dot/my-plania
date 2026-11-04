@@ -5,7 +5,7 @@ import type { CompositionProps } from "@/remotion/timeline-composition";
 import { ExportComposition } from "@/remotion/export-composition";
 import { ASPECT_SIZE, type MediaAsset, type Timeline } from "@/lib/editor/types";
 import { timelineDuration } from "@/lib/editor/timeline-utils";
-import { fontFamily } from "@/lib/editor/fonts";
+import { ensureExtraFonts, isExtraFont, fontFamily } from "@/lib/editor/fonts";
 
 export type ExportQuality = "720p" | "1080p";
 
@@ -32,6 +32,7 @@ export async function renderToMp4(
   }
 
   // הגופנים חייבים להיות טעונים לפני הרינדור, אחרת הטקסט ייצא בגופן ברירת המחדל
+  if ([...timeline.overlays.map((o) => o.font), ...timeline.captions.map((c) => c.font)].some(isExtraFont)) await ensureExtraFonts();
   const families = [...new Set([...timeline.overlays.map((o) => o.font), ...timeline.captions.map((c) => c.font)].map((f) => fontFamily(f).split(",")[0]))];
   await Promise.all(families.map((f) => document.fonts.load(`700 64px ${f}`).catch(() => undefined)));
   await document.fonts.ready;

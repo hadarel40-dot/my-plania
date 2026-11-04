@@ -10,7 +10,7 @@ import { CLIP_STYLES, detectStyle } from "@/lib/editor/clip-styles";
 import { importFile } from "@/lib/media/import";
 import { cn } from "@/lib/utils";
 import { IconButton, Section } from "./ui";
-import { CaptionColors, CaptionInspector, CaptionTemplates } from "./caption-inspector";
+import { CaptionColors, CaptionInspector, CaptionPosition, CaptionTemplates } from "./caption-inspector";
 import { openCaptionsSheet } from "./captions-sheet";
 import { OverlayInspector } from "./overlay-inspector";
 import { AudioInspector } from "./audio-inspector";
@@ -156,7 +156,8 @@ function TextTab() {
             </button>
             <CaptionTemplates current={captionStyle} />
             <CaptionColors color={captionStyle?.color} accent={captionStyle?.accent} />
-            <p className="text-[11px] text-zinc-500">לגופן, גודל ומיקום: לוחצים על כתובית בציר הזמן.</p>
+            <CaptionPosition y={captionStyle?.y} />
+            <p className="text-[11px] text-zinc-500">לגופן, אנימציה וגודל: לוחצים על כתובית בציר הזמן, או על הכתובית בסרטון.</p>
           </div>
         )}
         <button onClick={() => addCaption(at())}

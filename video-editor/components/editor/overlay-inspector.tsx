@@ -1,11 +1,12 @@
 "use client";
+import { useEffect } from "react";
 import { Copy, Trash2, X } from "lucide-react";
 import { useEditor } from "@/stores/editor-store";
 import { ANIM_IN_LABELS, ANIM_OUT_LABELS, LOOP_LABELS } from "@/lib/editor/overlay-presets";
 import type { Overlay } from "@/lib/editor/types";
 import { uid } from "@/lib/editor/timeline-utils";
 import { cn } from "@/lib/utils";
-import { FONTS, fontFamily } from "@/lib/editor/fonts";
+import { FONTS, ensureExtraFonts, fontFamily } from "@/lib/editor/fonts";
 import { IconButton, Section } from "./ui";
 
 const COLORS = ["#ffffff", "#111111", "#facc15", "#f43f5e", "#ef4444", "#22c55e", "#38bdf8", "#7c3aed", "#f97316"];
@@ -19,6 +20,8 @@ const POSITIONS: [number, number][] = [
 ];
 
 export function OverlayInspector({ id, onClose }: { id: string; onClose: () => void }) {
+  // הגופנים המיוחדים נטענים כשפותחים את העורך של הטקסט
+  useEffect(() => { void ensureExtraFonts(); }, []);
   const o = useEditor((s) => s.timeline.overlays.find((x) => x.id === id) ?? null);
   const { updateOverlay, removeSelected } = useEditor.getState();
   if (!o) return null;

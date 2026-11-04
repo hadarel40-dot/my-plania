@@ -136,7 +136,8 @@ export interface AudioClip {
   fadeOut: number;
 }
 
-export type CaptionPreset = "word-pop" | "highlight-box" | "one-word" | "bold-pop" | "karaoke" | "minimal";
+export type CaptionPreset = "word-pop" | "highlight-box" | "one-word" | "bold-pop" | "karaoke" | "minimal"
+  | "neon" | "underline" | "bubble" | "typewriter" | "slide" | "outline" | "shadow3d" | "gradient";
 
 export interface Caption {
   id: string;

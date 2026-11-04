@@ -233,6 +233,118 @@ function CaptionView({ caption }: { caption: Caption }) {
       );
     }
 
+    // ניאון: כל הטקסט זוהר בעדינות, והמילה הנאמרת זוהרת חזק בצבע ההדגשה
+    case "neon":
+      return (
+        <div style={{ ...box, fontSize: 88 * k, fontWeight: 800 }}>
+          {wrap(words.map((w, i) => {
+            const on = i === active;
+            return (
+              <span key={i} style={{ margin: `0 ${8 * k}px`, color: on ? "#fff" : plain,
+                textShadow: on ? `0 0 ${10 * k}px ${accent}, 0 0 ${24 * k}px ${accent}, 0 0 ${48 * k}px ${accent}` : `0 0 ${10 * k}px rgba(255,255,255,.45)` }}>
+                {w.word}
+              </span>
+            );
+          }))}
+        </div>
+      );
+
+    // קו בצבע ההדגשה שנמתח מתחת למילה הנאמרת
+    case "underline":
+      return (
+        <div style={{ ...box, fontSize: 86 * k, fontWeight: 900, color: plain, ...stroke(5) }}>
+          {wrap(words.map((w, i) => {
+            const on = i === active;
+            const grow = on ? Math.min(1, pop(w.start)) : i < active ? 1 : 0;
+            return (
+              <span key={i} style={{ position: "relative", display: "inline-block", margin: `0 ${9 * k}px` }}>
+                {w.word}
+                <span style={{ position: "absolute", insetInline: 0, bottom: -6 * k, height: 10 * k, borderRadius: 6 * k, background: accent, transform: `scaleX(${grow})`, transformOrigin: "right", opacity: on ? 1 : 0.55 }} />
+              </span>
+            );
+          }))}
+        </div>
+      );
+
+    // כל מילה בבועה משלה; הבועה של המילה הנאמרת בצבע ההדגשה וקופצת
+    case "bubble":
+      return (
+        <div style={{ ...box, fontSize: 70 * k, fontWeight: 800 }}>
+          {words.map((w, i) => {
+            const on = i === active;
+            return (
+              <span key={i} style={{ display: "inline-block", margin: `${6 * k}px ${5 * k}px`, padding: `${6 * k}px ${22 * k}px`, borderRadius: 999,
+                background: on ? accent : "rgba(15,12,28,.78)", color: on ? "#111" : plain === "#111" ? "#fff" : plain,
+                transform: `scale(${on ? 0.92 + 0.12 * pop(w.start) : 1})`, boxShadow: `0 ${4 * k}px ${14 * k}px rgba(0,0,0,.35)` }}>
+                {w.word}
+              </span>
+            );
+          })}
+        </div>
+      );
+
+    // מכונת כתיבה: האותיות מופיעות אחת אחרי השנייה, בקצב הדיבור
+    case "typewriter": {
+      const shown = Math.ceil(caption.text.length * Math.min(1, t / Math.max(0.2, (caption.end - caption.start) * 0.8)));
+      return (
+        <div style={{ ...box, fontSize: 74 * k, fontWeight: 700, color: plain, ...stroke(4) }}>
+          {wrap(<>{caption.text.slice(0, shown)}<span style={{ color: accent, opacity: frame % 16 < 8 ? 1 : 0 }}>|</span></>)}
+        </div>
+      );
+    }
+
+    // החלקה: הכתובית עולה מלמטה ונכנסת, המילה הנאמרת בצבע ההדגשה
+    case "slide": {
+      const p = Math.min(1, frame / (fps * 0.22));
+      const ease = 1 - Math.pow(1 - p, 3);
+      return (
+        <div style={{ ...box, fontSize: 82 * k, fontWeight: 900, ...stroke(5), transform: `translateY(calc(-50% + ${(1 - ease) * 60 * k}px))`, opacity: ease }}>
+          {wrap(words.map((w, i) => <span key={i} style={{ color: i === active ? accent : plain }}>{w.word} </span>))}
+        </div>
+      );
+    }
+
+    // חלול: אותיות עם קו מתאר בלבד, והמילה הנאמרת מתמלאת בצבע
+    case "outline":
+      return (
+        <div style={{ ...box, fontSize: 96 * k, fontWeight: 900 }}>
+          {wrap(words.map((w, i) => {
+            const on = i <= active;
+            return (
+              <span key={i} style={{ margin: `0 ${8 * k}px`, color: on ? accent : "transparent", WebkitTextStroke: `${3 * k}px ${on ? accent : plain === "#111" ? "#111" : "#fff"}`,
+                transform: `scale(${i === active ? 0.94 + 0.08 * pop(w.start) : 1})`, display: "inline-block" }}>
+                {w.word}
+              </span>
+            );
+          }))}
+        </div>
+      );
+
+    // תלת-ממד: צל עמוק בצבע ההדגשה, כמו אותיות בולטות
+    case "shadow3d": {
+      const depth = [1, 2, 3, 4, 5, 6].map((d) => `${d * 1.6 * k}px ${d * 1.6 * k}px 0 ${accent}`).join(", ");
+      return (
+        <div style={{ ...box, fontSize: 90 * k, fontWeight: 900, color: plain === "#111" ? "#fff" : plain, textShadow: depth }}>
+          {wrap(words.map((w, i) => (
+            <span key={i} style={{ display: "inline-block", margin: `0 ${8 * k}px`, transform: `scale(${i === active ? 1 + 0.12 * pop(w.start) - 0.06 * Math.max(0, pop(w.start) - 1) : 1})` }}>{w.word}</span>
+          )))}
+        </div>
+      );
+    }
+
+    // גרדיאנט: מעבר צבעים מצבע ההדגשה ללבן לאורך הטקסט
+    case "gradient":
+      return (
+        <div style={{ ...box, fontSize: 92 * k, fontWeight: 900, filter: `drop-shadow(0 ${3 * k}px ${4 * k}px rgba(0,0,0,.6))` }}>
+          {wrap(words.map((w, i) => (
+            <span key={i} style={{ display: "inline-block", margin: `0 ${8 * k}px`, backgroundImage: `linear-gradient(90deg, ${accent}, ${plain === "#111" ? "#7c3aed" : "#ffffff"})`,
+              WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", transform: `scale(${i === active ? 1 + 0.1 * pop(w.start) - 0.05 * Math.max(0, pop(w.start) - 1) : 1})` }}>
+              {w.word}
+            </span>
+          )))}
+        </div>
+      );
+
     default: {
       const p = Math.min(1, frame / (fps * 0.12));
       return (
