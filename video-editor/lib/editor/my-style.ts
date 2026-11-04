@@ -19,7 +19,21 @@ export interface MyStyle {
   picks?: Record<string, number>;
 }
 
-const KEY = "ai-video-editor:my-style:v1";
+const BASE_KEY = "ai-video-editor:my-style:v1";
+let KEY = BASE_KEY;
+
+/**
+ * לכל משתמשת סגנון ומילון משלה, גם כששתיים משתמשות באותו טלפון. בפעם הראשונה,
+ * מה שנשמר לפני שהיו כמה משתמשות עובר למשתמשת שנכנסה.
+ */
+export function setMyStyleUser(userId: string) {
+  KEY = `${BASE_KEY}:${userId}`;
+  try {
+    const legacy = localStorage.getItem(BASE_KEY);
+    if (legacy && !localStorage.getItem(KEY)) localStorage.setItem(KEY, legacy);
+    if (legacy) localStorage.removeItem(BASE_KEY);
+  } catch { /* מצב פרטי */ }
+}
 
 export function loadMyStyle(): MyStyle {
   try {

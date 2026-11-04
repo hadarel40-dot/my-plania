@@ -5,6 +5,7 @@ import type { ProjectMeta } from "@/lib/editor/project-meta";
 import { CreateButton } from "./create-button";
 import { DeleteButton } from "./delete-button";
 import { PasswordCard } from "./password-card";
+import { InviteButton } from "./invite-button";
 
 interface Row { id: string; title: string; updated_at: string; meta: Partial<ProjectMeta> | null }
 
@@ -40,6 +41,7 @@ export function ProjectList({ email, projects, error, showPassword, hasPassword 
             className="rounded-md p-1.5 hover:bg-zinc-800 hover:text-white">
             <KeyRound className="size-4" />
           </Link>
+          <InviteButton />
           <button title="התנתקות" aria-label="התנתקות" className="rounded-md p-1.5 hover:bg-zinc-800 hover:text-white">
             <LogOut className="size-4" />
           </button>

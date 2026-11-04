@@ -1,3 +1,4 @@
+import "@/lib/dispose-polyfill";
 import { Audio as MediaAudio, Video as MediaVideo } from "@remotion/media";
 import { MediaTagsContext, TimelineComposition, type CompositionProps, type MediaTags } from "./timeline-composition";
 

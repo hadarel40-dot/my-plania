@@ -1,4 +1,5 @@
 "use client";
+import "@/lib/dispose-polyfill";
 import { canRenderMediaOnWeb, renderMediaOnWeb } from "@remotion/web-renderer";
 import type { CompositionProps } from "@/remotion/timeline-composition";
 import { ExportComposition } from "@/remotion/export-composition";

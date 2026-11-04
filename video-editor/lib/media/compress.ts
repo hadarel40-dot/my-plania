@@ -1,4 +1,5 @@
 "use client";
+import "@/lib/dispose-polyfill";
 import { errorText, logEvent } from "@/lib/telemetry";
 
 /**

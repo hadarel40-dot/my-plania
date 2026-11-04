@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, supabaseEnabled } from "@/lib/supabase/env";
 
-const PUBLIC_PATHS = ["/login", "/auth", "/api"];
+const PUBLIC_PATHS = ["/login", "/auth", "/api", "/invite"];
 
 /** מרענן את סשן ה-Supabase בכל בקשה, ומפנה משתמש לא מחובר לעמוד ההתחברות */
 export async function middleware(request: NextRequest) {
