@@ -174,6 +174,8 @@ function AutoEditButton({ disabled }: { disabled: boolean }) {
     useEditor.setState({ timeline: o.timeline, selection: null });
     usePlayback.getState().seek(0);
     useAutoEditRun.setState({ chosen: o.id });
+    // מנגנים מיד מההתחלה, כדי לראות את הגרסה בלי עוד לחיצה
+    usePlayback.getState().player?.play();
   };
   const setMode = (m: AutoEditMode) => useAutoEditRun.setState({ mode: m });
   const run = runAutoEdit;

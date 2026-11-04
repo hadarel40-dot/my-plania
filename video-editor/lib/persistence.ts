@@ -30,7 +30,7 @@ async function withStore<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore
 export const saveFile = (assetId: string, file: Blob) =>
   withStore("readwrite", (s) => s.put(file, assetId)).catch(() => undefined);
 
-const loadFile = (assetId: string) =>
+export const loadFile = (assetId: string) =>
   withStore<Blob | undefined>("readonly", (s) => s.get(assetId)).catch(() => undefined);
 
 const clearFiles = () => withStore("readwrite", (s) => s.clear()).catch(() => undefined);

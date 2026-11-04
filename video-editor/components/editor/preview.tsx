@@ -13,6 +13,7 @@ import { FileInput } from "./media-bin";
 import { OPEN_SMART_EVENT, runAutoEdit, useAutoEditRun } from "./smart-tab";
 import { Sparkles, X as XIcon } from "lucide-react";
 import { useUploads } from "@/stores/upload-store";
+import { ensurePreviewProxies, setProxyPause, usePreviewProxies } from "@/lib/media/preview-proxy";
 
 export function Preview() {
   const playerRef = useRef<PlayerRef>(null);
@@ -21,23 +22,37 @@ export function Preview() {
   const previewVariantId = useEditor((s) => s.previewVariantId);
   const previewVariant = useEditor((s) => (previewVariantId ? s.variants[previewVariantId] : null));
   const setAspect = useEditor((s) => s.setAspect);
-  const { setPlayer, setCurrentTime, setPlaying, seek, currentTime, playing } = usePlayback();
+  const { setPlayer, setCurrentTime, setPlaying } = usePlayback.getState();
+  const playing = usePlayback((s) => s.playing);
+  const proxies = usePreviewProxies((s) => s.urls);
 
   const { width, height } = ASPECT_SIZE[timeline.aspect];
   const duration = timelineDuration(timeline);
   const durationInFrames = Math.max(1, Math.ceil(duration * timeline.fps));
+  const hasPlayer = duration > 0;
+
+  // עותקים קטנים לתצוגה ברקע (הייצוא משתמש במקור)
+  useEffect(() => {
+    setProxyPause(() => useUploads.getState().items.length > 0 || !!useAutoEditRun.getState().busy || usePlayback.getState().playing);
+    ensurePreviewProxies(Object.values(assets));
+  }, [assets]);
+  const previewAssets = useMemo(() => {
+    if (!Object.keys(proxies).length) return assets;
+    return Object.fromEntries(Object.entries(assets).map(([id, a]) => [id, proxies[id] ? { ...a, url: proxies[id] } : a]));
+  }, [assets, proxies]);
 
   const inputProps = useMemo<CompositionProps>(() => ({
     timeline,
-    assets,
+    assets: previewAssets,
     override: previewVariant?.result
       ? { clipId: previewVariant.clipId, ...previewVariant.result }
       : null,
-  }), [timeline, assets, previewVariant]);
+  }), [timeline, previewAssets, previewVariant]);
 
   // בתצוגה מקדימה של וריאציה, קופצים לתחילת הקליפ שלה
   useEffect(() => {
     if (!previewVariant) return;
+    const { currentTime, seek } = usePlayback.getState();
     const hit = layoutClips(timeline.clips).find((l) => l.clip.id === previewVariant.clipId);
     if (hit && (currentTime < hit.start || currentTime >= hit.end)) seek(hit.start);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -63,9 +78,13 @@ export function Preview() {
       p.removeEventListener("ended", onPause);
       setPlayer(null, timeline.fps);
     };
-  }, [setPlayer, setCurrentTime, setPlaying, timeline.fps]);
+    // הנגן נוצר רק כשיש משהו בציר הזמן: בפרויקט חדש מתחברים אליו אחרי ההעלאה הראשונה
+  }, [setPlayer, setCurrentTime, setPlaying, timeline.fps, hasPlayer]);
 
-  const step = (frames: number) => seek(currentTime + frames / timeline.fps);
+  const step = (frames: number) => {
+    const { currentTime, seek } = usePlayback.getState();
+    seek(currentTime + frames / timeline.fps);
+  };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center gap-2 p-2 md:gap-3 md:p-4">
@@ -109,9 +128,7 @@ export function Preview() {
       </div>
 
       <div dir="ltr" className="flex w-full max-w-xl items-center justify-between gap-3">
-        <span className="w-24 font-mono text-xs tabular-nums text-zinc-400">
-          {formatTime(currentTime, timeline.fps)}
-        </span>
+        <TimeLabel fps={timeline.fps} />
         <div className="flex items-center gap-1">
           <CtrlBtn label="פריים אחורה" onClick={() => step(-1)}><SkipBack className="size-4" /></CtrlBtn>
           <button
@@ -140,6 +157,12 @@ export function Preview() {
       </div>
     </div>
   );
+}
+
+/** השעון מתעדכן 30 פעם בשנייה, ולכן הוא רכיב נפרד: רק הוא מתרנדר, לא כל הנגן */
+function TimeLabel({ fps }: { fps: number }) {
+  const t = usePlayback((s) => s.currentTime);
+  return <span className="w-24 font-mono text-xs tabular-nums text-zinc-400">{formatTime(t, fps)}</span>;
 }
 
 function CtrlBtn({ children, label, onClick }: { children: React.ReactNode; label: string; onClick: () => void }) {

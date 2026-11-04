@@ -54,7 +54,7 @@ export function TimelineComposition({ timeline, assets, override }: CompositionP
           ? { type: own.type, frames: Math.max(1, Math.round((overlap || Math.min(own.duration, (end - start) / 2)) * fps)) }
           : null;
         return (
-          <Sequence key={clip.id} from={from} durationInFrames={duration} premountFor={fps}>
+          <Sequence key={clip.id} from={from} durationInFrames={duration} premountFor={Math.round(fps * 1.5)}>
             <ClipLayer clip={clip} asset={asset} look={look} duration={duration} fps={fps} mode={mediaMode} Video={VideoTag} intro={intro} />
           </Sequence>
         );

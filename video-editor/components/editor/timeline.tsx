@@ -52,7 +52,6 @@ export function TimelinePanel() {
   const transcribeStatus = useEditor((s) => s.transcribeStatus);
   const { splitAt, removeSelected, addCaption, autoTranscribe } = useEditor.getState();
   const { canUndo, canRedo } = useHistory();
-  const currentTime = usePlayback((s) => s.currentTime);
   const seek = usePlayback((s) => s.seek);
   const tracksRef = useRef<HTMLDivElement>(null);
 
@@ -75,10 +74,10 @@ export function TimelinePanel() {
         <ToolBtn label="ביטול (Ctrl+Z)" onClick={undo} disabled={!canUndo}><Undo2 className="size-4" /></ToolBtn>
         <ToolBtn label="חזרה (Ctrl+Shift+Z)" onClick={redo} disabled={!canRedo}><Redo2 className="size-4" /></ToolBtn>
         <Sep />
-        <ToolBtn label="פיצול בנקודת הניגון (S)" onClick={() => splitAt(currentTime)}><Scissors className="size-4" /></ToolBtn>
+        <ToolBtn label="פיצול בנקודת הניגון (S)" onClick={() => splitAt(usePlayback.getState().currentTime)}><Scissors className="size-4" /></ToolBtn>
         <ToolBtn label="מחיקה (Delete)" onClick={removeSelected} disabled={!selection}><Trash2 className="size-4" /></ToolBtn>
         <Sep />
-        <ToolBtn label="הוסף כתובית בנקודת הניגון" onClick={() => addCaption(currentTime)}><Plus className="size-4" /></ToolBtn>
+        <ToolBtn label="הוסף כתובית בנקודת הניגון" onClick={() => addCaption(usePlayback.getState().currentTime)}><Plus className="size-4" /></ToolBtn>
         <button
           onClick={() => autoTranscribe().catch(() => undefined)}
           disabled={transcribing || timeline.clips.length === 0}
@@ -133,10 +132,7 @@ export function TimelinePanel() {
             ))}
           </Track>
 
-          <div className="pointer-events-none absolute inset-y-0 z-20 w-px bg-red-500"
-            style={{ left: TRACK_LABEL_W + currentTime * pps }}>
-            <div className="absolute -left-1.5 top-0 size-3 rotate-45 bg-red-500" />
-          </div>
+          <Playhead pps={pps} />
         </div>
       </div>
     </section>
@@ -354,3 +350,17 @@ function ToolBtn({ children, label, onClick, disabled }: {
 }
 
 const Sep = () => <span className="mx-1 h-4 w-px bg-zinc-800" />;
+
+/**
+ * קו הניגון מתעדכן 30 פעם בשנייה. כרכיב נפרד, רק הוא זז, ושאר ציר הזמן (שיכול
+ * להכיל מאות כתוביות) לא מתרנדר מחדש בכל פריים. זה מה ששומר על נגינה חלקה בטלפון.
+ */
+function Playhead({ pps }: { pps: number }) {
+  const t = usePlayback((s) => s.currentTime);
+  return (
+    <div className="pointer-events-none absolute inset-y-0 z-20 w-px bg-red-500"
+      style={{ transform: `translateX(${TRACK_LABEL_W + t * pps}px)` }}>
+      <div className="absolute -left-1.5 top-0 size-3 rotate-45 bg-red-500" />
+    </div>
+  );
+}

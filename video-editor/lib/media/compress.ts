@@ -31,7 +31,7 @@ export async function prepareVideoForUpload(file: File, onProgress?: (p: number)
 }
 
 async function compress(file: File, onProgress?: (p: number) => void): Promise<File> {
-  const { Input, Output, Conversion, BlobSource, BufferTarget, Mp4OutputFormat, ALL_FORMATS } = await import("mediabunny");
+  const { Input, BlobSource, ALL_FORMATS } = await import("mediabunny");
   const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
   try {
     const track = await input.getPrimaryVideoTrack();
@@ -50,60 +50,9 @@ async function compress(file: File, onProgress?: (p: number) => void): Promise<F
     }
     // סרטון ארוך מקבל 720p, כדי שהאיכות תישאר טובה בתוך המגבלה
     const target = shortSide > 720 && videoBudget >= 2_500_000 ? 1080 : 720;
-    const scale = Math.min(1, target / shortSide);
-    const even = (n: number) => Math.max(2, Math.round((n * scale) / 2) * 2);
     const bitrate = Math.round(Math.min(target === 1080 ? 6_000_000 : 3_000_000, videoBudget * 0.92));
-
-    // באייפון יש לפעמים כמה פסי קול (למשל קול מרחבי בפורמט שהדפדפן לא מכיר, ולידו AAC רגיל):
-    // שומרים את הראשון שאפשר לפענח. אם אין כזה, מעדיפים סרטון בלי קול על פני העלאה שנכשלת.
-    const setup = async (keepAudio: boolean) => {
-      let kept = false;
-      const output = new Output({ format: new Mp4OutputFormat({ fastStart: "in-memory" }), target: new BufferTarget() });
-      const conversion = await Conversion.init({
-        input,
-        output,
-        video: {
-          width: even(track.displayWidth),
-          height: even(track.displayHeight),
-          fit: "fill",
-          codec: "avc",
-          bitrate,
-          forceTranscode: true,
-          // הסיבוב נצרב בתמונה עצמה, כדי שכל נגן יציג אותה עומדת
-          allowTransformationMetadata: false,
-        },
-        audio: (audioTrack) => {
-          if (!keepAudio || kept || !audioTrack.codec) return { discard: true };
-          kept = true;
-          return { codec: "aac" };
-        },
-      });
-      const lost = conversion.discardedTracks.filter((d) => d.reason !== "discarded_by_user").map((d) => `${d.track.type}:${d.reason}`);
-      return { output, conversion, lost };
-    };
-    let { output, conversion, lost } = await setup(true);
-    if (conversion.isValid && lost.length && lost.every((l) => l.startsWith("audio:"))) {
-      logEvent("compress_audio_dropped", { reasons: lost });
-      ({ output, conversion, lost } = await setup(false));
-    }
-    if (!conversion.isValid || lost.length) throw new Error(`conversion invalid ${lost.join(",")}`);
-
-    // שומר: אם אין התקדמות חצי דקה, מבטלים במקום להיתקע לנצח
-    let lastProgress = Date.now();
-    conversion.onProgress = (p) => { lastProgress = Date.now(); onProgress?.(p); };
-    let stalled = false;
-    const watchdog = setInterval(() => {
-      if (Date.now() - lastProgress > STALL_MS) { stalled = true; void conversion.cancel(); }
-    }, 2000);
-    try {
-      await conversion.execute();
-    } catch (e) {
-      throw stalled ? new Error("compression stalled") : e;
-    } finally {
-      clearInterval(watchdog);
-    }
-
-    const buffer = output.target.buffer!;
+    // תמונת מפתח כל שנייה: קפיצה לנקודה באמצע הסרטון (בנגן ובייצוא) מהירה הרבה יותר
+    const { buffer } = await transcode(input, { shortSide: target, bitrate, keyFrameInterval: 1, onProgress, allowSilent: true });
     if (buffer.byteLength > MAX_UPLOAD_BYTES) {
       throw new TooLarge(`גם אחרי כיווץ הסרטון גדול מדי (${mb(buffer.byteLength)}MB). אפשר לקצר אותו בגלריה ולהעלות שוב.`);
     }
@@ -111,6 +60,81 @@ async function compress(file: File, onProgress?: (p: number) => void): Promise<F
   } finally {
     input.dispose();
   }
+}
+
+export interface TranscodeOptions {
+  /** הצלע הקצרה של התוצאה (לא מגדילים סרטון קטן) */
+  shortSide: number;
+  bitrate: number;
+  keyFrameInterval: number;
+  onProgress?: (p: number) => void;
+  /** אם אין פס קול שאפשר לפענח: true ממשיך בלי קול, false נכשל */
+  allowSilent: boolean;
+}
+
+/**
+ * המרה ל-MP4 (H.264) בתוך הדפדפן. משמש גם לכיווץ לפני העלאה וגם לעותק הקטן של
+ * התצוגה המקדימה. מבטל את עצמו אם אין התקדמות חצי דקה.
+ */
+export async function transcode(input: import("mediabunny").Input, opts: TranscodeOptions): Promise<{ buffer: ArrayBuffer; silent: boolean }> {
+  const { Output, Conversion, BufferTarget, Mp4OutputFormat } = await import("mediabunny");
+  const track = await input.getPrimaryVideoTrack();
+  if (!track) throw new Error("no video track");
+  const scale = Math.min(1, opts.shortSide / Math.min(track.displayWidth, track.displayHeight));
+  const even = (n: number) => Math.max(2, Math.round((n * scale) / 2) * 2);
+
+  // באייפון יש לפעמים כמה פסי קול (למשל קול מרחבי בפורמט שהדפדפן לא מכיר, ולידו AAC רגיל):
+  // שומרים את הראשון שאפשר לפענח. אם אין כזה, מעדיפים סרטון בלי קול על פני העלאה שנכשלת.
+  const setup = async (keepAudio: boolean) => {
+    let kept = false;
+    const output = new Output({ format: new Mp4OutputFormat({ fastStart: "in-memory" }), target: new BufferTarget() });
+    const conversion = await Conversion.init({
+      input,
+      output,
+      video: {
+        width: even(track.displayWidth),
+        height: even(track.displayHeight),
+        fit: "fill",
+        codec: "avc",
+        bitrate: opts.bitrate,
+        keyFrameInterval: opts.keyFrameInterval,
+        forceTranscode: true,
+        // הסיבוב נצרב בתמונה עצמה, כדי שכל נגן יציג אותה עומדת
+        allowTransformationMetadata: false,
+      },
+      audio: (audioTrack) => {
+        if (!keepAudio || kept || !audioTrack.codec) return { discard: true };
+        kept = true;
+        return { codec: "aac" };
+      },
+    });
+    const lost = conversion.discardedTracks.filter((d) => d.reason !== "discarded_by_user").map((d) => `${d.track.type}:${d.reason}`);
+    return { output, conversion, lost };
+  };
+  let { output, conversion, lost } = await setup(true);
+  let silent = false;
+  if (opts.allowSilent && conversion.isValid && lost.length && lost.every((l) => l.startsWith("audio:"))) {
+    logEvent("compress_audio_dropped", { reasons: lost });
+    ({ output, conversion, lost } = await setup(false));
+    silent = true;
+  }
+  if (!conversion.isValid || lost.length) throw new Error(`conversion invalid ${lost.join(",")}`);
+
+  // שומר: אם אין התקדמות חצי דקה, מבטלים במקום להיתקע לנצח
+  let lastProgress = Date.now();
+  conversion.onProgress = (p) => { lastProgress = Date.now(); opts.onProgress?.(p); };
+  let stalled = false;
+  const watchdog = setInterval(() => {
+    if (Date.now() - lastProgress > STALL_MS) { stalled = true; void conversion.cancel(); }
+  }, 2000);
+  try {
+    await conversion.execute();
+  } catch (e) {
+    throw stalled ? new Error("compression stalled") : e;
+  } finally {
+    clearInterval(watchdog);
+  }
+  return { buffer: output.target.buffer!, silent };
 }
 
 /** הודעה שמוצגת כמו שהיא: הסרטון לא ייכנס גם אחרי כיווץ */

@@ -45,9 +45,11 @@ export function ClipLayer({ clip, asset, look, duration, intro, Video, mode, fps
   return (
     <AbsoluteFill style={{ overflow: "hidden", ...outerStyle(intro, frame) }}>
       {blurFill && (
-        <AbsoluteFill style={{ transform: "scale(1.15)" }}>
-          <Video {...common} volume={0} muted style={{ ...coverBoxFor(asset, W, H, 0.5, 0.5, "cover"), filter: `blur(${Math.round(W / 22)}px) brightness(0.65)` }} />
-        </AbsoluteFill>
+        // הרקע המטושטש מצויר ברבע גודל ואז מוגדל: נראה אותו דבר, אבל חישוב הטשטוש
+        // קל פי 16 (בטלפון זה ההבדל בין נגינה חלקה לקטועה)
+        <div style={{ position: "absolute", left: -0.075 * W, top: -0.075 * H, width: W / 4, height: H / 4, overflow: "hidden", transform: `scale(${4 * 1.15})`, transformOrigin: "0 0" }}>
+          <Video {...common} volume={0} muted style={{ ...coverBoxFor(asset, W / 4, H / 4, 0.5, 0.5, "cover"), filter: `blur(${Math.round(W / 88)}px) brightness(0.65)` }} />
+        </div>
       )}
       <AbsoluteFill style={{ transform: `${motion} scale(${look.zoom}) scaleX(${look.flip ? -1 : 1}) ${inStyle.transform ?? ""}`, opacity: inStyle.opacity }}>
         <Video {...common} volume={clip.volume ?? 1}
