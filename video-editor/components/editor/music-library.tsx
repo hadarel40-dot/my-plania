@@ -44,7 +44,7 @@ export function MusicLibrary() {
     setLoading(true);
     setError(null);
     try {
-      setTracks(await searchLibrary(q));
+      setTracks(await searchLibrary(q, { force: true, timeoutMs: 15000 }));
     } catch (e) {
       setError(e instanceof Error && e.message ? e.message : "החיפוש נכשל");
       setTracks(null);

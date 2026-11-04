@@ -364,8 +364,9 @@ function AutoEditButton({ disabled }: { disabled: boolean }) {
   ];
   const mode = genreInfo(genre)?.mode ?? "auto";
 
-  return (
-    <div>
+  // אחרי עריכה: הגרסאות והתיקונים למעלה, וההגדרות לעריכה חוזרת מתחתיהם
+  const settingsBlock = (
+    <>
       <EditorNotes />
       <MyStyleLine />
       <TransitionStylePicker />
@@ -393,7 +394,12 @@ function AutoEditButton({ disabled }: { disabled: boolean }) {
           </span>
         </span>
       </button>
-      {error && <p className="mt-2 text-xs text-red-300">{error}</p>}
+    </>
+  );
+  return (
+    <div>
+      {options.length > 1 ? (
+        <>
       {options.length > 1 && (
         <div className="mt-3">
           <p className="text-sm font-medium">בחרו גרסה <span className="text-xs font-normal text-zinc-500">· לחיצה מציגה אותה בנגן</span></p>
@@ -429,6 +435,31 @@ function AutoEditButton({ disabled }: { disabled: boolean }) {
             </button>
           )}
         </div>
+      )}
+      {error && <p className="mt-2 text-xs text-red-300">{error}</p>}
+          <details className="mt-4 rounded-lg border border-zinc-800 p-3 open:pb-4">
+            <summary className="cursor-pointer text-sm font-medium text-zinc-300">✏️ לערוך שוב עם הוראות או סגנון אחר</summary>
+            <div className="mt-3">{settingsBlock}</div>
+          </details>
+        </>
+      ) : (
+        <>
+          {settingsBlock}
+      {error && <p className="mt-2 text-xs text-red-300">{error}</p>}
+      {report && (
+        <div className="mt-2 space-y-1 rounded-lg bg-zinc-950 p-3 text-xs">
+          {report.done.map((d) => <p key={d} className="text-emerald-300">✓ {d}</p>)}
+          {report.skipped.map((d) => <p key={d} className="text-amber-300">– {d}</p>)}
+          <p className="pt-1 text-zinc-400">מכאן אפשר לשנות כל דבר: לחיצה על טקסט, כתובית או קליפ פותחת את העריכה שלו.</p>
+          {before && (
+            <button onClick={() => { useEditor.setState({ timeline: before }); setReport(null); setBefore(null); useAutoEditRun.setState({ options: [], chosen: null }); }}
+              className="mt-1 text-zinc-400 underline hover:text-white">
+              לא אהבתי, חזרה לסרטון כמו שהיה
+            </button>
+          )}
+        </div>
+      )}
+        </>
       )}
     </div>
   );

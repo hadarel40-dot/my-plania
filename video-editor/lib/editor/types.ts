@@ -118,6 +118,8 @@ export interface Overlay {
 export interface AudioClip {
   /** נוסף מתבנית (מוחלף כשבוחרים תבנית אחרת) */
   fromTemplate?: boolean;
+  /** שיר שהעריכה האוטומטית בחרה (מוחלף בעריכה אוטומטית חוזרת) */
+  auto?: boolean;
   id: string;
   assetId: string;
   /** מיקום על ציר הזמן, בשניות */
@@ -157,6 +159,8 @@ export interface Timeline {
   transitionStyle?: TransitionStyle;
   /** הסגנון לכתוביות חדשות (מתבנית או מהבחירה האחרונה) */
   captionStyle?: CaptionStyle;
+  /** הצילומים המקוריים, לפני העריכה האוטומטית: עריכה חוזרת מתחילה מהם ולא מהגרסה הערוכה */
+  raw?: Clip[];
   fps: number;
   aspect: Aspect;
   clips: Clip[];

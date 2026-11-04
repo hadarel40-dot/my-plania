@@ -1,6 +1,6 @@
 "use client";
 import { useEditor } from "@/stores/editor-store";
-import { searchLibrary, addLibraryTrack, addBuiltinTrack } from "@/lib/music/add";
+import { searchLibrary, addLibraryTrack, addBuiltinTrack, markLastAudioAuto } from "@/lib/music/add";
 import { BUILTIN_TRACKS } from "@/lib/music/builtin";
 import { MUSIC_MOODS, type MusicMood } from "@/lib/music/moods";
 import { errorText, logEvent } from "@/lib/telemetry";
@@ -98,10 +98,7 @@ export async function otherMusic(): Promise<string> {
   const mood = MOOD_CYCLE[moodTurn++ % MOOD_CYCLE.length];
   let name = "";
   try {
-    const tracks = await Promise.race([
-      searchLibrary(MUSIC_MOODS[mood]),
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 8000)),
-    ]);
+    const tracks = await searchLibrary(MUSIC_MOODS[mood], { timeoutMs: 4000 });
     const fresh = tracks.filter((t) => !oldAsset?.name.startsWith(t.title));
     const track = fresh[Math.floor(Math.random() * Math.min(5, fresh.length))];
     if (!track) throw new Error("לא נמצא שיר");
@@ -114,6 +111,7 @@ export async function otherMusic(): Promise<string> {
     addBuiltinTrack(builtin, { select: false });
     name = builtin.title;
   }
+  markLastAudioAuto();
   const added = musicClip();
   if (added && volume !== undefined) useEditor.getState().updateAudioClip(added.id, { volume });
   // בסרטון אווירה החיתוכים זזים לקצב של השיר החדש

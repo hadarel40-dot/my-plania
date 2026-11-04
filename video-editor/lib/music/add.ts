@@ -6,11 +6,21 @@ import { builtinAsset, type BuiltinTrack } from "./builtin";
 
 export const musicFileUrl = (id: string) => `/api/music/file?id=${encodeURIComponent(id)}`;
 
-export async function searchLibrary(query: string): Promise<MusicTrack[]> {
-  const res = await fetch(`/api/music/search?q=${encodeURIComponent(query)}`);
-  const data = await res.json().catch(() => null);
-  if (!res.ok || !data) throw new Error(data?.error ?? "החיפוש נכשל");
-  return data.tracks as MusicTrack[];
+/** אחרי כישלון, הספרייה לא נוסתה שוב 10 דקות: כדי שעריכה אוטומטית לא תחכה לה כל פעם */
+let libraryDownUntil = 0;
+
+export async function searchLibrary(query: string, { timeoutMs = 6000, force = false } = {}): Promise<MusicTrack[]> {
+  if (!force && Date.now() < libraryDownUntil) throw new Error("ספריית המוזיקה לא זמינה כרגע");
+  try {
+    const res = await fetch(`/api/music/search?q=${encodeURIComponent(query)}`, { signal: AbortSignal.timeout(timeoutMs) });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data) throw new Error(data?.error ?? "החיפוש נכשל");
+    if (!(data.tracks as MusicTrack[]).length) throw new Error("לא נמצאו שירים");
+    return data.tracks as MusicTrack[];
+  } catch (e) {
+    libraryDownUntil = Date.now() + 10 * 60_000;
+    throw e;
+  }
 }
 
 /**
@@ -31,6 +41,16 @@ export async function addLibraryTrack(t: MusicTrack, { select = true }: { select
 }
 
 /** מוסיף שיר מובנה (מהאתר עצמו, בלי הורדה והעלאה) למסלול הסאונד מתחילת הסרטון */
+/** מסמן את השיר האחרון שנוסף כבחירה של העריכה האוטומטית (כדי שעריכה חוזרת תחליף אותו) */
+export function markLastAudioAuto() {
+  useEditor.setState((s) => {
+    const audio = [...s.timeline.audio];
+    const last = audio.at(-1);
+    if (last) audio[audio.length - 1] = { ...last, auto: true };
+    return { timeline: { ...s.timeline, audio } };
+  });
+}
+
 export function addBuiltinTrack(t: BuiltinTrack, { select = true }: { select?: boolean } = {}): string {
   const asset = builtinAsset(t);
   const { addAsset, addAudioClip } = useEditor.getState();

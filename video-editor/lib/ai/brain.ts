@@ -54,16 +54,19 @@ const GEMINI_API = process.env.GEMINI_API_BASE || "https://generativelanguage.go
  */
 const GEMINI_MODELS: { model: string; fast: boolean }[] = [
   ...(process.env.GEMINI_MODEL ? [{ model: process.env.GEMINI_MODEL, fast: false }] : []),
+  // הגרסאות הישנות (2.5) כבר לא זמינות למשתמשים חדשים, ולכן החדשות קודם
+  { model: "gemini-3.8-flash", fast: true },
+  { model: "gemini-flash-latest", fast: true },
+  { model: "gemini-3.5-flash-lite", fast: true },
+  { model: "gemini-flash-lite-latest", fast: true },
   { model: "gemini-2.5-flash", fast: true },
-  { model: "gemini-flash-latest", fast: false },
-  { model: "gemini-2.5-flash-lite", fast: true },
-  { model: "gemini-flash-lite-latest", fast: false },
 ];
 
-/** מוסיף לבקשה הגדרת חשיבה מינימלית */
-function withFastThinking(body: unknown) {
+/** מוסיף לבקשה הגדרת חשיבה מינימלית (בגרסאות 3 ומעלה: רמת חשיבה נמוכה; בישנות: תקציב 0) */
+function withFastThinking(body: unknown, model: string) {
   const b = body as { generationConfig?: Record<string, unknown> };
-  return { ...b, generationConfig: { ...(b.generationConfig ?? {}), thinkingConfig: { thinkingBudget: 0 } } };
+  const thinkingConfig = /gemini-2\./.test(model) ? { thinkingBudget: 0 } : { thinkingLevel: "low" };
+  return { ...b, generationConfig: { ...(b.generationConfig ?? {}), thinkingConfig } };
 }
 
 /**
@@ -83,10 +86,10 @@ async function geminiCall(body: unknown, budgetMs = 52_000, attemptMs = 25_000):
     const timeout = Math.min(left, attemptMs);
     try {
       try {
-        return await geminiModelCall(model, fast ? withFastThinking(body) : body, timeout);
+        return await geminiModelCall(model, fast ? withFastThinking(body, model) : body, timeout);
       } catch (e) {
         // גרסה שלא מכירה את הגדרת החשיבה: אותה גרסה בלי ההגדרה
-        if (fast && e instanceof BrainError && e.status === 502 && /thinking/i.test(e.detail ?? "")) {
+        if (fast && e instanceof BrainError && [400, 502].includes(e.status) && /thinking/i.test(e.detail ?? "")) {
           return await geminiModelCall(model, body, Math.min(deadline - Date.now(), attemptMs));
         }
         throw e;

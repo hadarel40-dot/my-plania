@@ -14,7 +14,7 @@ import type { CaptionPreset, ClipEffect, Overlay, Timeline, TransitionStyle, Tra
 import { MUSIC_MOODS, type MusicMood } from "@/lib/music/moods";
 import type { SmartPlan, SmartPlanRequest, VibePlan, VibePlanRequest } from "@/lib/ai/smart-plan";
 import { pickShots, rankShots, sampleClip, type FrameSample, type Shot } from "@/lib/video/analyze";
-import { addBuiltinTrack, addLibraryTrack, searchLibrary } from "@/lib/music/add";
+import { addBuiltinTrack, addLibraryTrack, markLastAudioAuto, searchLibrary } from "@/lib/music/add";
 import { builtinForMood } from "@/lib/music/builtin";
 import { errorText, logEvent } from "@/lib/telemetry";
 import type { SourceRange } from "./timeline-utils";
@@ -147,6 +147,16 @@ export interface AutoEditResult {
 export async function autoEditAll(onStatus: (s: string) => void, genre: VideoGenre = "auto"): Promise<AutoEditResult> {
   if (!useEditor.getState().timeline.clips.length) throw new Error("קודם מעלים סרטון");
   activeGenre = genreInfo(genre);
+  startFromRawFootage();
+  // כמה זמן לקח כל שלב (לפי "1/4", "2/4"...), ליומן: כך רואים מה איטי בטלפון האמיתי
+  const steps: Record<string, number> = {};
+  let stepKey = "detect", stepAt = Date.now();
+  const report = onStatus;
+  onStatus = (st: string) => {
+    const key = st.match(/^(\d\/\d)/)?.[1] ?? stepKey;
+    if (key !== stepKey) { steps[stepKey] = (steps[stepKey] ?? 0) + Date.now() - stepAt; stepKey = key; stepAt = Date.now(); }
+    report(st);
+  };
   let mode: AutoEditMode = activeGenre?.mode ?? "auto";
   const auto = mode === "auto";
   if (auto) {
@@ -158,12 +168,45 @@ export async function autoEditAll(onStatus: (s: string) => void, genre: VideoGen
     const result = mode === "vibe" ? await autoEditVibe(onStatus) : await autoEditTalking(onStatus);
     if (auto && mode === "talking") result.report.done.unshift("זוהה סרטון דיבור (אם זה סרטון אווירה, בחרו \"אווירה\" ונסו שוב)");
     if (result.options[0]) useEditor.setState({ timeline: result.options[0].timeline, selection: null });
-    logEvent("auto_edit_done", { mode, genre, auto, ms: Date.now() - started, options: result.options.length, skipped: result.report.skipped });
+    steps[stepKey] = (steps[stepKey] ?? 0) + Date.now() - stepAt;
+    logEvent("auto_edit_done", { mode, genre, auto, steps, ms: Date.now() - started, options: result.options.length, skipped: result.report.skipped });
     return result;
   } catch (e) {
     logEvent("auto_edit_failed", { mode, genre, auto, ms: Date.now() - started, error: errorText(e) });
     throw e;
   }
+}
+
+/**
+ * עריכה אוטומטית תמיד מתחילה מהצילומים המקוריים, גם כשמריצים אותה שוב (למשל אחרי
+ * "שליחה" של הוראות חדשות): אחרת היא הייתה עורכת את הגרסה הערוכה, עם פחות חומר בכל פעם.
+ * מה שהעריכה הקודמת הוסיפה (טקסטים, כתוביות, השיר שהיא בחרה) מתחיל מחדש; מה שהוספתם בעצמכם נשאר.
+ */
+function startFromRawFootage() {
+  const { timeline, assets } = useEditor.getState();
+  if (timeline.raw?.length) {
+    const rawAssets = new Set(timeline.raw.map((c) => c.assetId));
+    // סרטונים שהועלו אחרי העריכה הקודמת נכנסים בסוף, כל אחד באורך המלא שלו
+    const added = new Map<string, (typeof timeline.clips)[number]>();
+    for (const c of timeline.clips) {
+      if (!rawAssets.has(c.assetId) && !added.has(c.assetId) && assets[c.assetId]) {
+        added.set(c.assetId, { ...c, in: 0, out: assets[c.assetId].duration, speed: 1, transitionIn: undefined, effect: "none" });
+      }
+    }
+    const clips = [...timeline.raw.filter((c) => assets[c.assetId]), ...added.values()];
+    useEditor.setState({
+      timeline: {
+        ...timeline,
+        clips,
+        captions: [],
+        overlays: timeline.overlays.filter((o) => !o.fromTemplate),
+        audio: timeline.audio.filter((a) => !a.auto && !a.fromTemplate),
+      },
+      selection: null,
+    });
+    logEvent("auto_edit_from_raw", { clips: clips.length, added: added.size });
+  }
+  useEditor.setState((s) => ({ timeline: { ...s.timeline, raw: s.timeline.clips } }));
 }
 
 /** סוג הסרטון שנבחר בשאלה "מה הסרטון?" (לריצה הנוכחית) */
@@ -542,7 +585,7 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditResu
   const mainMood: MusicMood = plan?.music ?? moodFromNotes(notes) ?? activeGenre?.mood ?? "chill";
   const style = currentStyle();
   const looks: VibeLook[] = [
-    { title: plan ? `הבחירה של ${brainName()}` : "מומלץ", description: "קטע של כשתי שניות מכל צילום, מעברי המסה וזום עדין", pace: [1.3, 2.6], mood: mainMood, color: plan?.color_style ?? "cinematic", useBrainOrder: true, motion: MOTION_BY_STYLE[style][0] },
+    { title: plan ? `הבחירה של ${brainName()}` : "מומלץ", description: watched ? `הרגעים ש-${brainName()} בחר אחרי שצפה בסרטונים` : "קטע של כשתי שניות מכל צילום, מעברי המסה וזום עדין", pace: [1.3, 2.6], mood: mainMood, color: plan?.color_style ?? "cinematic", useBrainOrder: true, motion: MOTION_BY_STYLE[style][0] },
     { title: "קצבי ואנרגטי", description: "חיתוכים של כשנייה, הבזקים ופאנצ'ים, מוזיקה אנרגטית", pace: [0.7, 1.3], mood: mainMood === "energetic" ? "pop" : "energetic", color: "vivid", useBrainOrder: false, motion: MOTION_BY_STYLE[style][1] },
     { title: "רגוע וקולנועי", description: "קטעים ארוכים, תנועת מצלמה איטית ומעברים רכים", pace: [2.2, 3.4], mood: mainMood === "cinematic" ? "romantic" : "cinematic", color: "warm", useBrainOrder: false, motion: MOTION_BY_STYLE[style][2] },
   ];
@@ -616,13 +659,14 @@ function vibeTarget(footage: number, clipCount: number, shotLen: number) {
 export async function addVibeMusic(mood: MusicMood, tryLibrary: boolean, report: AutoEditReport): Promise<number> {
   if (tryLibrary) {
     try {
-      const tracks = await Promise.race([
-        searchLibrary(MUSIC_MOODS[mood]),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 10_000)),
-      ]);
+      const tracks = await searchLibrary(MUSIC_MOODS[mood]);
       const track = tracks[0];
       if (!track) throw new Error("לא נמצא שיר");
-      const assetId = await addLibraryTrack(track, { select: false });
+      const assetId = await Promise.race([
+        addLibraryTrack(track, { select: false }),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 12_000)),
+      ]);
+      markLastAudioAuto();
       if (track.needsCredit) report.done.push(`השיר "${track.title}" דורש קרדיט בתיאור (ראו בלשונית סאונד)`);
       return detectBeats(await decodeAssetAudio(useEditor.getState().assets[assetId])).bpm;
     } catch (e) {
@@ -631,6 +675,7 @@ export async function addVibeMusic(mood: MusicMood, tryLibrary: boolean, report:
   }
   const builtin = builtinForMood(mood);
   addBuiltinTrack(builtin, { select: false });
+  markLastAudioAuto();
   return builtin.bpm;
 }
 
