@@ -1,7 +1,7 @@
 "use client";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Player, type PlayerRef } from "@remotion/player";
-import { Loader2, Pause, Play, SkipBack, SkipForward, Upload } from "lucide-react";
+import { Loader2, Maximize2, Pause, Play, SkipBack, SkipForward, Upload } from "lucide-react";
 import { MediaTagsContext, TimelineComposition, type CompositionProps, type MediaTags } from "@/remotion/timeline-composition";
 import { useEditor } from "@/stores/editor-store";
 import { usePlayback } from "@/stores/playback-store";
@@ -34,6 +34,26 @@ export function Preview() {
   const duration = timelineDuration(timeline);
   const durationInFrames = Math.max(1, Math.ceil(duration * timeline.fps));
   const hasPlayer = duration > 0;
+  // מסך מלא: אותו נגן (הניגון ממשיך מאותה נקודה), פרוש על כל המסך
+  const [full, setFull] = useState(false);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const openFull = () => {
+    setFull(true);
+    // במחשב ובאנדרואיד גם מסתירים את סרגלי הדפדפן; באייפון זה לא אפשרי, ומסתפקים במסך המלא שלנו
+    document.documentElement.requestFullscreen?.().catch(() => undefined);
+    playerRef.current?.play();
+  };
+  const closeFull = () => {
+    setFull(false);
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
+  };
+  useEffect(() => {
+    const onChange = () => { if (!document.fullscreenElement) setFull(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setFull(false); };
+    document.addEventListener("fullscreenchange", onChange);
+    window.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("fullscreenchange", onChange); window.removeEventListener("keydown", onKey); };
+  }, []);
   const busyUploading = useUploads((s) => s.picking || s.items.length > 0);
 
   // עותקים קטנים לתצוגה ברקע (הייצוא משתמש במקור)
@@ -93,11 +113,21 @@ export function Preview() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center gap-2 p-2 md:gap-3 md:p-4">
-      <div className="relative flex min-h-0 w-full flex-1 items-center justify-center">
+      <div ref={stageRef} className={cn("relative flex min-h-0 w-full flex-1 items-center justify-center",
+        full && "fixed inset-0 z-[70] bg-black p-0")}>
+        {full && (
+          <div dir="rtl" className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between p-3 pt-[max(env(safe-area-inset-top),12px)]">
+            <button onClick={closeFull} aria-label="יציאה ממסך מלא"
+              className="pointer-events-auto grid size-10 place-items-center rounded-full bg-black/60 text-white">
+              <XIcon className="size-5" />
+            </button>
+            <span className="rounded-full bg-black/60 px-3 py-1 text-xs text-white">לחיצה על הסרטון: עצירה / המשך</span>
+          </div>
+        )}
         {/* Remotion ממקם את הקומפוזיציה בהנחת LTR. הכתוביות עצמן מוגדרות RTL */}
         <div
           dir="ltr"
-          className="relative h-full max-w-full overflow-hidden rounded-lg bg-black shadow-2xl ring-1 ring-zinc-800"
+          className={cn("relative h-full max-w-full overflow-hidden bg-black", full ? "" : "rounded-lg shadow-2xl ring-1 ring-zinc-800")}
           style={{ aspectRatio: `${width} / ${height}` }}
         >
           {duration > 0 ? (
@@ -125,10 +155,10 @@ export function Preview() {
               </label>
             </div>
           )}
-          {duration > 0 && <OverlayHandles />}
-          <ActivityBar />
+          {duration > 0 && !full && <OverlayHandles />}
+          {!full && <ActivityBar />}
           <CaptionsSheet />
-          {duration > 0 && <AutoEditSuggestion />}
+          {duration > 0 && !full && <AutoEditSuggestion />}
           {previewVariant && (
             <div dir="rtl" className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-blue-600/80 to-transparent px-3 py-2 text-xs font-medium">
               תצוגה מקדימה: וריאציה {previewVariant.label} · עדיין לא הוחלה
@@ -149,6 +179,7 @@ export function Preview() {
             {playing ? <Pause className="size-5" /> : <Play className="size-5 translate-x-px" />}
           </button>
           <CtrlBtn label="פריים קדימה" onClick={() => step(1)}><SkipForward className="size-4" /></CtrlBtn>
+          {duration > 0 && <CtrlBtn label="מסך מלא" onClick={openFull}><Maximize2 className="size-4" /></CtrlBtn>}
         </div>
         <div className="flex w-24 justify-end gap-1">
           {(Object.keys(ASPECT_SIZE) as Aspect[]).map((a) => (

@@ -69,7 +69,14 @@ function CaptionHandle({ layerRef }: { layerRef: React.RefObject<HTMLDivElement 
   const playing = usePlayback((s) => s.playing);
   const caption = useEditor((s) => s.timeline.captions.find((c) => t >= c.start && t < c.end) ?? null);
   const y = useEditor((s) => s.timeline.captionStyle?.y ?? s.timeline.captions[0]?.y ?? 0.78);
+  const size = useEditor((s) => s.timeline.captionStyle?.size ?? s.timeline.captions[0]?.size ?? 1);
   if (!caption || playing) return null;
+
+  function resize(d: number) {
+    const end = beginGesture();
+    useEditor.getState().styleAllCaptions({ size: +Math.min(2.2, Math.max(0.5, size + d)).toFixed(2) });
+    end();
+  }
 
   function onDown(e: React.PointerEvent) {
     e.stopPropagation();
@@ -98,6 +105,13 @@ function CaptionHandle({ layerRef }: { layerRef: React.RefObject<HTMLDivElement 
     <div onPointerDown={onDown} title="גרירה למעלה או למטה מזיזה את הכתוביות"
       className="pointer-events-auto absolute inset-x-[6%] flex -translate-y-1/2 touch-none cursor-ns-resize items-center justify-end rounded-lg border-2 border-dashed border-sky-300/70"
       style={{ top: `${y * 100}%`, height: "13%" }}>
+      {/* קטן / גדול ישר על הסרטון */}
+      <div className={cn("absolute start-0 flex gap-1", y < 0.25 ? "-bottom-8" : "-top-8")} onPointerDown={(e) => e.stopPropagation()}>
+        {([["A−", -0.1], ["A+", 0.1]] as const).map(([l, d]) => (
+          <button key={l} onClick={(e) => { e.stopPropagation(); resize(d); }} aria-label={d > 0 ? "כתוביות גדולות יותר" : "כתוביות קטנות יותר"}
+            className="grid h-6 min-w-8 place-items-center rounded-full bg-sky-400 px-1.5 text-[11px] font-bold text-zinc-950 shadow">{l}</button>
+        ))}
+      </div>
       <span className="-me-3 grid size-6 place-items-center rounded-full bg-sky-400 text-[11px] font-bold text-zinc-950 shadow">↕</span>
     </div>
   );

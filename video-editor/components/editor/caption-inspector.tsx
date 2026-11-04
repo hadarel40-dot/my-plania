@@ -88,11 +88,7 @@ export function CaptionInspector({ caption }: { caption: Caption }) {
 
         <FontGrid current={caption.font ?? "heebo"} sample={caption.text.split(" ").slice(0, 2).join(" ")} />
 
-        <Group title={`גודל · ${Math.round((caption.size ?? 1) * 100)}%`}>
-          <input type="range" min={0.6} max={1.6} step={0.05} value={caption.size ?? 1} dir="ltr"
-            onChange={(e) => useEditor.getState().styleAllCaptions({ size: +e.target.value })}
-            onPointerUp={() => styleAllCaptions({})} className="w-full accent-violet-500" />
-        </Group>
+        <CaptionSize size={caption.size} />
 
 
         <div className="grid grid-cols-2 gap-3">
@@ -165,6 +161,36 @@ function FontGrid({ current, sample }: { current: string; sample: string }) {
     </>
   );
 }
+
+export const SIZE_MIN = 0.5;
+export const SIZE_MAX = 2.2;
+const clampSize = (v: number) => +Math.min(SIZE_MAX, Math.max(SIZE_MIN, v)).toFixed(2);
+
+/** גודל הכתוביות: כפתורי קטן/גדול וסרגל (לכל הכתוביות יחד) */
+export function CaptionSize({ size }: { size?: number }) {
+  const v = size ?? 1;
+  const set = (n: number) => useEditor.getState().styleAllCaptions({ size: clampSize(n) });
+  return (
+    <Group title={`גודל הכתוביות · ${Math.round(v * 100)}%`}>
+      <div className="flex items-center gap-2" dir="ltr">
+        <button onClick={() => { const end = beginGesture(); set(v - 0.1); end(); }} aria-label="כתוביות קטנות יותר"
+          className="grid size-9 shrink-0 place-items-center rounded-full border border-zinc-700 text-sm font-bold">A−</button>
+        <input type="range" min={SIZE_MIN} max={SIZE_MAX} step={0.05} value={v}
+          onPointerDown={() => { sizeGesture = beginGesture(); }}
+          onPointerUp={() => { sizeGesture?.(); sizeGesture = null; }}
+          onChange={(e) => set(+e.target.value)} className="min-w-0 flex-1 accent-violet-500" />
+        <button onClick={() => { const end = beginGesture(); set(v + 0.1); end(); }} aria-label="כתוביות גדולות יותר"
+          className="grid size-9 shrink-0 place-items-center rounded-full border border-zinc-700 text-lg font-bold">A+</button>
+      </div>
+      <div className="mt-1.5 grid grid-cols-4 gap-1.5">
+        {[["קטן", 0.75], ["רגיל", 1], ["גדול", 1.3], ["ענק", 1.7]].map(([l, n]) => (
+          <Chip key={l as string} on={Math.abs(v - (n as number)) < 0.03} onClick={() => styleAllCaptions({ size: n as number })}>{l}</Chip>
+        ))}
+      </div>
+    </Group>
+  );
+}
+let sizeGesture: (() => void) | null = null;
 
 /** מיקום הכתוביות בלחיצה (אפשר גם לגרור אותן על הנגן כשהסרטון עוצר) */
 export function CaptionPosition({ y }: { y?: number }) {
