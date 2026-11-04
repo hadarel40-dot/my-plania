@@ -1,0 +1,25 @@
+name = "ig-autodm"
+main = "src/index.ts"
+compatibility_date = "2025-10-01"
+
+# כל 5 דקות: שליחת הודעות שחיכו בתור. פעם ביום: ניקוי תגובות ישנות וחידוש הטוקן של אינסטגרם
+[triggers]
+crons = ["*/5 * * * *", "17 3 * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ig-autodm"
+# מתקבל מ: npx wrangler d1 create ig-autodm
+database_id = "REPLACE_WITH_DATABASE_ID"
+migrations_dir = "migrations"
+
+[vars]
+GRAPH_BASE = "https://graph.instagram.com/v23.0"
+# כמה הודעות פרטיות לכל היותר בשעה. השאר מחכות בתור
+HOURLY_LIMIT = "150"
+
+# סודות (לא בקובץ הזה! מכניסים עם npx wrangler secret put <שם>):
+#   IG_APP_SECRET         ה-Instagram app secret מהגדרות האפליקציה במטא
+#   IG_ACCESS_TOKEN       טוקן הגישה של חשבון האינסטגרם (נשמר ומתחדש אוטומטית אחרי ההפעלה הראשונה)
+#   WEBHOOK_VERIFY_TOKEN  מילה סודית שתבחרי, ותדביקי גם בהגדרות ה-Webhook במטא
+#   ADMIN_PASSWORD        הסיסמה לדף הניהול

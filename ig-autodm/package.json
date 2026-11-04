@@ -1,0 +1,19 @@
+{
+  "name": "ig-autodm",
+  "version": "0.1.0",
+  "private": true,
+  "description": "תגובה עם מילת מפתח בריל ← הודעה פרטית עם כפתור. מחליף למאני צ'ט על Cloudflare Workers.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 migrations apply ig-autodm --remote",
+    "db:init:local": "wrangler d1 migrations apply ig-autodm --local",
+    "lint": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test test/*.test.ts"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261006.1",
+    "typescript": "^5.9.0",
+    "wrangler": "^4.150.0"
+  }
+}
