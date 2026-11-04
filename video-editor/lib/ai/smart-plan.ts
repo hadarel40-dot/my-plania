@@ -88,3 +88,32 @@ export interface HooksRequest {
   context: string;
   current?: string;
 }
+
+/**
+ * "הבמאי": המוח צופה בסרטונים עצמם (תמונה, תנועה וסאונד) ובונה רשימת עריכה כמו
+ * עורך אנושי: אילו רגעים, באיזה סדר, ואיפה להשאיר את הסאונד המקורי.
+ */
+export const DirectorPlanSchema = z.object({
+  understanding: z.string().describe("משפט או שניים בעברית: מה רואים ושומעים בצילומים"),
+  shots: z.array(z.object({
+    clip: z.number().int().describe("מספר הסרטון (1 והלאה)"),
+    start: z.number().describe("תחילת הרגע, בשניות מתחילת אותו סרטון"),
+    end: z.number().describe("סוף הרגע, בשניות מתחילת אותו סרטון"),
+    sound: z.boolean().default(false).describe("true אם הסאונד המקורי חשוב ברגע הזה (צחוק, משפט, תגובה, רעש מיוחד)"),
+  })).describe("הרגעים לסרטון, לפי הסדר שבו יופיעו"),
+  music: z.enum(["happy", "chill", "energetic", "inspiring", "pop", "hiphop", "romantic", "cinematic", "acoustic"]),
+  color_style: z.enum(["none", "cinematic", "vivid", "warm", "cold", "vintage", "matte", "bw", "noir"]),
+  title: z.string().describe("שם קצר לפרויקט"),
+  text: z.string().describe("טקסט פתיחה קצר על המסך (עד 6 מילים), או מחרוזת ריקה"),
+  target_seconds: z.number().default(0),
+  summary: z.string().describe("משפט או שניים בעברית: מה נבחר ולמה, כמו עורך שמסביר"),
+});
+
+export type DirectorPlan = z.infer<typeof DirectorPlanSchema>;
+
+export interface DirectorRequest {
+  clips: { duration: number; video: string }[];
+  target: number;
+  hasMusic: boolean;
+  notes?: string;
+}

@@ -17,7 +17,7 @@ export function brainProvider(): BrainProvider | null {
 
 export const BRAIN_NAMES: Record<BrainProvider, string> = { gemini: "Gemini", claude: "Claude" };
 
-export type BrainPart = { text: string } | { image: string /* data:image/jpeg;base64,... */ } | { audioWav: string /* base64 */ };
+export type BrainPart = { text: string } | { image: string /* data:image/jpeg;base64,... */ } | { audioWav: string /* base64 */ } | { videoMp4: string /* base64 */ };
 
 export interface BrainRequest<T extends z.ZodType> {
   system: string;
@@ -27,6 +27,8 @@ export interface BrainRequest<T extends z.ZodType> {
   search?: boolean;
   /** כמה זמן (מ"ש) מותר לכל קריאה ל-Gemini. השרת מוגבל לדקה לבקשה */
   budgetMs?: number;
+  /** כמה זמן מותר לכל גרסה של Gemini לפני שעוברים לבאה (ברירת מחדל 25 שניות; צפייה בווידאו צריכה יותר) */
+  attemptMs?: number;
 }
 
 /** שגיאה שמוצגת למשתמש כמו שהיא (בעברית). detail: ההודעה המקורית מהשירות, לאבחון */
@@ -68,7 +70,7 @@ function withFastThinking(body: unknown) {
  * קורא ל-Gemini, ועובר לגרסה הבאה כשהנוכחית נכשלת או איטית. הזמן הכולל מוגבל, כי לשרת יש
  * דקה אחת לכל בקשה; כל ניסיון מקבל עד 25 שניות.
  */
-async function geminiCall(body: unknown, budgetMs = 52_000): Promise<string> {
+async function geminiCall(body: unknown, budgetMs = 52_000, attemptMs = 25_000): Promise<string> {
   const deadline = Date.now() + budgetMs;
   let last: BrainError | null = null;
   const tried: string[] = [];
@@ -78,14 +80,14 @@ async function geminiCall(body: unknown, budgetMs = 52_000): Promise<string> {
     seen.add(model);
     const left = deadline - Date.now();
     if (left < 4000) break;
-    const timeout = Math.min(left, 25_000);
+    const timeout = Math.min(left, attemptMs);
     try {
       try {
         return await geminiModelCall(model, fast ? withFastThinking(body) : body, timeout);
       } catch (e) {
         // גרסה שלא מכירה את הגדרת החשיבה: אותה גרסה בלי ההגדרה
         if (fast && e instanceof BrainError && e.status === 502 && /thinking/i.test(e.detail ?? "")) {
-          return await geminiModelCall(model, body, Math.min(deadline - Date.now(), 25_000));
+          return await geminiModelCall(model, body, Math.min(deadline - Date.now(), attemptMs));
         }
         throw e;
       }
@@ -145,7 +147,9 @@ const toGeminiParts = (parts: BrainPart[]) =>
     ? { text: p.text }
     : "audioWav" in p
       ? { inline_data: { mime_type: "audio/wav", data: p.audioWav } }
-      : { inline_data: { mime_type: "image/jpeg", data: p.image.split(",")[1] } });
+      : "videoMp4" in p
+        ? { inline_data: { mime_type: "video/mp4", data: p.videoMp4 } }
+        : { inline_data: { mime_type: "image/jpeg", data: p.image.split(",")[1] } });
 
 /** חילוץ JSON מתשובה חופשית (לפעמים עטוף ב-```json) */
 function extractJson(text: string): unknown {
@@ -157,7 +161,7 @@ function extractJson(text: string): unknown {
   return JSON.parse(raw.slice(start, end + 1));
 }
 
-async function askGemini<T extends z.ZodType>({ system, parts, schema, search, budgetMs = 52_000 }: BrainRequest<T>): Promise<z.infer<T>> {
+async function askGemini<T extends z.ZodType>({ system, parts, schema, search, budgetMs = 52_000, attemptMs }: BrainRequest<T>): Promise<z.infer<T>> {
   const jsonSchema = z.toJSONSchema(schema, { target: "draft-7" });
   const contents = [{ role: "user", parts: toGeminiParts(parts) }];
 
@@ -187,7 +191,7 @@ async function askGemini<T extends z.ZodType>({ system, parts, schema, search, b
       system_instruction: { parts: [{ text: system }] },
       contents,
       generationConfig: { responseMimeType: "application/json", responseJsonSchema: jsonSchema },
-    }, budgetMs);
+    }, budgetMs, attemptMs);
     return schema.parse(extractJson(text));
   } catch (e) {
     if (e instanceof BrainError && !(e as { gemini?: unknown }).gemini) throw e;
@@ -221,7 +225,7 @@ async function structure<T extends z.ZodType>(schema: T, jsonSchema: unknown, pr
 
 async function askClaude<T extends z.ZodType>({ system, parts, schema, search }: BrainRequest<T>): Promise<z.infer<T>> {
   const client = new Anthropic({ timeout: 55_000, maxRetries: search ? 0 : 1 });
-  if (parts.some((p) => "audioWav" in p)) throw new BrainError("תמלול סאונד זמין רק עם Gemini", 404);
+  if (parts.some((p) => "audioWav" in p || "videoMp4" in p)) throw new BrainError("צפייה בסרטונים וסאונד זמינים רק עם Gemini", 404);
   const content: Anthropic.Beta.BetaContentBlockParam[] = parts.flatMap((p): Anthropic.Beta.BetaContentBlockParam[] => "text" in p
     ? [{ type: "text", text: p.text }]
     : "image" in p ? [{ type: "image", source: { type: "base64", media_type: "image/jpeg", data: p.image.split(",")[1] } }] : []);

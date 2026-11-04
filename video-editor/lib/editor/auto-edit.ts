@@ -1,5 +1,6 @@
 "use client";
 import { genreInfo, type GenreInfo, type VideoGenre } from "./genres";
+import { watchFootage } from "@/lib/ai/director";
 import { favoritePick, hasMyCaptionStyle, loadMyStyle } from "./my-style";
 import { useEditor } from "@/stores/editor-store";
 import { decodeAssetAudio } from "@/lib/audio/decode";
@@ -470,6 +471,14 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditResu
   const { timeline, assets } = useEditor.getState();
   const clips = timeline.clips;
   const footage = clips.reduce((sum, c) => sum + c.out - c.in, 0);
+  const userMusicNow = musicClip();
+
+  // הבמאי: Gemini צופה בסרטונים עצמם (תנועה וסאונד), במקביל לניתוח התמונות שכאן
+  let directorStatus: string | null = null;
+  const director = useEditor.getState().cloud?.brain === "Gemini"
+    ? watchFootage(clips, assets, { target: vibeTarget(footage, clips.length, 2), hasMusic: !!userMusicNow, notes: brainNotes() }, (st) => { directorStatus = st; onStatus(`2/4 · ${st}`); })
+      .catch((e) => { report.skipped.push(`צפייה בסרטונים: ${e instanceof Error ? e.message : "נכשל"} (נבחר לפי תמונות)`); logEvent("director_failed", { error: errorText(e) }); return null; })
+    : Promise.resolve(null);
   const step = Math.min(1, Math.max(0.25, footage / 200));
   const expected = Math.max(1, Math.round(footage / step));
   let done = 0;
@@ -479,7 +488,7 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditResu
     if (!asset) continue;
     samples.push(...await sampleClip(asset, clip.id, clip.in, clip.out, step, () => {
       done++;
-      onStatus(`2/4 · מנתח את הצילומים ${Math.min(99, Math.round((done / expected) * 100))}%`);
+      onStatus(`2/4 · ${directorStatus ? `${directorStatus} · ` : ""}מנתח ${Math.min(99, Math.round((done / expected) * 100))}%`);
     }));
   }
   if (!samples.length) throw new Error("לא הצלחתי לקרוא את הסרטונים");
@@ -488,10 +497,21 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditResu
   const userMusic = musicClip();
   const noMusic = !userMusic && /בלי מוזיקה|ללא מוזיקה|לא לשים מוזיקה|בלי שיר/.test(notes);
 
-  // 2. המוח רואה את המועמדים הטובים ובוחר (פעם אחת)
+  // 2. המוח בוחר (פעם אחת): קודם לפי הצפייה בסרטונים, ואם לא הצליח, לפי תמונות מהקטעים
   let plan: VibePlan | null = null;
   let brainShots: Shot[] = [];
-  if (useEditor.getState().cloud?.smartEdit) {
+  let soundShots: boolean[] = [];
+  onStatus("3/4 · Gemini צופה בסרטונים ובוחר רגעים…");
+  const watched = await director;
+  if (watched) {
+    const { plan: d, shots } = watched;
+    plan = { order: [], music: d.music, color_style: d.color_style, title: d.title, text: d.text, target_seconds: d.target_seconds, summary: d.summary };
+    brainShots = shots.map((sh, i) => ({ id: i, clipId: sh.clipId, start: sh.start, end: sh.end, score: 0, thumb: "" }));
+    soundShots = shots.map((sh) => sh.sound);
+    if (d.understanding) report.done.push(`${brainName()} צפה בסרטונים: ${d.understanding}`);
+    if (d.summary) report.done.push(d.summary);
+  }
+  if (!watched && useEditor.getState().cloud?.smartEdit) {
     onStatus(`3/4 · ${brainName()} בוחר את הקטעים הכי יפים…`);
     try {
       const shots = rankShots(samples, clips, Math.min(2, footage), step);
@@ -556,6 +576,11 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditResu
       const { setClipVolume } = useEditor.getState();
       for (const clip of useEditor.getState().timeline.clips) setClipVolume(clip.id, 0);
       await syncToBeat(() => undefined).catch(() => undefined);
+    }
+    // ברגעים שהבמאי סימן (צחוק, משפט, תגובה) שומעים את הסאונד המקורי, והמוזיקה מתחתיו
+    if (look.useBrainOrder && soundShots.some(Boolean) && brainShots.length >= 2) {
+      const { setClipVolume } = useEditor.getState();
+      useEditor.getState().timeline.clips.forEach((clip, k) => { if (soundShots[k]) setClipVolume(clip.id, 1); });
     }
     const style = CLIP_STYLES.find((st) => st.id === look.color);
     const { setClipLook } = useEditor.getState();

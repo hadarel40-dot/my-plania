@@ -85,6 +85,12 @@ export interface TranscodeOptions {
   onProgress?: (p: number) => void;
   /** אם אין פס קול שאפשר לפענח: true ממשיך בלי קול, false נכשל */
   allowSilent: boolean;
+  /** רק קטע מהקובץ (שניות בקובץ המקור) */
+  trim?: { start: number; end: number };
+  /** קצב פריימים קבוע (למשל 2 לעותק שהמוח צופה בו) */
+  frameRate?: number;
+  /** קול מכווץ במיוחד: ערוץ אחד בקצב הזה */
+  audioBitrate?: number;
 }
 
 /**
@@ -106,7 +112,9 @@ export async function transcode(input: import("mediabunny").Input, opts: Transco
     const conversion = await Conversion.init({
       input,
       output,
+      ...(opts.trim ? { trim: opts.trim } : {}),
       video: {
+        ...(opts.frameRate ? { frameRate: opts.frameRate } : {}),
         width: even(track.displayWidth),
         height: even(track.displayHeight),
         fit: "fill",
@@ -120,7 +128,7 @@ export async function transcode(input: import("mediabunny").Input, opts: Transco
       audio: (audioTrack) => {
         if (!keepAudio || kept || !audioTrack.codec) return { discard: true };
         kept = true;
-        return { codec: "aac" };
+        return opts.audioBitrate ? { codec: "aac", bitrate: opts.audioBitrate, numberOfChannels: 1 } : { codec: "aac" };
       },
     });
     const lost = conversion.discardedTracks.filter((d) => d.reason !== "discarded_by_user").map((d) => `${d.track.type}:${d.reason}`);
