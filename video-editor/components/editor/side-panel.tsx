@@ -14,7 +14,7 @@ import { CaptionInspector } from "./caption-inspector";
 import { OverlayInspector } from "./overlay-inspector";
 import { AudioInspector } from "./audio-inspector";
 import { VariantsPanel } from "./variants-panel";
-import { SmartTab } from "./smart-tab";
+import { OPEN_SMART_EVENT, SmartTab } from "./smart-tab";
 import { MusicLibrary } from "./music-library";
 import { ClipControls } from "./clip-controls";
 
@@ -35,6 +35,11 @@ export function SidePanel({ tab: fixedTab, inspect = true }: {
   const aiAvailable = useEditor((s) => !!s.cloud?.video);
   const [ownTab, setTab] = useState<Tab>("text");
   const tab = fixedTab ?? ownTab;
+  useEffect(() => {
+    const open = () => { setTab("smart"); select(null); };
+    window.addEventListener(OPEN_SMART_EVENT, open);
+    return () => window.removeEventListener(OPEN_SMART_EVENT, open);
+  }, [select]);
 
   // בחירת קליפ חדש פותחת את לשונית הסגנון (אבל לא נועלת אותה)
   const selectedClipId = selection?.kind === "clip" ? selection.id : null;

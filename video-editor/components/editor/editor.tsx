@@ -9,6 +9,7 @@ import { MediaBin } from "./media-bin";
 import { Preview } from "./preview";
 import { TimelinePanel } from "./timeline";
 import { SidePanel, type Tab } from "./side-panel";
+import { OPEN_SMART_EVENT } from "./smart-tab";
 import { ExportDialog } from "./export-dialog";
 import { useProjectBootstrap, type SaveState } from "./use-project-bootstrap";
 import { clearProject } from "@/lib/persistence";
@@ -72,6 +73,13 @@ function PhoneLayout({ top }: { top: React.ReactNode }) {
   const editable = useEditor((s) => (s.selection && s.selection.kind !== "clip" ? s.selection.id : null));
   const aiAvailable = useEditor((s) => !!s.cloud?.video);
   const uploading = useUploads((s) => s.items.length > 0);
+
+  // הכפתור "לערוך אוטומטית" שעל הנגן פותח את לשונית "חכם", שם מופיעות הגרסאות
+  useEffect(() => {
+    const open = () => setSheet("smart");
+    window.addEventListener(OPEN_SMART_EVENT, open);
+    return () => window.removeEventListener(OPEN_SMART_EVENT, open);
+  }, []);
 
   // פריט שנוסף מלשונית טקסט/סאונד נפתח מיד לעריכה. כשהבחירה מתבטלת, מגירת העריכה נסגרת
   useEffect(() => {

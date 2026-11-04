@@ -5,8 +5,8 @@ import { Captions, Crop, Loader2, Music2, Scissors, Sparkles, TrendingUp } from 
 import type { Trends, TrendsRequest } from "@/lib/ai/smart-plan";
 import { logEvent } from "@/lib/telemetry";
 import { useEditor } from "@/stores/editor-store";
-import type { Timeline } from "@/lib/editor/types";
-import { autoEditAll, autoReframe, removeSilences, syncToBeat, type AutoEditMode, type AutoEditReport, type EditOption } from "@/lib/editor/auto-edit";
+import type { Timeline, TransitionStyle } from "@/lib/editor/types";
+import { applyTransitionStyle, autoEditAll, autoReframe, removeSilences, syncToBeat, type AutoEditMode, type AutoEditReport, type EditOption } from "@/lib/editor/auto-edit";
 import { usePlayback } from "@/stores/playback-store";
 import { TEMPLATES } from "@/lib/editor/templates";
 import { Section } from "./ui";
@@ -89,7 +89,7 @@ export function SmartTab() {
  * מצב הריצה של העריכה האוטומטית. נשמר מחוץ לקומפוננטה, כי בזמן הריצה המסך יכול
  * להתחלף (למשל בטלפון עוברים ללשונית אחרת) והדוח לא צריך ללכת לאיבוד.
  */
-const useAutoEditRun = create<{
+export const useAutoEditRun = create<{
   busy: string | null;
   report: AutoEditReport | null;
   error: string | null;
@@ -101,7 +101,10 @@ const useAutoEditRun = create<{
   chosen: string | null;
 }>(() => ({ busy: null, report: null, error: null, before: null, mode: "auto", options: [], chosen: null }));
 
-async function runAutoEdit() {
+/** פותח את לשונית "חכם" (בטלפון: המגירה), למשל מהכפתור שעל הנגן */
+export const OPEN_SMART_EVENT = "editor:open-smart";
+
+export async function runAutoEdit() {
   const set = useAutoEditRun.setState;
   set({ report: null, error: null, options: [], chosen: null, before: useEditor.getState().timeline, busy: "מתחיל…" });
   try {
@@ -112,6 +115,37 @@ async function runAutoEdit() {
   } finally {
     set({ busy: null });
   }
+}
+
+/** כמה מעברים ותנועה: בלי / נקיים / דינמיים / מוגזמים. העריכה האוטומטית משתמשת בבחירה */
+function TransitionStylePicker() {
+  const style = useEditor((s) => s.timeline.transitionStyle ?? "clean");
+  const hasClips = useEditor((s) => s.timeline.clips.length > 1);
+  const options: { id: TransitionStyle; label: string }[] = [
+    { id: "none", label: "בלי" },
+    { id: "clean", label: "נקיים" },
+    { id: "dynamic", label: "דינמיים" },
+    { id: "extreme", label: "מוגזמים 🔥" },
+  ];
+  return (
+    <div className="mb-3">
+      <div className="flex flex-wrap items-center gap-1.5 text-xs">
+        <span className="text-zinc-500">מעברים:</span>
+        {options.map((o) => (
+          <button key={o.id} onClick={() => useEditor.getState().setTransitionStyle(o.id)}
+            className={cn("rounded-full border px-2.5 py-1",
+              style === o.id ? "border-violet-500 bg-violet-500/15 text-white" : "border-zinc-700 text-zinc-400 hover:border-zinc-500")}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+      {hasClips && (
+        <button onClick={() => applyTransitionStyle(style)} className="mt-1 text-[11px] text-zinc-500 underline hover:text-white">
+          להחיל עכשיו על כל הקליפים
+        </button>
+      )}
+    </div>
+  );
 }
 
 /** הוראות והערות לעורך. נשמרות בפרויקט, ועם מוח מחובר (Gemini / Claude) הן נשלחות אליו בכל עריכה אוטומטית */
@@ -155,6 +189,7 @@ function AutoEditButton({ disabled }: { disabled: boolean }) {
   return (
     <div>
       <EditorNotes />
+      <TransitionStylePicker />
       <div className="mb-2 flex flex-wrap items-center gap-1.5 text-xs">
         <span className="text-zinc-500">סוג הסרטון:</span>
         {modes.map((m) => (

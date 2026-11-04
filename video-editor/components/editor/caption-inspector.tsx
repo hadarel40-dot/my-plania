@@ -4,6 +4,7 @@ import { useEditor } from "@/stores/editor-store";
 import type { Caption, CaptionPreset } from "@/lib/editor/types";
 import { cn } from "@/lib/utils";
 import { CAPTION_ACCENTS } from "@/lib/editor/captions";
+import { FONTS, fontFamily } from "@/lib/editor/fonts";
 
 const PRESETS: { id: CaptionPreset; label: string }[] = [
   { id: "word-pop", label: "מילה קופצת" },
@@ -44,6 +45,19 @@ export function CaptionInspector({ caption }: { caption: Caption }) {
                 className={cn("rounded-md border py-2 text-xs",
                   caption.preset === p.id ? "border-blue-500 bg-blue-500/15" : "border-zinc-700 hover:border-zinc-500")}>
                 {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <span className="text-xs text-zinc-400">גופן</span>
+          <div className="mt-1 grid grid-cols-4 gap-1.5">
+            {FONTS.map((f) => (
+              <button key={f.id} onClick={() => styleAll({ font: f.id })}
+                className={cn("rounded-md border px-1 py-1.5 text-center",
+                  (caption.font ?? "heebo") === f.id ? "border-blue-500 bg-blue-500/15" : "border-zinc-700 hover:border-zinc-500")}>
+                <span className="block text-base leading-tight" style={{ fontFamily: fontFamily(f.id) }}>{caption.text.split(" ")[0] || f.sample}</span>
+                <span className="block text-[10px] text-zinc-500">{f.label}</span>
               </button>
             ))}
           </div>

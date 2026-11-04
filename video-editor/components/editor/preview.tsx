@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Player, type PlayerRef } from "@remotion/player";
 import { Pause, Play, SkipBack, SkipForward, Upload } from "lucide-react";
 import { TimelineComposition, type CompositionProps } from "@/remotion/timeline-composition";
@@ -10,6 +10,8 @@ import { formatTime, layoutClips, timelineDuration } from "@/lib/editor/timeline
 import { cn } from "@/lib/utils";
 import { OverlayHandles } from "./overlay-handles";
 import { FileInput } from "./media-bin";
+import { OPEN_SMART_EVENT, runAutoEdit, useAutoEditRun } from "./smart-tab";
+import { Sparkles, X as XIcon } from "lucide-react";
 import { useUploads } from "@/stores/upload-store";
 
 export function Preview() {
@@ -97,6 +99,7 @@ export function Preview() {
             </div>
           )}
           {duration > 0 && <OverlayHandles />}
+          {duration > 0 && <AutoEditSuggestion />}
           {previewVariant && (
             <div dir="rtl" className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-blue-600/80 to-transparent px-3 py-2 text-xs font-medium">
               תצוגה מקדימה: וריאציה {previewVariant.label} · עדיין לא הוחלה
@@ -145,5 +148,28 @@ function CtrlBtn({ children, label, onClick }: { children: React.ReactNode; labe
       className="grid size-8 place-items-center rounded-full text-zinc-400 hover:bg-zinc-800 hover:text-white">
       {children}
     </button>
+  );
+}
+
+/**
+ * אחרי העלאה, כשעוד לא נערך כלום: כפתור על הנגן שמפעיל עריכה אוטומטית ופותח את
+ * לשונית "חכם" (שם הגרסאות לבחירה).
+ */
+function AutoEditSuggestion() {
+  const uploading = useUploads((s) => s.items.length > 0);
+  const untouched = useEditor((s) => s.timeline.overlays.length === 0 && s.timeline.captions.length === 0 && s.timeline.audio.length === 0);
+  const ran = useAutoEditRun((s) => !!s.busy || s.options.length > 0 || !!s.report);
+  const [dismissed, setDismissed] = useState(false);
+  if (uploading || !untouched || ran || dismissed) return null;
+  return (
+    <div dir="rtl" className="absolute inset-x-3 bottom-3 flex items-center gap-2">
+      <button onClick={() => { window.dispatchEvent(new Event(OPEN_SMART_EVENT)); void runAutoEdit(); }}
+        className="flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-l from-violet-600 to-fuchsia-600 py-2.5 text-sm font-semibold shadow-xl">
+        <Sparkles className="size-4" /> לערוך אוטומטית
+      </button>
+      <button onClick={() => setDismissed(true)} aria-label="לא עכשיו" className="grid size-9 place-items-center rounded-full bg-black/60 text-zinc-300">
+        <XIcon className="size-4" />
+      </button>
+    </div>
   );
 }

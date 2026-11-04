@@ -5,6 +5,7 @@ import { OverlayView } from "./overlay-view";
 import { layoutClips, transitionOverlap } from "@/lib/editor/timeline-utils";
 import { ClipLayer } from "./clip-layer";
 import { wordTimes } from "@/lib/editor/captions";
+import { fontFamily } from "@/lib/editor/fonts";
 
 export interface CompositionProps extends Record<string, unknown> {
   timeline: Timeline;
@@ -129,7 +130,7 @@ function CaptionView({ caption }: { caption: Caption }) {
     transform: "translateY(-50%)",
     textAlign: "center",
     direction: "rtl",
-    fontFamily: "'Heebo', 'Rubik', system-ui, sans-serif",
+    fontFamily: fontFamily(caption.font),
     lineHeight: 1.25,
   };
   const stroke = (px: number): React.CSSProperties => ({ WebkitTextStroke: `${px * base}px black`, paintOrder: "stroke fill" });

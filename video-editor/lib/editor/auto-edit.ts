@@ -7,7 +7,7 @@ import { emojiOverlays } from "./emoji-keywords";
 import { presetById } from "./overlay-presets";
 import { CLIP_STYLES } from "./clip-styles";
 import { clipLength, layoutClips, transitionOverlap, uid } from "./timeline-utils";
-import type { CaptionPreset, ClipEffect, Overlay, Timeline, TransitionType } from "./types";
+import type { CaptionPreset, ClipEffect, Overlay, Timeline, TransitionStyle, TransitionType } from "./types";
 import { MUSIC_MOODS, type MusicMood } from "@/lib/music/moods";
 import type { SmartPlan, SmartPlanRequest, VibePlan, VibePlanRequest } from "@/lib/ai/smart-plan";
 import { pickShots, rankShots, sampleClip, type FrameSample, type Shot } from "@/lib/video/analyze";
@@ -192,7 +192,7 @@ async function looksLikeTalking(): Promise<boolean> {
 
 /** עיצוב של גרסה בסרטון דיבור */
 interface TalkingLook {
-  template: string; preset: CaptionPreset; accent: string; color: string; title: string; description: string;
+  template: string; preset: CaptionPreset; accent: string; font: string; color: string; title: string; description: string;
   /** זום לסירוגין בין החיתוכים */
   punchZoom?: boolean;
   /** מעבר בכל חיתוך */
@@ -200,10 +200,10 @@ interface TalkingLook {
 }
 
 const TALKING_LOOKS: TalkingLook[] = [
-  { template: "talking", preset: "word-pop", accent: "#facc15", color: "vivid", title: "קלאסי", description: "מילה קופצת בצהוב, זום לסירוגין בחיתוכים", punchZoom: true },
-  { template: "tips", preset: "highlight-box", accent: "#22d3ee", color: "warm", title: "נקי ומסודר", description: "מילה במסגרת תכלת, גוון חם, בלי קפיצות" },
-  { template: "energy", preset: "one-word", accent: "#f472b6", color: "cinematic", title: "אנרגטי", description: "מילה אחת גדולה, פאנץ' בכל חיתוך", punchZoom: true, cutTransition: { type: "punch", duration: 0.2 } },
-  { template: "before-after", preset: "karaoke", accent: "#a3e635", color: "cold", title: "רגוע", description: "קריוקי בירוק, גוון קר" },
+  { template: "talking", preset: "word-pop", accent: "#facc15", font: "secular", color: "vivid", title: "קלאסי", description: "מילה קופצת בצהוב, זום לסירוגין בחיתוכים", punchZoom: true },
+  { template: "tips", preset: "highlight-box", accent: "#22d3ee", font: "rubik", color: "warm", title: "נקי ומסודר", description: "מילה במסגרת תכלת, גוון חם, בלי קפיצות" },
+  { template: "energy", preset: "one-word", accent: "#f472b6", font: "karantina", color: "cinematic", title: "אנרגטי", description: "מילה אחת גדולה, פאנץ' בכל חיתוך", punchZoom: true, cutTransition: { type: "punch", duration: 0.2 } },
+  { template: "before-after", preset: "karaoke", accent: "#a3e635", font: "varela", color: "cold", title: "רגוע", description: "קריוקי בירוק, גוון קר" },
 ];
 
 async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditResult> {
@@ -259,8 +259,15 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
 
   // הגרסאות: הראשונה לפי המוח (אם מחובר), והשאר בסגנונות אחרים
   const looks: TalkingLook[] = [];
-  if (s0) looks.push({ template: s0.plan.template, preset: s0.plan.caption_style, accent: s0.plan.accent, color: s0.plan.color_style, title: `הבחירה של ${brainName()}`, description: "הסגנון שהבינה המלאכותית בחרה לתוכן", punchZoom: true });
-  for (const l of TALKING_LOOKS) if (looks.length < 3 && !looks.some((x) => x.template === l.template)) looks.push(l);
+  if (s0) looks.push({ template: s0.plan.template, preset: s0.plan.caption_style, accent: s0.plan.accent, font: s0.plan.caption_font, color: s0.plan.color_style, title: `הבחירה של ${brainName()}`, description: "הסגנון שהבינה המלאכותית בחרה לתוכן", punchZoom: true });
+  for (const l of TALKING_LOOKS) if (looks.length < 3 && !looks.some((x) => x.template === l.template)) looks.push({ ...l });
+  // סגנון המעברים: בלי = בלי זום ומעברים; נקי = זום לסירוגין בלבד; מוגזם = פאנץ' והבזקים בכל חיתוך
+  const tstyle = currentStyle();
+  for (const [k, l] of looks.entries()) {
+    if (tstyle === "none") { l.punchZoom = false; l.cutTransition = undefined; }
+    if (tstyle === "clean") l.cutTransition = undefined;
+    if (tstyle === "extreme") { l.punchZoom = true; l.cutTransition = k % 2 ? T("flash", 0.2) : T("punch", 0.25); }
+  }
 
   onStatus("5/5 · בונה גרסאות…");
   const base = useEditor.getState().timeline;
@@ -269,7 +276,7 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
     useEditor.setState({ timeline: base });
     const { applyTemplate, styleAllCaptions, setClipLook } = useEditor.getState();
     applyTemplate(look.template, { hook, extraOverlays: extras.map((o) => ({ ...o, id: uid("ovl") })), hookOnly: !!s0 });
-    styleAllCaptions({ preset: look.preset, accent: look.accent });
+    styleAllCaptions({ preset: look.preset, accent: look.accent, font: look.font });
     const style = CLIP_STYLES.find((st) => st.id === look.color);
     // זום לסירוגין בכל חיתוך (כמו ב-CapCut): הפנים קרובות יותר בקטע אחד ורחוקות בבא, והחיתוך מרגיש מכוון
     useEditor.getState().timeline.clips.forEach((clip, k) => {
@@ -380,11 +387,39 @@ interface VibeLook {
 /** סגנון תנועה לגרסה: אילו מעברים ואילו תנועות מצלמה, בסבב */
 interface Motion { transitions: { type: TransitionType; duration: number }[]; effects: ClipEffect[] }
 
-const MOTION = {
-  smooth: { transitions: [{ type: "fade", duration: 0.35 }], effects: ["zoom-in", "zoom-out"] },
-  energetic: { transitions: [{ type: "punch", duration: 0.25 }, { type: "flash", duration: 0.2 }, { type: "whip", duration: 0.25 }, { type: "glitch", duration: 0.2 }], effects: ["pulse", "none", "shake", "pulse"] },
-  cinematic: { transitions: [{ type: "fade", duration: 0.6 }, { type: "blur", duration: 0.5 }], effects: ["pan-left", "zoom-in", "pan-right", "zoom-out"] },
-} satisfies Record<string, Motion>;
+const T = (type: TransitionType, duration: number) => ({ type, duration });
+const NO_MOTION: Motion = { transitions: [], effects: [] };
+
+/**
+ * לכל סגנון מעברים, שלוש גרסאות תנועה (לשלוש הגרסאות של סרטון אווירה):
+ * נקי = חיתוכים ומעט המסה, דינמי = מגוון, מוגזם = הבזקים, גליצ'ים ורעידות.
+ */
+const MOTION_BY_STYLE: Record<TransitionStyle, [Motion, Motion, Motion]> = {
+  none: [NO_MOTION, NO_MOTION, NO_MOTION],
+  clean: [
+    { transitions: [T("fade", 0.3)], effects: ["zoom-in", "none", "zoom-out", "none"] },
+    { transitions: [], effects: ["none"] },
+    { transitions: [T("fade", 0.5)], effects: ["zoom-in", "zoom-out"] },
+  ],
+  dynamic: [
+    { transitions: [T("fade", 0.35)], effects: ["zoom-in", "zoom-out"] },
+    { transitions: [T("punch", 0.25), T("flash", 0.2), T("whip", 0.25), T("glitch", 0.2)], effects: ["pulse", "none", "shake", "pulse"] },
+    { transitions: [T("fade", 0.6), T("blur", 0.5)], effects: ["pan-left", "zoom-in", "pan-right", "zoom-out"] },
+  ],
+  extreme: [
+    { transitions: [T("whip", 0.25), T("flash", 0.2), T("glitch", 0.25), T("punch", 0.25)], effects: ["shake", "pulse", "zoom-in", "shake"] },
+    { transitions: [T("glitch", 0.3), T("flash", 0.25), T("zoom", 0.3)], effects: ["pulse", "shake"] },
+    { transitions: [T("slide", 0.35), T("zoom", 0.35), T("whip", 0.3)], effects: ["zoom-in", "shake", "zoom-out", "pulse"] },
+  ],
+};
+
+const currentStyle = (): TransitionStyle => useEditor.getState().timeline.transitionStyle ?? "clean";
+
+/** מחיל את סגנון המעברים הנוכחי על כל הקליפים בציר הזמן (כפתור בלשונית חכם) */
+export function applyTransitionStyle(style: TransitionStyle) {
+  useEditor.getState().setTransitionStyle(style);
+  applyMotion(MOTION_BY_STYLE[style][0]);
+}
 
 /** מוסיף לכל קליפ בציר הזמן מעבר ותנועה לפי הסגנון (בסבב, כדי שלא יהיה חד-גוני) */
 function applyMotion(motion: Motion) {
@@ -467,10 +502,11 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditResu
 
   // 3. הגרסאות: מומלצת, קצבית, ורגועה-קולנועית. מצבי רוח שונים זה מזה
   const mainMood: MusicMood = plan?.music ?? moodFromNotes(notes) ?? "chill";
+  const style = currentStyle();
   const looks: VibeLook[] = [
-    { title: plan ? `הבחירה של ${brainName()}` : "מומלץ", description: "קטע של כשתי שניות מכל צילום, מעברי המסה וזום עדין", pace: [1.3, 2.6], mood: mainMood, color: plan?.color_style ?? "cinematic", useBrainOrder: true, motion: MOTION.smooth },
-    { title: "קצבי ואנרגטי", description: "חיתוכים של כשנייה, הבזקים ופאנצ'ים, מוזיקה אנרגטית", pace: [0.7, 1.3], mood: mainMood === "energetic" ? "pop" : "energetic", color: "vivid", useBrainOrder: false, motion: MOTION.energetic },
-    { title: "רגוע וקולנועי", description: "קטעים ארוכים, תנועת מצלמה איטית ומעברים רכים", pace: [2.2, 3.4], mood: mainMood === "cinematic" ? "romantic" : "cinematic", color: "warm", useBrainOrder: false, motion: MOTION.cinematic },
+    { title: plan ? `הבחירה של ${brainName()}` : "מומלץ", description: "קטע של כשתי שניות מכל צילום, מעברי המסה וזום עדין", pace: [1.3, 2.6], mood: mainMood, color: plan?.color_style ?? "cinematic", useBrainOrder: true, motion: MOTION_BY_STYLE[style][0] },
+    { title: "קצבי ואנרגטי", description: "חיתוכים של כשנייה, הבזקים ופאנצ'ים, מוזיקה אנרגטית", pace: [0.7, 1.3], mood: mainMood === "energetic" ? "pop" : "energetic", color: "vivid", useBrainOrder: false, motion: MOTION_BY_STYLE[style][1] },
+    { title: "רגוע וקולנועי", description: "קטעים ארוכים, תנועת מצלמה איטית ומעברים רכים", pace: [2.2, 3.4], mood: mainMood === "cinematic" ? "romantic" : "cinematic", color: "warm", useBrainOrder: false, motion: MOTION_BY_STYLE[style][2] },
   ];
 
   onStatus("4/4 · בונה גרסאות…");

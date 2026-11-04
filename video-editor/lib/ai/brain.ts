@@ -17,7 +17,7 @@ export function brainProvider(): BrainProvider | null {
 
 export const BRAIN_NAMES: Record<BrainProvider, string> = { gemini: "Gemini", claude: "Claude" };
 
-export type BrainPart = { text: string } | { image: string /* data:image/jpeg;base64,... */ };
+export type BrainPart = { text: string } | { image: string /* data:image/jpeg;base64,... */ } | { audioWav: string /* base64 */ };
 
 export interface BrainRequest<T extends z.ZodType> {
   system: string;
@@ -46,31 +46,56 @@ export async function askBrain<T extends z.ZodType>(req: BrainRequest<T>): Promi
 const GEMINI_API = process.env.GEMINI_API_BASE || "https://generativelanguage.googleapis.com/v1beta/models";
 
 /**
- * גרסאות Gemini לפי סדר. אם גרסה אחת לא כלולה במכסה החינמית של המפתח (429 עם limit 0)
- * או לא קיימת (404), עוברים לבאה בתור.
+ * גרסאות Gemini לפי סדר. fast: בלי "חשיבה" ארוכה (thinkingBudget 0), כדי לענות תוך שניות.
+ * אם גרסה לא כלולה במכסה החינמית (429), לא קיימת (404), עמוסה (500/503) או איטית מדי,
+ * עוברים לבאה בתור.
  */
-const GEMINI_MODELS = [
-  ...(process.env.GEMINI_MODEL ? [process.env.GEMINI_MODEL] : []),
-  "gemini-flash-latest", "gemini-2.5-flash", "gemini-flash-lite-latest", "gemini-2.5-flash-lite",
+const GEMINI_MODELS: { model: string; fast: boolean }[] = [
+  ...(process.env.GEMINI_MODEL ? [{ model: process.env.GEMINI_MODEL, fast: false }] : []),
+  { model: "gemini-2.5-flash", fast: true },
+  { model: "gemini-flash-latest", fast: false },
+  { model: "gemini-2.5-flash-lite", fast: true },
+  { model: "gemini-flash-lite-latest", fast: false },
 ];
 
+/** מוסיף לבקשה הגדרת חשיבה מינימלית */
+function withFastThinking(body: unknown) {
+  const b = body as { generationConfig?: Record<string, unknown> };
+  return { ...b, generationConfig: { ...(b.generationConfig ?? {}), thinkingConfig: { thinkingBudget: 0 } } };
+}
+
 /**
- * קורא ל-Gemini, ועובר לגרסה הבאה כשהגרסה הנוכחית לא כלולה במכסה (429), לא קיימת (404)
- * או עמוסה (500/503). הזמן הכולל מוגבל, כי לשרת יש דקה אחת לכל בקשה.
+ * קורא ל-Gemini, ועובר לגרסה הבאה כשהנוכחית נכשלת או איטית. הזמן הכולל מוגבל, כי לשרת יש
+ * דקה אחת לכל בקשה; כל ניסיון מקבל עד 25 שניות.
  */
 async function geminiCall(body: unknown, budgetMs = 52_000): Promise<string> {
   const deadline = Date.now() + budgetMs;
   let last: BrainError | null = null;
-  for (const model of [...new Set(GEMINI_MODELS)]) {
+  const tried: string[] = [];
+  const seen = new Set<string>();
+  for (const { model, fast } of GEMINI_MODELS) {
+    if (seen.has(model)) continue;
+    seen.add(model);
     const left = deadline - Date.now();
     if (left < 4000) break;
+    const timeout = Math.min(left, 25_000);
     try {
-      return await geminiModelCall(model, body, left);
+      try {
+        return await geminiModelCall(model, fast ? withFastThinking(body) : body, timeout);
+      } catch (e) {
+        // גרסה שלא מכירה את הגדרת החשיבה: אותה גרסה בלי ההגדרה
+        if (fast && e instanceof BrainError && e.status === 502 && /thinking/i.test(e.detail ?? "")) {
+          return await geminiModelCall(model, body, Math.min(deadline - Date.now(), 25_000));
+        }
+        throw e;
+      }
     } catch (e) {
-      if (!(e instanceof BrainError) || ![429, 404, 500, 503].includes(e.status)) throw e;
+      if (!(e instanceof BrainError) || ![429, 404, 500, 503, 504].includes(e.status)) throw e;
+      tried.push(e.detail ?? `${model}: ${e.status}`);
       last = e;
     }
   }
+  if (last) last.detail = tried.join(" | ").slice(0, 600);
   throw last ?? new BrainError("Gemini לא ענה בזמן, נסו שוב", 504);
 }
 
@@ -92,7 +117,7 @@ async function geminiModelCall(model: string, body: unknown, timeoutMs: number):
       res = await send({ authorization: `Bearer ${key}` });
     }
   } catch {
-    throw new BrainError("Gemini לא ענה בזמן, נסו שוב", 504);
+    throw new BrainError("Gemini לא ענה בזמן, נסו שוב", 504, `${model}: timeout after ${Math.round(timeoutMs / 1000)}s`);
   } finally {
     clearTimeout(timer);
   }
@@ -118,7 +143,9 @@ async function geminiModelCall(model: string, body: unknown, timeoutMs: number):
 const toGeminiParts = (parts: BrainPart[]) =>
   parts.map((p) => "text" in p
     ? { text: p.text }
-    : { inline_data: { mime_type: "image/jpeg", data: p.image.split(",")[1] } });
+    : "audioWav" in p
+      ? { inline_data: { mime_type: "audio/wav", data: p.audioWav } }
+      : { inline_data: { mime_type: "image/jpeg", data: p.image.split(",")[1] } });
 
 /** חילוץ JSON מתשובה חופשית (לפעמים עטוף ב-```json) */
 function extractJson(text: string): unknown {
@@ -194,9 +221,10 @@ async function structure<T extends z.ZodType>(schema: T, jsonSchema: unknown, pr
 
 async function askClaude<T extends z.ZodType>({ system, parts, schema, search }: BrainRequest<T>): Promise<z.infer<T>> {
   const client = new Anthropic({ timeout: 55_000, maxRetries: search ? 0 : 1 });
-  const content: Anthropic.Beta.BetaContentBlockParam[] = parts.map((p) => "text" in p
-    ? { type: "text", text: p.text }
-    : { type: "image", source: { type: "base64", media_type: "image/jpeg", data: p.image.split(",")[1] } });
+  if (parts.some((p) => "audioWav" in p)) throw new BrainError("תמלול סאונד זמין רק עם Gemini", 404);
+  const content: Anthropic.Beta.BetaContentBlockParam[] = parts.flatMap((p): Anthropic.Beta.BetaContentBlockParam[] => "text" in p
+    ? [{ type: "text", text: p.text }]
+    : "image" in p ? [{ type: "image", source: { type: "base64", media_type: "image/jpeg", data: p.image.split(",")[1] } }] : []);
   const messages: Anthropic.Beta.BetaMessageParam[] = [{ role: "user", content }];
   try {
     // חיפוש ברשת יכול לעצור באמצע (pause_turn); ממשיכים מאותה נקודה, עד 3 פעמים

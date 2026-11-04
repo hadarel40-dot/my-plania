@@ -1,8 +1,7 @@
 "use client";
-import type { Caption, MediaAsset } from "@/lib/editor/types";
-import { layoutClips, uid } from "@/lib/editor/timeline-utils";
 import type { Transcriber } from "./transcriber";
 import { decodeAssetAudio } from "@/lib/audio/decode";
+import { perAssetCache, segmentsToCaptions, type Segment } from "./segments";
 
 /**
  * "small" מדויק יותר בעברית אבל כבד (כ-250MB). בטלפון הוא איטי מאוד ועלול לקרוס
@@ -15,7 +14,6 @@ function whisperModel() {
 }
 const LANGUAGE = process.env.NEXT_PUBLIC_WHISPER_LANGUAGE || "hebrew";
 
-interface Segment { start: number; end: number; text: string }
 
 let worker: Worker | null = null;
 let nextId = 1;
@@ -68,42 +66,14 @@ function runWhisper(audio: Float32Array, onStatus: (s: string) => void): Promise
  * ממופים לציר הזמן לפי נקודות החיתוך של כל קליפ.
  */
 export function createBrowserTranscriber(): Transcriber {
-  const cache = new Map<string, Promise<Segment[]>>();
-
-  function transcribeAsset(asset: MediaAsset, onStatus: (s: string) => void) {
-    let pending = cache.get(asset.id);
-    if (!pending) {
-      pending = (async () => {
-        onStatus("קורא את הסאונד…");
-        return runWhisper(await decodeAssetAudio(asset), onStatus);
-      })();
-      pending.catch(() => cache.delete(asset.id));
-      cache.set(asset.id, pending);
-    }
-    return pending;
-  }
-
   return {
     id: "browser-whisper",
     async transcribe(timeline, assets, onStatus = () => {}) {
-      const captions: Caption[] = [];
-      for (const { clip, start } of layoutClips(timeline.clips)) {
-        const asset = assets[clip.sourceAssetId];
-        if (!asset || clip.volume === 0) continue;
-        for (const seg of await transcribeAsset(asset, onStatus)) {
-          const s = Math.max(seg.start, clip.in);
-          const e = Math.min(seg.end, clip.out);
-          if (e - s < 0.2) continue;
-          captions.push({
-            id: uid("cap"),
-            start: +(start + s - clip.in).toFixed(2),
-            end: +(start + e - clip.in).toFixed(2),
-            text: seg.text,
-            preset: "bold-pop",
-          });
-        }
-      }
-      return captions;
+      const segmentsFor = perAssetCache(async (asset) => {
+        onStatus("קורא את הסאונד…");
+        return runWhisper(await decodeAssetAudio(asset), onStatus);
+      });
+      return segmentsToCaptions(timeline, assets, segmentsFor);
     },
   };
 }

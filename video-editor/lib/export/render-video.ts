@@ -31,7 +31,7 @@ export async function renderToMp4(
   }
 
   // הגופנים חייבים להיות טעונים לפני הרינדור, אחרת הטקסט ייצא בגופן ברירת המחדל
-  const families = [...new Set(timeline.overlays.map((o) => fontFamily(o.font).split(",")[0]))];
+  const families = [...new Set([...timeline.overlays.map((o) => o.font), ...timeline.captions.map((c) => c.font)].map((f) => fontFamily(f).split(",")[0]))];
   await Promise.all(families.map((f) => document.fonts.load(`700 64px ${f}`).catch(() => undefined)));
   await document.fonts.ready;
 

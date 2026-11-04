@@ -8,6 +8,7 @@ import {
   type AudioClip,
   type Caption,
   type CaptionStyle,
+  type TransitionStyle,
   type Clip,
   type Look,
   type Overlay,
@@ -82,6 +83,7 @@ interface EditorState {
   setAspect: (aspect: Aspect) => void;
   setTitle: (title: string) => void;
   setNotes: (notes: string) => void;
+  setTransitionStyle: (style: TransitionStyle) => void;
 
   setClipLook: (clipId: string, look: Look) => void;
   setClipVolume: (clipId: string, volume: number) => void;
@@ -104,7 +106,7 @@ interface EditorState {
   setCaptions: (captions: Caption[]) => void;
   updateCaption: (id: string, patch: Partial<Omit<Caption, "id">>) => void;
   /** אותו סגנון לכל הכתוביות (סגנון, צבע, מיקום) */
-  styleAllCaptions: (patch: Partial<Pick<Caption, "preset" | "accent" | "y">>) => void;
+  styleAllCaptions: (patch: Partial<Pick<Caption, "preset" | "accent" | "y" | "font">>) => void;
   addCaption: (start: number) => void;
 
   select: (selection: Selection) => void;
@@ -123,7 +125,7 @@ interface EditorState {
 /** הסגנון לכתוביות חדשות: מה שנבחר אחרון, או מילה-מילה בצהוב */
 function currentCaptionStyle(tl: Timeline): CaptionStyle {
   const like = tl.captions[0];
-  return tl.captionStyle ?? (like ? { preset: like.preset, accent: like.accent, y: like.y } : { preset: "word-pop" });
+  return tl.captionStyle ?? (like ? { preset: like.preset, accent: like.accent, y: like.y, font: like.font } : { preset: "word-pop", font: "secular" });
 }
 
 /** וריאציות שכבר עוקבים אחריהן, כדי לא להתחיל מעקב כפול */
@@ -280,6 +282,7 @@ export const useEditor = create<EditorState>()(
       setAspect: (aspect) => set((s) => { s.timeline.aspect = aspect; }),
       setTitle: (title) => set((s) => { s.title = title; }),
       setNotes: (notes) => set((s) => { s.notes = notes; }),
+      setTransitionStyle: (style) => set((s) => { s.timeline.transitionStyle = style; }),
 
       setClipLook: (clipId, look) =>
         set((s) => {

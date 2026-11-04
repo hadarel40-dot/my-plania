@@ -11,6 +11,8 @@ export const SmartPlanSchema = z.object({
   emojis: z.array(z.object({ segment: z.number().int(), emoji: z.string() })).describe("2-5 אימוג'ים ברגעים בולטים"),
   caption_style: z.enum(["word-pop", "highlight-box", "one-word", "karaoke", "bold-pop", "minimal"]),
   accent: z.enum(["#facc15", "#22d3ee", "#a3e635", "#f472b6", "#fb923c", "#ffffff"]),
+  caption_font: z.enum(["heebo", "rubik", "secular", "suez", "frank", "varela", "amatic", "karantina"]).default("secular")
+    .describe("גופן לכתוביות: secular/rubik נקיים ובולטים, karantina צר ודרמטי, frank ספרותי, amatic כתב יד, varela רך"),
   template: z.enum(["talking", "tips", "before-after", "energy"]),
   color_style: z.enum(["none", "cinematic", "vivid", "warm", "cold", "vintage", "matte", "bw", "noir"]),
   cta: z.string().describe("קריאה לפעולה קצרה לסוף הסרטון, או מחרוזת ריקה אם לא מתאים"),
@@ -35,7 +37,7 @@ export const VibePlanSchema = z.object({
   color_style: z.enum(["none", "cinematic", "vivid", "warm", "cold", "vintage", "matte", "bw", "noir"]),
   title: z.string().describe("שם קצר לפרויקט"),
   text: z.string().describe("טקסט קצר ועדין על המסך בפתיחה (עד 5 מילים), או מחרוזת ריקה"),
-  target_seconds: z.number().describe("אורך הסרטון שהיוצרת ביקשה בהוראות, בשניות; 0 אם לא ביקשה"),
+  target_seconds: z.number().default(0).describe("אורך הסרטון שהיוצרת ביקשה בהוראות, בשניות; 0 אם לא ביקשה"),
   summary: z.string().describe("משפט או שניים בעברית: מה נבחר ולמה"),
 });
 
@@ -48,6 +50,11 @@ export interface VibePlanRequest {
   hasMusic: boolean;
   notes?: string;
 }
+
+/** תמלול: מקטעים קצרים עם זמנים (בשניות מתחילת קטע הסאונד) */
+export const TranscriptSchema = z.object({
+  segments: z.array(z.object({ start: z.number(), end: z.number(), text: z.string() })),
+});
 
 /** טרנדים עכשוויים לסרטון, ש-Claude מצא בחיפוש ברשת */
 export const TrendsSchema = z.object({

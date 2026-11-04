@@ -15,7 +15,7 @@ export interface ReelTemplate {
   description: string;
   /** סגנון הצבע לכל הקליפים */
   style: string;
-  captions: { preset: CaptionPreset; accent: string; y: number };
+  captions: { preset: CaptionPreset; accent: string; y: number; font: string };
   /** טקסטים. זמן: מספר שניות מההתחלה, שלילי = מהסוף, "mid" = אמצע הסרטון */
   overlays: { preset: string; text: string; start: At; until?: At; patch?: Partial<Overlay> }[];
   sfx: { id: SfxId; at: At }[];
@@ -30,7 +30,7 @@ export const TEMPLATES: ReelTemplate[] = [
     emoji: "🎤",
     description: "הוק גדול בפתיחה, כתוביות מילה-מילה בצהוב, צבעים חיים",
     style: "vivid",
-    captions: { preset: "word-pop", accent: "#facc15", y: 0.72 },
+    captions: { preset: "word-pop", accent: "#facc15", y: 0.72, font: "secular" },
     overlays: [
       { preset: "title-pop", text: "כתבו כאן את ההוק 👀", start: 0, patch: { y: 0.18, size: 96 } },
       { preset: "emoji-point", text: "👇", start: -2.5 },
@@ -43,7 +43,7 @@ export const TEMPLATES: ReelTemplate[] = [
     emoji: "💡",
     description: "כותרת בפתיחה, תווית טיפ, וקריאה לעקוב בסוף",
     style: "warm",
-    captions: { preset: "highlight-box", accent: "#22d3ee", y: 0.78 },
+    captions: { preset: "highlight-box", accent: "#22d3ee", y: 0.78, font: "rubik" },
     overlays: [
       { preset: "title-bounce", text: "3 טיפים ש...", start: 0, patch: { y: 0.2, size: 110 } },
       { preset: "label-slide", text: "טיפ #1", start: 2.6, patch: { y: 0.32 } },
@@ -57,7 +57,7 @@ export const TEMPLATES: ReelTemplate[] = [
     emoji: "✨",
     description: "תווית לפני בהתחלה, אחרי באמצע, עם מעבר סאונד",
     style: "cinematic",
-    captions: { preset: "minimal", accent: "#ffffff", y: 0.85 },
+    captions: { preset: "minimal", accent: "#ffffff", y: 0.85, font: "frank" },
     overlays: [
       { preset: "side-slide", text: "לפני", start: 0, until: "mid", patch: { y: 0.15 } },
       { preset: "side-slide", text: "אחרי ✨", start: "mid", until: "end", patch: { y: 0.15, background: "#7c3aed" } },
@@ -70,7 +70,7 @@ export const TEMPLATES: ReelTemplate[] = [
     emoji: "🔥",
     description: "מילה אחת גדולה בכל פעם, אימוג'ים קופצים, הרבה אפקטים",
     style: "vivid",
-    captions: { preset: "one-word", accent: "#f472b6", y: 0.6 },
+    captions: { preset: "one-word", accent: "#f472b6", y: 0.6, font: "karantina" },
     overlays: [
       { preset: "zoom-in", text: "רגע!", start: 0, patch: { y: 0.22 } },
       { preset: "emoji-fire", text: "🔥", start: 1.5 },

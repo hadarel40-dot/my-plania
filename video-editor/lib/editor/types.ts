@@ -140,12 +140,19 @@ export interface Caption {
   accent?: string;
   /** גובה על המסך, 0 (למעלה) עד 1 (למטה). ברירת מחדל 0.78 */
   y?: number;
+  /** גופן (מזהה מ-lib/editor/fonts) */
+  font?: string;
 }
 
 /** מסלול הווידאו "מגנטי": קליפים צמודים זה לזה, והמיקום נגזר מהסדר */
-export type CaptionStyle = Pick<Caption, "preset" | "accent" | "y">;
+export type CaptionStyle = Pick<Caption, "preset" | "accent" | "y" | "font">;
+
+/** כמה "רעש" במעברים ובתנועה: בלי, נקי, דינמי או מוגזם */
+export type TransitionStyle = "none" | "clean" | "dynamic" | "extreme";
 
 export interface Timeline {
+  /** סגנון המעברים שהעריכה האוטומטית משתמשת בו (ברירת מחדל: נקי) */
+  transitionStyle?: TransitionStyle;
   /** הסגנון לכתוביות חדשות (מתבנית או מהבחירה האחרונה) */
   captionStyle?: CaptionStyle;
   fps: number;
