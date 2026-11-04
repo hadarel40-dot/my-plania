@@ -9,7 +9,7 @@ import type { Timeline, TransitionStyle } from "@/lib/editor/types";
 import { applyTransitionStyle, autoEditAll, autoReframe, currentStyle, removeSilences, syncToBeat, type AutoEditReport, type EditOption } from "@/lib/editor/auto-edit";
 import { GENRES, genreInfo, type VideoGenre } from "@/lib/editor/genres";
 import { forgetMyStyle, loadMyStyle, rememberPick, rememberStyle } from "@/lib/editor/my-style";
-import { canRestoreCaptions, currentHook, makeShorter, moreEnergy, otherMusic, setHookText, toggleCaptions } from "@/lib/editor/quick-fixes";
+import { ANIMATION_LABELS, canRestoreCaptions, currentHook, cycleAnimations, makeShorter, moreEnergy, otherMusic, setAnimationLevel, setHookText, toggleCaptions } from "@/lib/editor/quick-fixes";
 import { FONTS } from "@/lib/editor/fonts";
 import { usePlayback } from "@/stores/playback-store";
 import { TEMPLATES } from "@/lib/editor/templates";
@@ -173,6 +173,8 @@ function QuickFixes() {
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const hasCaptions = useEditor((s) => s.timeline.captions.length > 0);
+  const momentsCount = useEditor((s) => s.timeline.moments?.length ?? 0);
+  const level = useEditor((s) => s.timeline.animationLevel ?? "some");
   const run = async (id: string, fix: () => Promise<string> | string) => {
     setBusy(id); setMessage(null);
     try {
@@ -192,6 +194,7 @@ function QuickFixes() {
     { id: "energy", label: "⚡ יותר אנרגטי", fix: moreEnergy, show: true },
     { id: "music", label: "🎵 מוזיקה אחרת", fix: otherMusic, show: true },
     { id: "captions", label: hasCaptions ? "💬 בלי כתוביות" : "💬 להחזיר כתוביות", fix: toggleCaptions, show: hasCaptions || canRestoreCaptions() },
+    { id: "animations", label: `🎬 אנימציות: ${ANIMATION_LABELS[level]}`, fix: cycleAnimations, show: momentsCount > 0 && hasCaptions },
   ];
   return (
     <div className="mt-3">
@@ -269,6 +272,23 @@ function MyStyleLine() {
       ⭐ הסגנון שלי: {parts.join(" · ")}{" "}
       <button onClick={() => { forgetMyStyle(); setStyle({}); }} className="underline hover:text-white">איפוס</button>
     </p>
+  );
+}
+
+/** כמה אנימציות להקפיץ ברגעים החשובים בדיבור (מילת מפתח, מספר, שלב, אימוג'י) */
+function AnimationLevelPicker() {
+  const level = useEditor((s) => s.timeline.animationLevel ?? loadMyStyle().animationLevel ?? "some");
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-1.5 text-xs">
+      <span className="text-zinc-500">אנימציות בדיבור:</span>
+      {(["none", "some", "lots"] as const).map((l) => (
+        <button key={l} onClick={() => { setAnimationLevel(l); saveIntoChosen(); }}
+          className={cn("rounded-full border px-2.5 py-1",
+            level === l ? "border-violet-500 bg-violet-500/15 text-white" : "border-zinc-700 text-zinc-400 hover:border-zinc-500")}>
+          {ANIMATION_LABELS[l]}{l === "lots" ? " 🎬" : ""}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -370,6 +390,7 @@ function AutoEditButton({ disabled }: { disabled: boolean }) {
       <EditorNotes />
       <MyStyleLine />
       <TransitionStylePicker />
+      <AnimationLevelPicker />
       <div className="mb-2 flex flex-wrap items-center gap-1.5 text-xs">
         <span className="text-zinc-500">מה הסרטון?</span>
         {genres.map((m) => (

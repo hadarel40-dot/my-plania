@@ -1,5 +1,5 @@
 "use client";
-import type { CaptionPreset, TransitionStyle } from "./types";
+import type { AnimationLevel, CaptionPreset, TransitionStyle } from "./types";
 import type { VideoGenre } from "./genres";
 
 /**
@@ -9,6 +9,7 @@ import type { VideoGenre } from "./genres";
 export interface MyStyle {
   genre?: VideoGenre;
   transitionStyle?: TransitionStyle;
+  animationLevel?: AnimationLevel;
   captionPreset?: CaptionPreset;
   captionFont?: string;
   accent?: string;

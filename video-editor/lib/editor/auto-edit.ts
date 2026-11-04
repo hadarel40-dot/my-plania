@@ -6,11 +6,11 @@ import { useEditor } from "@/stores/editor-store";
 import { decodeAssetAudio } from "@/lib/audio/decode";
 import { findSpeech } from "@/lib/audio/silence";
 import { detectBeats } from "@/lib/audio/beats";
-import { emojiOverlays } from "./emoji-keywords";
 import { presetById } from "./overlay-presets";
 import { CLIP_STYLES } from "./clip-styles";
 import { clipLength, layoutClips, transitionOverlap, uid } from "./timeline-utils";
-import type { CaptionPreset, ClipEffect, Overlay, Timeline, TransitionStyle, TransitionType } from "./types";
+import type { AnimationLevel, CaptionPreset, ClipEffect, Moment, Overlay, Timeline, TransitionStyle, TransitionType } from "./types";
+import { applyMoments, guessMoments } from "./moments";
 import { MUSIC_MOODS, type MusicMood } from "@/lib/music/moods";
 import type { SmartPlan, SmartPlanRequest, VibePlan, VibePlanRequest } from "@/lib/ai/smart-plan";
 import { pickShots, rankShots, sampleClip, type FrameSample, type Shot } from "@/lib/video/analyze";
@@ -312,7 +312,13 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
   const s0 = smart as SmartCuts | null;
   const captions = useEditor.getState().timeline.captions;
   const hook = s0?.hook ?? (captions.length ? captions.map((c) => c.text).join(" ").split(/\s+/).slice(0, 6).join(" ") : undefined);
-  const extras = s0?.extras ?? (/בלי אימוג|ללא אימוג/.test(notes) ? [] : emojiOverlays(captions));
+  const extras = s0?.extras ?? [];
+  // הרגעים להקפיץ בהם אנימציה: מה ש-Gemini סימן, ואם אין, ניחוש לפי המילים
+  const noEmoji = /בלי אימוג|ללא אימוג/.test(notes);
+  const pool = (s0?.moments.length ? s0.moments : guessMoments(captions)).filter((m) => !(noEmoji && m.kind === "emoji"));
+  const level: AnimationLevel = /בלי אנימציות|ללא אנימציות/.test(notes) ? "none"
+    : /הרבה אנימציות|מלא אנימציות/.test(notes) ? "lots"
+      : useEditor.getState().timeline.animationLevel ?? loadMyStyle().animationLevel ?? "some";
 
   // הגרסאות: הראשונה לפי המוח (אם מחובר), והשאר בסגנונות אחרים
   const looks: TalkingLook[] = [];
@@ -349,13 +355,16 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
       useEditor.getState().timeline.clips.forEach((clip, k) => { if (k > 0) updateClip(clip.id, { transitionIn: look.cutTransition }); });
     }
     if (musicClip()) await syncToBeat(() => undefined).catch(() => undefined);
+    // אנימציות ברגעים החשובים (בגרסה האנרגטית יותר מהן)
+    useEditor.setState((st) => ({ timeline: { ...st.timeline, moments: pool } }));
+    applyMoments(level === "some" && look.template === "energy" ? "lots" : level, look.accent);
     options.push({ id: `talk-${look.title === "הסגנון שלי" ? "mine" : look.template}-${i}`, title: look.title, description: look.description, timeline: useEditor.getState().timeline });
   }
   report.done.push(`נבנו ${options.length} גרסאות לבחירה`);
   return { report, options };
 }
 
-interface SmartCuts { plan: SmartPlan; hook: string; extras: Overlay[]; summary: string }
+interface SmartCuts { plan: SmartPlan; hook: string; extras: Overlay[]; moments: Moment[]; summary: string }
 
 /**
  * עריכה חכמה: שולח את התמלול למוח (Gemini או Claude, דרך השרת), חותך את הטייקים החוזרים והמילוי
@@ -384,7 +393,12 @@ async function smartCuts(): Promise<SmartCuts> {
 
   // 1. חיתוך המקטעים שנבחרו (לפי זמני ציר הזמן), והכתוביות זזות איתם
   const removeIds = new Set(plan.remove_segments.map((i) => captions[i]?.id).filter(Boolean));
-  const emojiIds = plan.emojis.map((e) => ({ id: captions[e.segment]?.id, emoji: e.emoji })).filter((e) => e.id);
+  // כשהמוח סימן רגעים לאנימציות, האימוג'ים מגיעים משם (ולא פעמיים)
+  const emojiIds = plan.moments.length ? [] : plan.emojis.map((e) => ({ id: captions[e.segment]?.id, emoji: e.emoji })).filter((e) => e.id);
+  const moments: Moment[] = plan.moments.flatMap((m) => {
+    const id = captions[m.segment]?.id;
+    return id ? [{ captionId: id, kind: m.kind, text: m.text.trim(), importance: m.importance }] : [];
+  });
   const ranges = captions.filter((c) => removeIds.has(c.id)).map((c) => ({ start: c.start, end: c.end }));
   const before = timelineDuration(useEditor.getState().timeline);
   if (ranges.length) useEditor.getState().applyCuts(timelineRangesToPlan(ranges));
@@ -407,7 +421,7 @@ async function smartCuts(): Promise<SmartCuts> {
   if (!title || title === "פרויקט חדש") setTitle(plan.title);
 
   const parts = [cut > 0.05 ? `נחתכו ${cut.toFixed(1)} שניות (טייקים חוזרים ומילוי)` : null, `הוק: "${plan.hook}"`];
-  return { plan, hook: plan.hook, extras, summary: [plan.summary, ...parts.filter(Boolean)].join(" · ") };
+  return { plan, hook: plan.hook, extras, moments, summary: [plan.summary, ...parts.filter(Boolean)].join(" · ") };
 }
 
 /** טווחי זמן בציר הזמן שצריך להסיר, מתורגמים לקטעים שנשארים בכל קליפ (בזמן המקור) */

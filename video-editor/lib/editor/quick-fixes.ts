@@ -6,7 +6,9 @@ import { MUSIC_MOODS, type MusicMood } from "@/lib/music/moods";
 import { errorText, logEvent } from "@/lib/telemetry";
 import { MOTION_BY_STYLE, T, applyMotion, currentStyle, musicClip, syncToBeat } from "./auto-edit";
 import { layoutClips, uid, videoEnd, type SourceRange } from "./timeline-utils";
-import type { Caption, Overlay, TransitionStyle } from "./types";
+import type { AnimationLevel, Caption, Overlay, TransitionStyle } from "./types";
+import { applyMoments, currentAnimationLevel } from "./moments";
+import { rememberStyle } from "./my-style";
 
 /**
  * תיקונים בלחיצה מתחת לגרסאות: כל אחד משנה דבר אחד בסרטון שמוצג, בלי לגעת בשאר.
@@ -47,6 +49,8 @@ export async function makeShorter(): Promise<string> {
     if (musicClip()) await syncToBeat(() => undefined).catch(() => undefined);
   }
   keepEndingAtEnd();
+  // האנימציות נבנות מחדש לפי הזמנים החדשים של הכתוביות
+  if (useEditor.getState().timeline.moments?.length) applyMoments();
   const after = videoEnd(useEditor.getState().timeline.clips);
   return `קוצר מ-${Math.round(before)} ל-${Math.round(after)} שניות`;
 }
@@ -158,3 +162,21 @@ export function setHookText(text: string) {
 }
 
 export const currentHook = () => useEditor.getState().timeline.overlays.find((o) => o.hook)?.text ?? null;
+
+const NEXT_LEVEL: Record<AnimationLevel, AnimationLevel> = { none: "some", some: "lots", lots: "none" };
+export const ANIMATION_LABELS: Record<AnimationLevel, string> = { none: "בלי", some: "מעט", lots: "הרבה" };
+
+/** כמות האנימציות ברגעים החשובים: בלי → מעט → הרבה */
+export function cycleAnimations(): string {
+  const next = NEXT_LEVEL[currentAnimationLevel(useEditor.getState().timeline)];
+  setAnimationLevel(next);
+  return next === "none" ? "בלי אנימציות" : `אנימציות: ${ANIMATION_LABELS[next]}`;
+}
+
+export function setAnimationLevel(level: AnimationLevel) {
+  rememberStyle({ animationLevel: level });
+  if (useEditor.getState().timeline.moments?.length) applyMoments(level);
+  else useEditor.setState((s) => ({ timeline: { ...s.timeline, animationLevel: level } }));
+}
+
+export const hasMoments = () => !!useEditor.getState().timeline.moments?.length;

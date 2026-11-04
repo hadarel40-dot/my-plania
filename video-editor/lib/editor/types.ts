@@ -90,6 +90,8 @@ export interface Overlay {
   fromTemplate?: boolean;
   /** משפט הפתיחה (ההוק): אפשר להחליף אותו בלחיצה באחת ההצעות */
   hook?: boolean;
+  /** אנימציה שהעורך הקפיץ ברגע חשוב בדיבור (מתחלפת כשמשנים את כמות האנימציות) */
+  moment?: boolean;
   id: string;
   kind: "text" | "emoji";
   text: string;
@@ -120,6 +122,8 @@ export interface AudioClip {
   fromTemplate?: boolean;
   /** שיר שהעריכה האוטומטית בחרה (מוחלף בעריכה אוטומטית חוזרת) */
   auto?: boolean;
+  /** צליל קטן של אנימציה ברגע חשוב */
+  moment?: boolean;
   id: string;
   assetId: string;
   /** מיקום על ציר הזמן, בשניות */
@@ -151,6 +155,18 @@ export interface Caption {
 /** מסלול הווידאו "מגנטי": קליפים צמודים זה לזה, והמיקום נגזר מהסדר */
 export type CaptionStyle = Pick<Caption, "preset" | "accent" | "y" | "font">;
 
+export type AnimationLevel = "none" | "some" | "lots";
+
+/** רגע חשוב בדיבור: מילת מפתח, מספר, שלב ברשימה, או רגש לאימוג'י */
+export interface Moment {
+  captionId: string;
+  kind: "keyword" | "number" | "step" | "emoji";
+  /** מה להקפיץ: 1-3 מילים, מספר, "טיפ 2", או אימוג'י */
+  text: string;
+  /** 3 = הכי חשוב */
+  importance: number;
+}
+
 /** כמה "רעש" במעברים ובתנועה: בלי, נקי, דינמי או מוגזם */
 export type TransitionStyle = "none" | "clean" | "dynamic" | "extreme";
 
@@ -161,6 +177,12 @@ export interface Timeline {
   captionStyle?: CaptionStyle;
   /** הצילומים המקוריים, לפני העריכה האוטומטית: עריכה חוזרת מתחילה מהם ולא מהגרסה הערוכה */
   raw?: Clip[];
+  /** כמה אנימציות להקפיץ ברגעים החשובים בדיבור */
+  animationLevel?: AnimationLevel;
+  /** הרגעים החשובים שהעורך מצא (מהם נבנות האנימציות, לפי הכמות שנבחרה) */
+  moments?: Moment[];
+  /** זום קצר פנימה ברגעים של הדגשה (כמו עורך שמקרב לפנים במשפט חשוב) */
+  zooms?: { start: number; end: number; scale: number }[];
   fps: number;
   aspect: Aspect;
   clips: Clip[];

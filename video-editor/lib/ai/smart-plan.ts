@@ -9,6 +9,12 @@ export const SmartPlanSchema = z.object({
   hook: z.string().describe("ההוק לשניות הראשונות: עד 7 מילים, באותה שפה שבה מדברים בסרטון"),
   remove_segments: z.array(z.number().int()).describe("מספרי המקטעים להסרה: התחלות שנכשלו, טייקים חוזרים, מילוי"),
   emojis: z.array(z.object({ segment: z.number().int(), emoji: z.string() })).describe("2-5 אימוג'ים ברגעים בולטים"),
+  moments: z.array(z.object({
+    segment: z.number().int(),
+    kind: z.enum(["keyword", "number", "step", "emoji"]),
+    text: z.string().describe("מה מקפיצים על המסך: 1-3 מילים, מספר, 'טיפ 2', או אימוג'י אחד"),
+    importance: z.number().int().min(1).max(3).describe("3 = הרגע הכי חשוב בסרטון"),
+  })).default([]).describe("רגעים להקפיץ בהם אנימציה"),
   caption_style: z.enum(["word-pop", "highlight-box", "one-word", "karaoke", "bold-pop", "minimal"]),
   accent: z.enum(["#facc15", "#22d3ee", "#a3e635", "#f472b6", "#fb923c", "#ffffff"]),
   caption_font: z.enum(["heebo", "rubik", "secular", "suez", "frank", "varela", "amatic", "karantina"]).default("secular")

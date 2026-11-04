@@ -40,6 +40,7 @@ export function TimelineComposition({ timeline, assets, override }: CompositionP
   const { mode: mediaMode, Video: VideoTag, Audio: AudioTag } = useContext(MediaTagsContext);
   return (
     <AbsoluteFill style={{ backgroundColor: "black" }}>
+      <ZoomLayer zooms={timeline.zooms} fps={fps}>
       {layoutClips(timeline.clips).map(({ clip, start, end }, i, all) => {
         const ov = override?.clipId === clip.id ? override : null;
         const asset = assets[ov?.assetId ?? clip.assetId];
@@ -59,6 +60,7 @@ export function TimelineComposition({ timeline, assets, override }: CompositionP
           </Sequence>
         );
       })}
+      </ZoomLayer>
 
       {timeline.captions.map((cap) => {
         const from = Math.round(cap.start * fps);
@@ -97,6 +99,24 @@ export function TimelineComposition({ timeline, assets, override }: CompositionP
       })}
     </AbsoluteFill>
   );
+}
+
+/**
+ * זום קצר פנימה ברגעי הדגשה: נכנס מהר, נשאר, ויוצא בעדינות. רק הווידאו מתקרב,
+ * הכתוביות והטקסטים נשארים במקום.
+ */
+function ZoomLayer({ zooms, fps, children }: { zooms?: { start: number; end: number; scale: number }[]; fps: number; children: React.ReactNode }) {
+  const frame = useCurrentFrame();
+  const t = frame / fps;
+  let scale = 1;
+  for (const z of zooms ?? []) {
+    if (t < z.start || t > z.end + 0.25) continue;
+    const inP = Math.min(1, (t - z.start) / 0.12);
+    const outP = t > z.end ? Math.max(0, 1 - (t - z.end) / 0.25) : 1;
+    const ease = 1 - Math.pow(1 - inP, 3);
+    scale = Math.max(scale, 1 + (z.scale - 1) * ease * outP);
+  }
+  return <AbsoluteFill style={scale !== 1 ? { transform: `scale(${scale.toFixed(4)})` } : undefined}>{children}</AbsoluteFill>;
 }
 
 /** עוצמה לפי פריים: דהייה פנימה בהתחלה ודהייה החוצה בסוף */

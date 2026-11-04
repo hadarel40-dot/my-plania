@@ -251,6 +251,8 @@ export const useEditor = create<EditorState>()(
           // בסרטון אווירה אין דיבור: כתוביות ישנות לא מתאימות לסדר החדש
           s.timeline.captions = [];
           s.timeline.overlays = s.timeline.overlays.filter((o) => !o.fromTemplate);
+          s.timeline.zooms = [];
+          s.timeline.moments = [];
           s.selection = null;
         }),
 
@@ -264,6 +266,7 @@ export const useEditor = create<EditorState>()(
               .filter((it) => it.end - it.start >= MIN_CLIP_SEC);
           s.timeline.captions = remap(s.timeline.captions);
           s.timeline.overlays = remap(s.timeline.overlays);
+          if (s.timeline.zooms) s.timeline.zooms = remap(s.timeline.zooms);
           if (s.selection?.kind === "clip" && !clips.some((c) => c.id === s.selection!.id)) s.selection = null;
         }),
 
