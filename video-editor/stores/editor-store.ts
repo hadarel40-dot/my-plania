@@ -239,6 +239,17 @@ export const useEditor = create<EditorState>()(
           pieces.push(frozen);
           if (clip.out - at >= MIN_CLIP_SEC) pieces.push({ ...clip, id: uid("clip"), in: at, activeVariantId: null, transitionIn: undefined });
           s.timeline.clips.splice(index, 1, ...pieces);
+          // כל מה שאחרי נקודת ההקפאה זז קדימה; מה שמוצג בדיוק ברגע הזה נשאר על המסך בזמן ההקפאה
+          const shift = <T extends { start: number; end: number }>(it: T) => {
+            if (it.start >= time) { it.start = +(it.start + seconds).toFixed(2); it.end = +(it.end + seconds).toFixed(2); }
+            else if (it.end > time) it.end = +(it.end + seconds).toFixed(2);
+          };
+          s.timeline.captions.forEach(shift);
+          s.timeline.overlays.forEach(shift);
+          s.timeline.zooms?.forEach(shift);
+          for (const l of s.timeline.layers ?? []) if (l.start >= time) l.start = +(l.start + seconds).toFixed(2);
+          // אפקטי סאונד קצרים זזים; מוזיקה ממשיכה להתנגן
+          for (const a of s.timeline.audio) if (a.out - a.in <= 5 && a.start >= time) a.start = +(a.start + seconds).toFixed(2);
           s.selection = { kind: "clip", id: frozen.id };
         }),
 

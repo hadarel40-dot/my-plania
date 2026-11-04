@@ -5,6 +5,7 @@ import type { LayerLayout, VideoLayer } from "@/lib/editor/types";
 import { uid } from "@/lib/editor/timeline-utils";
 import { cn } from "@/lib/utils";
 import { IconButton, Section } from "./ui";
+import { RemoveBgPanel } from "./remove-bg-panel";
 
 const LAYOUTS: { id: LayerLayout; label: string; hint: string }[] = [
   { id: "pip", label: "🪟 חלון קטן", hint: "סרטון בחלון מעל הסרטון הראשי. גוררים אותו על הנגן" },
@@ -84,6 +85,9 @@ export function LayerInspector({ id, onClose }: { id: string; onClose: () => voi
             onPointerDown={() => { gesture = beginGesture(); }} onPointerUp={() => { gesture?.(); gesture = null; }}
             onChange={(e) => live({ volume: +e.target.value })} className="w-full accent-violet-500" />
         </Section>
+        <RemoveBgPanel sourceId={layer.sourceAssetId ?? layer.assetId} currentId={layer.assetId}
+          onApply={(newId) => useEditor.getState().updateLayer(id, { sourceAssetId: layer.sourceAssetId ?? layer.assetId, assetId: newId })}
+          onRestore={() => useEditor.getState().updateLayer(id, { assetId: layer.sourceAssetId ?? layer.assetId })} />
         <label className="flex items-center gap-2 text-xs text-zinc-300">
           <input type="checkbox" checked={!!layer.flip} onChange={(e) => set({ flip: e.target.checked })} className="accent-violet-500" /> היפוך מראה
         </label>

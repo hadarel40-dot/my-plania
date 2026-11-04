@@ -8,7 +8,7 @@ import { findSpeech } from "@/lib/audio/silence";
 import { detectBeats } from "@/lib/audio/beats";
 import { presetById } from "./overlay-presets";
 import { CLIP_STYLES } from "./clip-styles";
-import { clipLength, layoutClips, transitionOverlap, uid } from "./timeline-utils";
+import { clipLength, layoutClips, transitionOverlap, uid, videoEnd } from "./timeline-utils";
 import type { AnimationLevel, CaptionPreset, ClipEffect, Moment, Overlay, Timeline, TransitionStyle, TransitionType } from "./types";
 import { applyMoments, guessMoments } from "./moments";
 import { MUSIC_MOODS, type MusicMood } from "@/lib/music/moods";
@@ -359,10 +359,29 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
     // אנימציות ברגעים החשובים (בגרסה האנרגטית יותר מהן)
     useEditor.setState((st) => ({ timeline: { ...st.timeline, moments: pool } }));
     applyMoments(level === "some" && look.template === "energy" ? "lots" : level, look.accent);
-    options.push({ id: `talk-${look.title === "הסגנון שלי" ? "mine" : look.template}-${i}`, title: look.title, description: look.description, timeline: useEditor.getState().timeline });
+    // בגרסה האנרגטית: הקפאת תמונה קצרה מיד אחרי המשפט הכי חשוב, כמו "פאוזה" דרמטית בריל
+    let description = look.description;
+    if (look.template === "energy" && freezeAtPeak()) description += " · הקפאה דרמטית ברגע השיא";
+    useEditor.setState({ selection: null });
+    options.push({ id: `talk-${look.title === "הסגנון שלי" ? "mine" : look.template}-${i}`, title: look.title, description, timeline: useEditor.getState().timeline });
   }
   report.done.push(`נבנו ${options.length} גרסאות לבחירה`);
   return { report, options };
+}
+
+/** הקפאה של 0.6 שנ׳ בסוף הכתובית של הרגע הכי חשוב (לא בהתחלה ולא בסוף הסרטון) */
+function freezeAtPeak(): boolean {
+  const { timeline, freezeFrame } = useEditor.getState();
+  const end = videoEnd(timeline.clips);
+  const top = [...(timeline.moments ?? [])]
+    .filter((m) => m.importance >= 3 && (m.kind === "keyword" || m.kind === "number"))
+    .map((m) => timeline.captions.find((c) => c.id === m.captionId))
+    .filter((c): c is NonNullable<typeof c> => !!c && c.end > 2 && c.end < end - 2)
+    .sort((a, b) => a.end - b.end)[0];
+  if (!top) return false;
+  const before = timeline.clips.length;
+  freezeFrame(top.end - 0.02, 0.6);
+  return useEditor.getState().timeline.clips.length > before;
 }
 
 interface SmartCuts { plan: SmartPlan; hook: string; extras: Overlay[]; moments: Moment[]; summary: string }
@@ -650,10 +669,17 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditResu
         timeline: { ...st.timeline, overlays: [...st.timeline.overlays, { ...preset.fields, y: 0.16, id: uid("ovl"), text: plan!.text.trim(), start: 0.3, end: 3, fromTemplate: true, hook: true }] },
       }));
     }
-    const length = useEditor.getState().timeline.clips.reduce((sum, c) => sum + c.out - c.in, 0);
+    // בגרסה הקולנועית: הסוף נעצר על הפריים האחרון לרגע, כמו בסוף סרט
+    let frozenEnd = false;
+    if (i === 2) {
+      const end = videoEnd(useEditor.getState().timeline.clips);
+      if (end > 3) { useEditor.getState().freezeFrame(end - 0.05, 0.9); frozenEnd = true; }
+      useEditor.setState({ selection: null });
+    }
+    const length = videoEnd(useEditor.getState().timeline.clips);
     options.push({
       id: `vibe-${i}`, title: pos === 0 && fav === i ? `הסגנון שלי · ${look.title}` : look.title,
-      description: `${look.description} · ${useEditor.getState().timeline.clips.length} קטעים, ${Math.round(length)} שנ׳`,
+      description: `${look.description}${frozenEnd ? ", סוף שנעצר על התמונה" : ""} · ${useEditor.getState().timeline.clips.length - (frozenEnd ? 1 : 0)} קטעים, ${Math.round(length)} שנ׳`,
       timeline: useEditor.getState().timeline,
     });
   }

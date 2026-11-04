@@ -5,6 +5,7 @@ import { Section } from "./ui";
 import { cn } from "@/lib/utils";
 import { usePlayback } from "@/stores/playback-store";
 import { layoutClips } from "@/lib/editor/timeline-utils";
+import { RemoveBgPanel } from "./remove-bg-panel";
 
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.5, 2, 3];
 
@@ -138,6 +139,12 @@ function Tricks({ clip }: { clip: Clip }) {
         <Chip on={false} onClick={() => useEditor.getState().freezeFrame(at())}>❄️ הקפאת תמונה</Chip>
       </div>
       <p className="mt-1 text-[11px] text-zinc-500">הקפאה: הסרטון עוצר לשנייה וחצי על הפריים שבנקודת הניגון, וממשיך.</p>
+      <div className="mt-3">
+        <RemoveBgPanel sourceId={clip.sourceAssetId} currentId={clip.assetId}
+          // הרקע מתחלף בכל הקליפים מאותו סרטון (למשל אחרי חיתוך שתיקות)
+          onApply={(newId) => useEditor.setState((s) => ({ timeline: { ...s.timeline, clips: s.timeline.clips.map((c) => (c.sourceAssetId === clip.sourceAssetId ? { ...c, assetId: newId, activeVariantId: null } : c)) } }))}
+          onRestore={() => useEditor.setState((s) => ({ timeline: { ...s.timeline, clips: s.timeline.clips.map((c) => (c.sourceAssetId === clip.sourceAssetId ? { ...c, assetId: c.sourceAssetId } : c)) } }))} />
+      </div>
       {others.length > 0 && (
         <div className="mt-3 space-y-1.5">
           <p className="text-xs text-zinc-400">עם סרטון נוסף, מעל הקליפ הזה:</p>

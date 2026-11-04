@@ -82,6 +82,8 @@ export type LayerLayout = "pip" | "clone-left" | "clone-right" | "split-right" |
 export interface VideoLayer {
   id: string;
   assetId: string;
+  /** הסרטון המקורי, כשהרקע הוחלף (כדי שאפשר יהיה לחזור אליו) */
+  sourceAssetId?: string;
   /** מתי השכבה מתחילה בציר הזמן */
   start: number;
   /** נקודות החיתוך בקובץ */
