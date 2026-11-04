@@ -24,11 +24,14 @@ function looksRight(segments: { text: string }[]) {
 export async function POST(request: Request) {
   if (brainProvider() !== "gemini") return NextResponse.json({ error: "תמלול בענן זמין רק עם Gemini" }, { status: 404 });
   if (supabaseEnabled && !(await getUser()).user) return NextResponse.json({ error: "צריך להתחבר" }, { status: 401 });
-  const body = (await request.json().catch(() => null)) as { audio?: string; duration?: number } | null;
+  const body = (await request.json().catch(() => null)) as { audio?: string; duration?: number; hints?: string[] } | null;
+  // מילים ושמות שהיוצרת כבר תיקנה בעבר: כדי ש-Gemini יכתוב אותם נכון מההתחלה
+  const hints = (body?.hints ?? []).filter((h) => typeof h === "string" && h.length < 40).slice(0, 60);
+  const hintText = hints.length ? `\nWords and names that appear in this creator's videos (spell them exactly like this): ${hints.join(", ")}` : "";
   if (!body?.audio || body.audio.length > 4_000_000) return NextResponse.json({ error: "קטע הסאונד חסר או גדול מדי" }, { status: 400 });
   try {
     const ask = (extra = "") => askBrain({
-      system: SYSTEM + extra,
+      system: SYSTEM + hintText + extra,
       schema: TranscriptSchema,
       parts: [{ text: `Audio length: ${(body.duration ?? 0).toFixed(1)}s.` }, { audioWav: body.audio! }],
     });

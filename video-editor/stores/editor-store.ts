@@ -22,6 +22,7 @@ import {
 import { clipLength, clipSpeed, cutClips, layoutClips, MIN_CLIP_SEC, uid, videoEnd, type SourceRange } from "@/lib/editor/timeline-utils";
 import { initialProject, makeClip, normalizeProject } from "@/lib/editor/initial-project";
 import { splitCaptions } from "@/lib/editor/captions";
+import { applyDictionary } from "@/lib/editor/dictionary";
 import { TEMPLATES, resolveTemplate } from "@/lib/editor/templates";
 import { presetById } from "@/lib/editor/overlay-presets";
 import { sfxAsset, type SfxId } from "@/lib/editor/sfx";
@@ -106,7 +107,7 @@ interface EditorState {
   setCaptions: (captions: Caption[]) => void;
   updateCaption: (id: string, patch: Partial<Omit<Caption, "id">>) => void;
   /** אותו סגנון לכל הכתוביות (סגנון, צבע, מיקום) */
-  styleAllCaptions: (patch: Partial<Pick<Caption, "preset" | "accent" | "y" | "font">>) => void;
+  styleAllCaptions: (patch: Partial<CaptionStyle>) => void;
   addCaption: (start: number) => void;
 
   select: (selection: Selection) => void;
@@ -513,7 +514,8 @@ export const useEditor = create<EditorState>()(
           if (captions.length === 0) throw new Error("לא נמצא דיבור בסרטון, לכן לא נוספו כתוביות");
           // שומרים על הסגנון שכבר נבחר לכתוביות; ברירת מחדל: מילה-מילה בהדגשה
           const style = currentCaptionStyle(get().timeline);
-          const styled = splitCaptions(captions).map((c) => ({ ...c, ...style }));
+          // תיקוני המילים שנשמרו (המילון שלי) חלים מיד על התמלול החדש
+          const styled = applyDictionary(splitCaptions(captions).map((c) => ({ ...c, ...style })));
           set((s) => { s.timeline.captions = styled; });
           return styled.length;
         } catch (e) {

@@ -150,10 +150,18 @@ export interface Caption {
   y?: number;
   /** גופן (מזהה מ-lib/editor/fonts) */
   font?: string;
+  /** גודל יחסי (1 = רגיל) */
+  size?: number;
+  /** צבע הטקסט (ברירת מחדל לבן) */
+  color?: string;
+  /** קו מתאר סביב האותיות */
+  outline?: "none" | "thin" | "bold";
+  /** רקע מאחורי הכתובית */
+  box?: "none" | "dark" | "light";
 }
 
 /** מסלול הווידאו "מגנטי": קליפים צמודים זה לזה, והמיקום נגזר מהסדר */
-export type CaptionStyle = Pick<Caption, "preset" | "accent" | "y" | "font">;
+export type CaptionStyle = Pick<Caption, "preset" | "accent" | "y" | "font" | "size" | "color" | "outline" | "box">;
 
 export type AnimationLevel = "none" | "some" | "lots";
 

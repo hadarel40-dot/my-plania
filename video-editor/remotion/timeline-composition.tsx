@@ -138,6 +138,9 @@ function CaptionView({ caption }: { caption: Caption }) {
   const base = width / 1080;
   const t = frame / fps;
   const accent = caption.accent ?? "#facc15";
+  const white = caption.color ?? "white";
+  // גודל: לפי הבחירה (ברירת מחדל 1), ביחס לרוחב 1080
+  const k = base * (caption.size ?? 1);
   const words = wordTimes(caption.text, caption.end - caption.start);
   // המילה שנאמרת עכשיו (אחרי הסוף נשארת האחרונה)
   const active = Math.max(0, words.findIndex((w) => t < w.end) === -1 ? words.length - 1 : words.findIndex((w) => t < w.end));
@@ -153,13 +156,23 @@ function CaptionView({ caption }: { caption: Caption }) {
     fontFamily: fontFamily(caption.font),
     lineHeight: 1.25,
   };
-  const stroke = (px: number): React.CSSProperties => ({ WebkitTextStroke: `${px * base}px black`, paintOrder: "stroke fill" });
+  // קו מתאר: לפי הבחירה (דק / עבה / בלי), אחרת ברירת המחדל של הסגנון
+  const stroke = (px: number): React.CSSProperties => {
+    const w = caption.outline === "none" ? 0 : caption.outline === "thin" ? px * 0.5 : caption.outline === "bold" ? px * 1.6 : px;
+    return w ? { WebkitTextStroke: `${w * k}px black`, paintOrder: "stroke fill" } : {};
+  };
+  // רקע מאחורי כל הכתובית (כהה או בהיר). על רקע בהיר הטקסט הרגיל כהה
+  const plain = caption.box === "light" && !caption.color ? "#111" : white;
+  const panel: React.CSSProperties = caption.box && caption.box !== "none"
+    ? { background: caption.box === "dark" ? "rgba(0,0,0,.62)" : "rgba(255,255,255,.93)", padding: `${8 * k}px ${22 * k}px`, borderRadius: 22 * k, display: "inline-block" }
+    : {};
+  const wrap = (node: React.ReactNode) => (panel.background ? <span style={panel}>{node}</span> : node);
 
   switch (caption.preset) {
     case "minimal":
       return (
-        <div style={{ ...box, fontSize: 48 * base, fontWeight: 500, color: "white", textShadow: "0 2px 8px rgba(0,0,0,.8)" }}>
-          <span style={{ background: "rgba(0,0,0,.45)", padding: `${6 * base}px ${16 * base}px`, borderRadius: 8 * base }}>
+        <div style={{ ...box, fontSize: 48 * k, fontWeight: 500, color: plain, textShadow: "0 2px 8px rgba(0,0,0,.8)" }}>
+          <span style={{ background: "rgba(0,0,0,.45)", padding: `${6 * k}px ${16 * k}px`, borderRadius: 8 * k }}>
             {caption.text}
           </span>
         </div>
@@ -167,43 +180,43 @@ function CaptionView({ caption }: { caption: Caption }) {
 
     case "karaoke":
       return (
-        <div style={{ ...box, fontSize: 76 * base, fontWeight: 800, ...stroke(4) }}>
-          {words.map((w, i) => (
-            <span key={i} style={{ color: i <= active ? accent : "white" }}>{w.word} </span>
-          ))}
+        <div style={{ ...box, fontSize: 76 * k, fontWeight: 800, ...stroke(4) }}>
+          {wrap(words.map((w, i) => (
+            <span key={i} style={{ color: i <= active ? accent : plain }}>{w.word} </span>
+          )))}
         </div>
       );
 
     // כל המילים על המסך; המילה הנאמרת קופצת, גדלה ונצבעת
     case "word-pop":
       return (
-        <div style={{ ...box, fontSize: 92 * base, fontWeight: 900, ...stroke(6) }}>
-          {words.map((w, i) => {
+        <div style={{ ...box, fontSize: 92 * k, fontWeight: 900, ...stroke(6) }}>
+          {wrap(words.map((w, i) => {
             const on = i === active;
             const s = on ? 1 + 0.18 * pop(w.start) - 0.08 * Math.max(0, pop(w.start) - 1) : 1;
             return (
-              <span key={i} style={{ display: "inline-block", margin: `0 ${10 * base}px`, color: on ? accent : "white", transform: `scale(${s})`, opacity: t >= w.start - 0.05 || i === 0 ? 1 : 0.85 }}>
+              <span key={i} style={{ display: "inline-block", margin: `0 ${10 * k}px`, color: on ? accent : plain, transform: `scale(${s})`, opacity: t >= w.start - 0.05 || i === 0 ? 1 : 0.85 }}>
                 {w.word}
               </span>
             );
-          })}
+          }))}
         </div>
       );
 
     // המילה הנאמרת בתוך מלבן צבעוני
     case "highlight-box":
       return (
-        <div style={{ ...box, fontSize: 86 * base, fontWeight: 900, color: "white", textShadow: `0 ${3 * base}px ${10 * base}px rgba(0,0,0,.6)` }}>
-          {words.map((w, i) => (
+        <div style={{ ...box, fontSize: 86 * k, fontWeight: 900, color: plain, textShadow: `0 ${3 * k}px ${10 * k}px rgba(0,0,0,.6)` }}>
+          {wrap(words.map((w, i) => (
             <span key={i} style={{
-              display: "inline-block", margin: `${4 * base}px ${6 * base}px`, padding: `${2 * base}px ${14 * base}px`,
-              borderRadius: 14 * base, background: i === active ? accent : "transparent",
-              color: i === active ? "#111" : "white",
+              display: "inline-block", margin: `${4 * k}px ${6 * k}px`, padding: `${2 * k}px ${14 * k}px`,
+              borderRadius: 14 * k, background: i === active ? accent : "transparent",
+              color: i === active ? "#111" : plain,
               transform: `scale(${i === active ? 0.9 + 0.1 * pop(w.start) : 1})`,
             }}>
               {w.word}
             </span>
-          ))}
+          )))}
         </div>
       );
 
@@ -213,8 +226,8 @@ function CaptionView({ caption }: { caption: Caption }) {
       if (!w) return null;
       const p = pop(w.start);
       return (
-        <div style={{ ...box, fontSize: 140 * base, fontWeight: 900, color: accent, ...stroke(7), transform: `translateY(-50%) scale(${0.6 + 0.4 * p})`, opacity: Math.min(1, p * 1.5) }}>
-          {w.word}
+        <div style={{ ...box, fontSize: 140 * k, fontWeight: 900, color: accent, ...stroke(7), transform: `translateY(-50%) scale(${0.6 + 0.4 * p})`, opacity: Math.min(1, p * 1.5) }}>
+          {wrap(w.word)}
         </div>
       );
     }
@@ -222,8 +235,8 @@ function CaptionView({ caption }: { caption: Caption }) {
     default: {
       const p = Math.min(1, frame / (fps * 0.12));
       return (
-        <div style={{ ...box, fontSize: 72 * base, fontWeight: 900, color: "white", ...stroke(4), transform: `translateY(-50%) scale(${0.85 + 0.15 * p})`, opacity: p }}>
-          {caption.text}
+        <div style={{ ...box, fontSize: 72 * k, fontWeight: 900, color: plain, ...stroke(4), transform: `translateY(-50%) scale(${0.85 + 0.15 * p})`, opacity: p }}>
+          {wrap(caption.text)}
         </div>
       );
     }

@@ -11,6 +11,7 @@ import { GENRES, genreInfo, type VideoGenre } from "@/lib/editor/genres";
 import { forgetMyStyle, loadMyStyle, rememberPick, rememberStyle } from "@/lib/editor/my-style";
 import { ANIMATION_LABELS, canRestoreCaptions, currentHook, cycleAnimations, makeShorter, moreEnergy, otherMusic, setAnimationLevel, setHookText, toggleCaptions } from "@/lib/editor/quick-fixes";
 import { FONTS } from "@/lib/editor/fonts";
+import { openCaptionsSheet } from "./captions-sheet";
 import { usePlayback } from "@/stores/playback-store";
 import { TEMPLATES } from "@/lib/editor/templates";
 import { Section } from "./ui";
@@ -210,8 +211,10 @@ function QuickFixes() {
       setMessage(await fix());
       saveIntoChosen();
       logEvent("quick_fix", { fix: id });
-      usePlayback.getState().seek(0);
-      usePlayback.getState().player?.play();
+      if (id !== "fix-captions") {
+        usePlayback.getState().seek(0);
+        usePlayback.getState().player?.play();
+      }
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "לא הצליח");
     } finally {
@@ -224,6 +227,7 @@ function QuickFixes() {
     { id: "energy", label: "⚡ יותר אנרגטי", fix: moreEnergy, show: true },
     { id: "music", label: "🎵 מוזיקה אחרת", fix: otherMusic, show: true },
     { id: "captions", label: hasCaptions ? "💬 בלי כתוביות" : "💬 להחזיר כתוביות", fix: toggleCaptions, show: hasCaptions || canRestoreCaptions() },
+    { id: "fix-captions", label: "✏️ תיקון כתוביות", fix: () => { openCaptionsSheet(); return "אפשר לתקן כל מילה ברשימה"; }, show: hasCaptions },
     { id: "animations", label: `🎬 אנימציות: ${ANIMATION_LABELS[level]}`, fix: cycleAnimations, show: momentsCount > 0 && hasCaptions },
   ];
   return (

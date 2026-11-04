@@ -17,7 +17,7 @@ export const SmartPlanSchema = z.object({
   })).default([]).describe("רגעים להקפיץ בהם אנימציה"),
   caption_style: z.enum(["word-pop", "highlight-box", "one-word", "karaoke", "bold-pop", "minimal"]),
   accent: z.enum(["#facc15", "#22d3ee", "#a3e635", "#f472b6", "#fb923c", "#ffffff"]),
-  caption_font: z.enum(["heebo", "rubik", "secular", "suez", "frank", "varela", "amatic", "karantina"]).default("secular")
+  caption_font: z.enum(["heebo", "rubik", "secular", "suez", "frank", "varela", "amatic", "karantina", "assistant", "fredoka", "playpen", "bellefair", "ibmplex"]).default("secular")
     .describe("גופן לכתוביות: secular/rubik נקיים ובולטים, karantina צר ודרמטי, frank ספרותי, amatic כתב יד, varela רך"),
   template: z.enum(["talking", "tips", "before-after", "energy"]),
   color_style: z.enum(["none", "cinematic", "vivid", "warm", "cold", "vintage", "matte", "bw", "noir"]),

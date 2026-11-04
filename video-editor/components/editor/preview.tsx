@@ -14,6 +14,7 @@ import { OPEN_SMART_EVENT, runAutoEdit, useAutoEditRun } from "./smart-tab";
 import { Sparkles, X as XIcon } from "lucide-react";
 import { useUploads } from "@/stores/upload-store";
 import { GENRES, type VideoGenre } from "@/lib/editor/genres";
+import { CaptionsSheet } from "./captions-sheet";
 import { loadMyStyle } from "@/lib/editor/my-style";
 import { ensurePreviewProxies, setProxyPause, usePreviewProxies } from "@/lib/media/preview-proxy";
 
@@ -123,6 +124,7 @@ export function Preview() {
           )}
           {duration > 0 && <OverlayHandles />}
           <ActivityBar />
+          <CaptionsSheet />
           {duration > 0 && <AutoEditSuggestion />}
           {previewVariant && (
             <div dir="rtl" className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-blue-600/80 to-transparent px-3 py-2 text-xs font-medium">

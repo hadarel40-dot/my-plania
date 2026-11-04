@@ -10,7 +10,8 @@ import { CLIP_STYLES, detectStyle } from "@/lib/editor/clip-styles";
 import { importFile } from "@/lib/media/import";
 import { cn } from "@/lib/utils";
 import { IconButton, Section } from "./ui";
-import { CaptionInspector } from "./caption-inspector";
+import { CaptionInspector, CaptionTemplates } from "./caption-inspector";
+import { openCaptionsSheet } from "./captions-sheet";
 import { OverlayInspector } from "./overlay-inspector";
 import { AudioInspector } from "./audio-inspector";
 import { VariantsPanel } from "./variants-panel";
@@ -106,6 +107,8 @@ function CaptionPanel({ id }: { id: string }) {
 function TextTab() {
   const addOverlay = useEditor((s) => s.addOverlay);
   const addCaption = useEditor((s) => s.addCaption);
+  const hasCaptions = useEditor((s) => s.timeline.captions.length > 0);
+  const captionStyle = useEditor((s) => s.timeline.captions[0] ?? null);
   const at = () => usePlayback.getState().currentTime;
   const texts = OVERLAY_PRESETS.filter((p) => p.fields.kind === "text");
   const emojis = OVERLAY_PRESETS.filter((p) => p.fields.kind === "emoji");
@@ -145,6 +148,16 @@ function TextTab() {
       </Section>
 
       <Section title="כתוביות">
+        {hasCaptions && (
+          <div className="mb-3 space-y-3">
+            <button onClick={openCaptionsSheet}
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 py-2.5 text-sm font-medium hover:bg-violet-500">
+              ✏️ תיקון ועריכה של כל הכתוביות
+            </button>
+            <CaptionTemplates current={captionStyle} />
+            <p className="text-[11px] text-zinc-500">לגופן, גודל, צבעים ומיקום: לוחצים על כתובית בציר הזמן.</p>
+          </div>
+        )}
         <button onClick={() => addCaption(at())}
           className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-zinc-700 py-2.5 text-sm text-zinc-300 hover:border-violet-500">
           <Plus className="size-4" /> הוספת כתובית

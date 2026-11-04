@@ -13,6 +13,8 @@ export interface MyStyle {
   captionPreset?: CaptionPreset;
   captionFont?: string;
   accent?: string;
+  /** תיקוני מילים בכתוביות שנזכרים לפעם הבאה (מה שהתמלול כתב → המילה הנכונה) */
+  dictionary?: Record<string, string>;
   /** כמה פעמים נבחרה כל גרסה (לפי סוג: talk-0, vibe-1...) */
   picks?: Record<string, number>;
 }

@@ -1,4 +1,5 @@
 "use client";
+import { dictionaryHints } from "@/lib/editor/dictionary";
 import type { Transcriber } from "./transcriber";
 import { createBrowserTranscriber } from "./browser-transcriber";
 import { perAssetCache, segmentsToCaptions, type Segment } from "./segments";
@@ -32,7 +33,7 @@ export function createGeminiTranscriber(): Transcriber {
             const res = await fetch("/api/transcribe", {
               method: "POST",
               headers: { "content-type": "application/json" },
-              body: JSON.stringify({ audio: wavBase64(samples, c.start, c.end), duration: c.end - c.start }),
+              body: JSON.stringify({ audio: wavBase64(samples, c.start, c.end), duration: c.end - c.start, hints: dictionaryHints() }),
             });
             const data = await res.json().catch(() => null);
             if (!res.ok || !data) {
