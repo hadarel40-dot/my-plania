@@ -1,8 +1,8 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Player, type PlayerRef } from "@remotion/player";
 import { Loader2, Pause, Play, SkipBack, SkipForward, Upload } from "lucide-react";
-import { TimelineComposition, type CompositionProps } from "@/remotion/timeline-composition";
+import { MediaTagsContext, TimelineComposition, type CompositionProps, type MediaTags } from "@/remotion/timeline-composition";
 import { useEditor } from "@/stores/editor-store";
 import { usePlayback } from "@/stores/playback-store";
 import { ASPECT_SIZE, type Aspect } from "@/lib/editor/types";
@@ -15,7 +15,7 @@ import { Sparkles, X as XIcon } from "lucide-react";
 import { useUploads } from "@/stores/upload-store";
 import { GENRES, type VideoGenre } from "@/lib/editor/genres";
 import { CaptionsSheet } from "./captions-sheet";
-import { loadMyStyle } from "@/lib/editor/my-style";
+import { loadMyStyle, rememberStyle } from "@/lib/editor/my-style";
 import { ensurePreviewProxies, setProxyPause, usePreviewProxies } from "@/lib/media/preview-proxy";
 
 export function Preview() {
@@ -28,6 +28,7 @@ export function Preview() {
   const { setPlayer, setCurrentTime, setPlaying } = usePlayback.getState();
   const playing = usePlayback((s) => s.playing);
   const proxies = usePreviewProxies((s) => s.urls);
+  const mediaTags = usePreviewMediaTags();
 
   const { width, height } = ASPECT_SIZE[timeline.aspect];
   const duration = timelineDuration(timeline);
@@ -100,6 +101,7 @@ export function Preview() {
           style={{ aspectRatio: `${width} / ${height}` }}
         >
           {duration > 0 ? (
+            <MediaTagsContext.Provider value={mediaTags}>
             <Player
               ref={playerRef}
               component={TimelineComposition}
@@ -111,6 +113,7 @@ export function Preview() {
               style={{ width: "100%", height: "100%" }}
               clickToPlay
             />
+            </MediaTagsContext.Provider>
           ) : (
             <div dir="rtl" className="grid h-full place-items-center px-6 text-center text-sm text-zinc-400">
               <EmptyUploadState />
@@ -247,6 +250,7 @@ function AutoEditSuggestion() {
   const ran = useAutoEditRun((s) => !!s.busy || s.options.length > 0 || !!s.report);
   const [dismissed, setDismissed] = useState(false);
   const [last] = useState(() => (typeof window === "undefined" ? undefined : loadMyStyle().genre));
+  const [noMusic, setNoMusic] = useState(() => (typeof window === "undefined" ? false : loadMyStyle().withMusic === false));
   if (uploading || !untouched || ran || dismissed) return null;
   const go = (genre: VideoGenre) => {
     window.dispatchEvent(new Event(OPEN_SMART_EVENT));
@@ -269,7 +273,34 @@ function AutoEditSuggestion() {
           </button>
         ))}
       </div>
+      <label className="mt-1.5 flex items-center justify-center gap-1.5 text-[11px] text-zinc-300">
+        <input type="checkbox" checked={noMusic} className="accent-violet-500"
+          onChange={(e) => { setNoMusic(e.target.checked); rememberStyle({ withMusic: !e.target.checked }); }} />
+        בלי מוזיקה (אוסיף בעצמי)
+      </label>
       <button onClick={() => go("auto")} className="mt-1 w-full text-center text-[10px] text-zinc-400 underline">שהעורך יזהה לבד</button>
     </div>
   );
+}
+
+/**
+ * מנוע הווידאו של התצוגה המקדימה. נגן הווידאו הרגיל של הדפדפן "תופס" כל קטע רק ברגע
+ * החיתוך, ולכן הנגן עוצר לרגע בכל חיתוך (הקפיצות). כשיש WebCodecs (כמעט בכל דפדפן,
+ * גם באייפון), משתמשים באותו מנוע של הייצוא: הוא מפענח כל פריים מראש ובדיוק, החיתוכים
+ * חלקים, והתצוגה זהה לסרטון שיוצא. נטען ברקע; עד אז, הנגן הרגיל.
+ */
+let mediaTagsCache: MediaTags | null = null;
+function usePreviewMediaTags(): MediaTags {
+  const fallback = useContext(MediaTagsContext);
+  const [tags, setTags] = useState<MediaTags>(() => mediaTagsCache ?? fallback);
+  useEffect(() => {
+    if (mediaTagsCache || typeof VideoDecoder === "undefined" || typeof AudioDecoder === "undefined") return;
+    let alive = true;
+    import("@/remotion/media-tags").then(({ MEDIA_TAGS }) => {
+      mediaTagsCache = MEDIA_TAGS;
+      if (alive) setTags(MEDIA_TAGS);
+    }).catch(() => undefined);
+    return () => { alive = false; };
+  }, []);
+  return tags;
 }

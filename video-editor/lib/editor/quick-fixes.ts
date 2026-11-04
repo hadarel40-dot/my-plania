@@ -180,3 +180,27 @@ export function setAnimationLevel(level: AnimationLevel) {
 }
 
 export const hasMoments = () => !!useEditor.getState().timeline.moments?.length;
+
+/** בלי מוזיקה: מוריד את השיר ומחזיר את הסאונד המקורי של הסרטונים. ועם: מוסיף שיר */
+export async function toggleMusic(): Promise<string> {
+  const music = musicClip();
+  const talking = isTalking();
+  if (music) {
+    useEditor.setState((s) => ({
+      timeline: {
+        ...s.timeline,
+        audio: s.timeline.audio.filter((a) => a.id !== music.id),
+        clips: s.timeline.clips.map((c) => ({ ...c, volume: 1 })),
+      },
+    }));
+    return "המוזיקה הוסרה, והסאונד המקורי חזר. אפשר להוסיף מוזיקה אחר כך, גם באינסטגרם";
+  }
+  const msg = await otherMusic();
+  // בסרטון אווירה השיר מחליף את הסאונד המקורי; בדיבור הדיבור נשאר והשיר שקט מתחתיו
+  const added = musicClip();
+  if (added && talking) useEditor.getState().updateAudioClip(added.id, { volume: 0.15 });
+  if (!talking) useEditor.setState((s) => ({ timeline: { ...s.timeline, clips: s.timeline.clips.map((c) => ({ ...c, volume: 0 })) } }));
+  return msg;
+}
+
+export const hasMusic = () => !!musicClip();

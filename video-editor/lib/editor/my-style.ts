@@ -10,6 +10,8 @@ export interface MyStyle {
   genre?: VideoGenre;
   transitionStyle?: TransitionStyle;
   animationLevel?: AnimationLevel;
+  /** false: העריכה האוטומטית לא מוסיפה מוזיקה (מוסיפים בעצמכם, למשל באינסטגרם) */
+  withMusic?: boolean;
   captionPreset?: CaptionPreset;
   captionFont?: string;
   accent?: string;

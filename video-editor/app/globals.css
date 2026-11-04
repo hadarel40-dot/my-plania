@@ -73,3 +73,12 @@ label:has(> input[type="file"]):active {
   transition: transform 60ms;
 }
 * { -webkit-tap-highlight-color: transparent; }
+
+/* באייפון, שדה טקסט קטן מ-16px גורם להגדלה אוטומטית של הדף כשלוחצים עליו */
+@media (max-width: 767px) {
+  input:not([type="range"]):not([type="checkbox"]):not([type="color"]),
+  textarea,
+  select { font-size: 16px !important; }
+}
+/* בלי הגדלה בלחיצה כפולה (והלחיצות מגיבות מהר יותר) */
+html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }

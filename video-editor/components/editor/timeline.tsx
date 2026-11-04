@@ -44,7 +44,7 @@ function touchSelectOnly(e: React.PointerEvent, selected: boolean) {
   return true;
 }
 
-export function TimelinePanel() {
+export function TimelinePanel({ fill = false }: { fill?: boolean } = {}) {
   const [pps, setPps] = useState(80); // פיקסלים לשנייה
   const timeline = useEditor((s) => s.timeline);
   const selection = useEditor((s) => s.selection);
@@ -69,7 +69,7 @@ export function TimelinePanel() {
   };
 
   return (
-    <section dir="ltr" className="flex h-56 shrink-0 flex-col border-t md:h-72 border-zinc-800 bg-zinc-950">
+    <section dir="ltr" className={cn("flex shrink-0 flex-col border-t border-zinc-800 bg-zinc-950", fill ? "h-full" : "h-56 md:h-72")}>
       <div className="flex items-center gap-1 overflow-x-auto whitespace-nowrap border-b border-zinc-800 px-3 py-1.5 text-xs">
         <ToolBtn label="ביטול (Ctrl+Z)" onClick={undo} disabled={!canUndo}><Undo2 className="size-4" /></ToolBtn>
         <ToolBtn label="חזרה (Ctrl+Shift+Z)" onClick={redo} disabled={!canRedo}><Redo2 className="size-4" /></ToolBtn>

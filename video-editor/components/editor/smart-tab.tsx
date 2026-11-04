@@ -9,6 +9,7 @@ import type { Timeline, TransitionStyle } from "@/lib/editor/types";
 import { applyTransitionStyle, autoEditAll, autoReframe, currentStyle, removeSilences, syncToBeat, type AutoEditReport, type EditOption } from "@/lib/editor/auto-edit";
 import { GENRES, genreInfo, type VideoGenre } from "@/lib/editor/genres";
 import { forgetMyStyle, loadMyStyle, rememberPick, rememberStyle } from "@/lib/editor/my-style";
+import { toggleMusic } from "@/lib/editor/quick-fixes";
 import { ANIMATION_LABELS, canRestoreCaptions, currentHook, cycleAnimations, makeShorter, moreEnergy, otherMusic, setAnimationLevel, setHookText, toggleCaptions } from "@/lib/editor/quick-fixes";
 import { FONTS } from "@/lib/editor/fonts";
 import { openCaptionsSheet } from "./captions-sheet";
@@ -202,6 +203,7 @@ function QuickFixes() {
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const hasCaptions = useEditor((s) => s.timeline.captions.length > 0);
+  const withMusic = useEditor((s) => s.timeline.audio.some((a) => a.out - a.in > 5));
   const momentsCount = useEditor((s) => s.timeline.moments?.length ?? 0);
   const level = useEditor((s) => s.timeline.animationLevel ?? "some");
   const run = async (id: string, fix: () => Promise<string> | string) => {
@@ -225,7 +227,8 @@ function QuickFixes() {
   const fixes: { id: string; label: string; fix: () => Promise<string> | string; show: boolean }[] = [
     { id: "shorter", label: "✂️ יותר קצר", fix: makeShorter, show: true },
     { id: "energy", label: "⚡ יותר אנרגטי", fix: moreEnergy, show: true },
-    { id: "music", label: "🎵 מוזיקה אחרת", fix: otherMusic, show: true },
+    { id: "music", label: "🎵 מוזיקה אחרת", fix: otherMusic, show: withMusic },
+    { id: "music-toggle", label: withMusic ? "🔇 בלי מוזיקה" : "🎵 להוסיף מוזיקה", fix: toggleMusic, show: true },
     { id: "captions", label: hasCaptions ? "💬 בלי כתוביות" : "💬 להחזיר כתוביות", fix: toggleCaptions, show: hasCaptions || canRestoreCaptions() },
     { id: "fix-captions", label: "✏️ תיקון כתוביות", fix: () => { openCaptionsSheet(); return "אפשר לתקן כל מילה ברשימה"; }, show: hasCaptions },
     { id: "animations", label: `🎬 אנימציות: ${ANIMATION_LABELS[level]}`, fix: cycleAnimations, show: momentsCount > 0 && hasCaptions },
@@ -306,6 +309,24 @@ function MyStyleLine() {
       ⭐ הסגנון שלי: {parts.join(" · ")}{" "}
       <button onClick={() => { forgetMyStyle(); setStyle({}); }} className="underline hover:text-white">איפוס</button>
     </p>
+  );
+}
+
+/** עם מוזיקה או בלי (כשמוסיפים מוזיקה בעצמכם, למשל באינסטגרם) */
+function MusicChoice() {
+  const [withMusic, setWithMusic] = useState(() => (typeof window === "undefined" ? true : loadMyStyle().withMusic !== false));
+  const pick = (v: boolean) => { setWithMusic(v); rememberStyle({ withMusic: v }); };
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-1.5 text-xs">
+      <span className="text-zinc-500">מוזיקה:</span>
+      {([[true, "🎵 עם מוזיקה"], [false, "🔇 בלי (אוסיף בעצמי)"]] as const).map(([v, l]) => (
+        <button key={l} onClick={() => pick(v)}
+          className={cn("rounded-full border px-2.5 py-1",
+            withMusic === v ? "border-violet-500 bg-violet-500/15 text-white" : "border-zinc-700 text-zinc-400 hover:border-zinc-500")}>
+          {l}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -423,6 +444,7 @@ function AutoEditButton({ disabled }: { disabled: boolean }) {
       <MyStyleLine />
       <TransitionStylePicker />
       <AnimationLevelPicker />
+      <MusicChoice />
       <div className="mb-2 flex flex-wrap items-center gap-1.5 text-xs">
         <span className="text-zinc-500">מה הסרטון?</span>
         {genres.map((m) => (

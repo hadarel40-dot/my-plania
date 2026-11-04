@@ -552,7 +552,8 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditResu
   const clipOrder = clips.map((c) => c.id);
   const notes = useEditor.getState().notes;
   const userMusic = musicClip();
-  const noMusic = !userMusic && /בלי מוזיקה|ללא מוזיקה|לא לשים מוזיקה|בלי שיר/.test(notes);
+  // בלי מוזיקה: לפי הבחירה ("אוסיף מוזיקה בעצמי", למשל באינסטגרם) או לפי ההוראות. אז הסאונד המקורי נשאר
+  const noMusic = !userMusic && (loadMyStyle().withMusic === false || /בלי מוזיקה|ללא מוזיקה|לא לשים מוזיקה|בלי שיר/.test(notes));
 
   // 2. המוח בוחר (פעם אחת): קודם לפי הצפייה בסרטונים, ואם לא הצליח, לפי תמונות מהקטעים
   let plan: VibePlan | null = null;

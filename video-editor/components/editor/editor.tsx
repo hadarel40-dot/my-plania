@@ -70,6 +70,11 @@ type Sheet = "edit" | "media" | Exclude<Tab, "ai"> | "ai";
  */
 function PhoneLayout({ top }: { top: React.ReactNode }) {
   const [sheet, setSheet] = useState<Sheet | null>(null);
+  // גובה אזור העריכה (חלק מגובה המסך). נשמר לפעם הבאה
+  const [panel, setPanel] = useState(() => {
+    try { const v = Number(localStorage.getItem(PANEL_KEY)); return v >= PANEL_MIN && v <= PANEL_MAX ? v : 0.42; } catch { return 0.42; }
+  });
+  useEffect(() => { try { localStorage.setItem(PANEL_KEY, String(panel)); } catch { /* */ } }, [panel]);
   const editable = useEditor((s) => (s.selection && s.selection.kind !== "clip" ? s.selection.id : null));
   // כמו במחשב: כשבוחרים קליפ, כפתור "סגנון" הופך ל"עריכת קליפ" (מהירות, אפקטים, צבע, מעבר)
   const clipSelected = useEditor((s) => s.selection?.kind === "clip");
@@ -106,13 +111,16 @@ function PhoneLayout({ top }: { top: React.ReactNode }) {
       <main className="flex min-h-0 flex-1 flex-col">
         <Preview />
       </main>
-      {sheet ? (
-        <div className="flex h-[46dvh] shrink-0 flex-col overflow-hidden border-t border-zinc-800 bg-zinc-900">
-          {sheet === "media" ? <MediaBin /> : <SidePanel tab={sheet === "edit" ? "text" : sheet} inspect={sheet === "edit"} />}
-        </div>
-      ) : (
-        <TimelinePanel />
-      )}
+      <ResizeHandle value={panel} onChange={setPanel} />
+      <div className="flex shrink-0 flex-col overflow-hidden" style={{ height: `${panel * 100}dvh` }}>
+        {sheet ? (
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-zinc-900">
+            {sheet === "media" ? <MediaBin /> : <SidePanel tab={sheet === "edit" ? "text" : sheet} inspect={sheet === "edit"} />}
+          </div>
+        ) : (
+          <TimelinePanel fill />
+        )}
+      </div>
       <nav className="flex shrink-0 gap-0.5 border-t border-zinc-800/70 bg-zinc-950/85 px-1 pt-1 pb-[max(env(safe-area-inset-bottom),4px)] backdrop-blur-xl">
         {buttons.map((b) => (
           <button key={b.id ?? "timeline"} onClick={() => setSheet((v) => (v === b.id ? null : b.id))}
@@ -122,6 +130,32 @@ function PhoneLayout({ top }: { top: React.ReactNode }) {
           </button>
         ))}
       </nav>
+    </div>
+  );
+}
+
+const PANEL_KEY = "ai-video-editor:panel-height";
+const PANEL_MIN = 0.24;
+const PANEL_MAX = 0.6;
+
+/**
+ * ידית בין הנגן לכלי העריכה: גוררים למעלה כדי להגדיל את אזור העריכה, למטה כדי להגדיל
+ * את הנגן. לחיצה כפולה מחזירה לגודל הרגיל.
+ */
+function ResizeHandle({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const start = (e: React.PointerEvent) => {
+    e.preventDefault();
+    const y0 = e.clientY, v0 = value, h = window.innerHeight;
+    const move = (ev: PointerEvent) => onChange(Math.min(PANEL_MAX, Math.max(PANEL_MIN, v0 + (y0 - ev.clientY) / h)));
+    const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up); };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  };
+  return (
+    <div onPointerDown={start} onDoubleClick={() => onChange(0.42)} role="separator" aria-orientation="horizontal" aria-label="שינוי גודל אזור העריכה"
+      className="group flex h-5 shrink-0 cursor-row-resize touch-none items-center justify-center border-t border-zinc-800/70 bg-zinc-950/80">
+      <span className="h-1.5 w-12 rounded-full bg-zinc-600 transition group-active:w-16 group-active:bg-violet-400" />
     </div>
   );
 }
