@@ -3,6 +3,8 @@ import { create, useStore } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { temporal } from "zundo";
 import {
+  type VideoLayer,
+  type LayerLayout,
   NEUTRAL_LOOK,
   type Aspect,
   type AudioClip,
@@ -74,6 +76,13 @@ interface EditorState {
   trimClip: (clipId: string, edge: "in" | "out", value: number) => void;
   splitAt: (time: number) => void;
   removeSelected: () => void;
+  /** שכבת וידאו מעל הסרטון (אוברליי / תאומים / מסך מפוצל), מנקודה בציר הזמן */
+  addLayer: (assetId: string, at: number, layout?: LayerLayout, length?: number) => void;
+  updateLayer: (id: string, patch: Partial<VideoLayer>) => void;
+  /** שכפול הקליפ הנבחר: עותק מיד אחריו */
+  duplicateClip: (clipId: string) => void;
+  /** הקפאת תמונה בנקודת הניגון: הסרטון עוצר על הפריים לכמה שניות, ואז ממשיך */
+  freezeFrame: (time: number, seconds?: number) => void;
   /**
    * בונה את מסלול הווידאו מחדש מקטעים נבחרים, בסדר הנתון (סרטון אווירה).
    * כל קטע הוא חלק מקליפ קיים. צעד undo אחד
@@ -96,7 +105,7 @@ interface EditorState {
   addOverlay: (presetId: string, at: number) => void;
   updateOverlay: (id: string, patch: Partial<Omit<Overlay, "id">>) => void;
   /** הזזה או חיתוך של פריט מתוזמן (טקסט / כתובית) על ציר הזמן */
-  retimeItem: (kind: "overlay" | "caption", id: string, start: number, end: number) => void;
+  retimeItem: (kind: "overlay" | "caption" | "layer", id: string, start: number, end: number) => void;
 
   addSfx: (sfxId: SfxId, at: number) => void;
   /** מחיל תבנית רילס: צבע לכל הקליפים, טקסטים, אפקטים וסגנון כתוביות. צעד undo אחד */
@@ -190,6 +199,49 @@ export const useEditor = create<EditorState>()(
       setAssetRemoteUrl: (assetId, url) =>
         set((s) => { const a = s.assets[assetId]; if (a) a.remoteUrl = url; }),
 
+      addLayer: (assetId, at, layout = "pip", length) =>
+        set((s) => {
+          const asset = s.assets[assetId];
+          if (!asset) return;
+          const end = videoEnd(s.timeline.clips);
+          const out = Math.min(asset.duration, length ?? Math.max(1, end - at) ?? asset.duration);
+          const layer: VideoLayer = {
+            id: uid("layer"), assetId, start: Math.max(0, at), in: 0, out: Math.max(MIN_CLIP_SEC, out), layout,
+            x: 0.72, y: 0.28, scale: 0.42, shape: layout === "pip" ? "rounded" : "rect", border: layout === "pip",
+            opacity: 1, volume: layout === "pip" ? 0 : 1,
+          };
+          (s.timeline.layers ??= []).push(layer);
+          s.selection = { kind: "layer", id: layer.id };
+        }),
+      updateLayer: (id, patch) =>
+        set((s) => {
+          const l = s.timeline.layers?.find((x) => x.id === id);
+          if (l) Object.assign(l, patch);
+        }),
+      duplicateClip: (clipId) =>
+        set((s) => {
+          const i = s.timeline.clips.findIndex((c) => c.id === clipId);
+          if (i < 0) return;
+          const copy: Clip = { ...s.timeline.clips[i], id: uid("clip"), activeVariantId: null, transitionIn: undefined };
+          s.timeline.clips.splice(i + 1, 0, copy);
+          s.selection = { kind: "clip", id: copy.id };
+        }),
+      freezeFrame: (time, seconds = 1.5) =>
+        set((s) => {
+          const hit = layoutClips(s.timeline.clips).find(({ start, end }) => time >= start && time < end);
+          if (!hit || hit.clip.freeze) return;
+          const { clip, start } = hit;
+          const at = clip.in + (time - start) * clipSpeed(clip);
+          const index = s.timeline.clips.findIndex((c) => c.id === clip.id);
+          const frozen: Clip = { ...clip, id: uid("clip"), in: at, out: Math.min(clip.out, at + 0.05), freeze: seconds, activeVariantId: null, transitionIn: undefined, effect: "none" };
+          const pieces: Clip[] = [];
+          if (at - clip.in >= MIN_CLIP_SEC) pieces.push({ ...clip, out: at });
+          pieces.push(frozen);
+          if (clip.out - at >= MIN_CLIP_SEC) pieces.push({ ...clip, id: uid("clip"), in: at, activeVariantId: null, transitionIn: undefined });
+          s.timeline.clips.splice(index, 1, ...pieces);
+          s.selection = { kind: "clip", id: frozen.id };
+        }),
+
       addClip: (assetId) =>
         set((s) => {
           const asset = s.assets[assetId];
@@ -268,6 +320,8 @@ export const useEditor = create<EditorState>()(
           s.timeline.captions = remap(s.timeline.captions);
           s.timeline.overlays = remap(s.timeline.overlays);
           if (s.timeline.zooms) s.timeline.zooms = remap(s.timeline.zooms);
+          // שכבות הווידאו זזות יחד עם החיתוכים (לפי נקודת ההתחלה שלהן)
+          if (s.timeline.layers) for (const l of s.timeline.layers) l.start = +mapTime(l.start).toFixed(2);
           if (s.selection?.kind === "clip" && !clips.some((c) => c.id === s.selection!.id)) s.selection = null;
         }),
 
@@ -278,6 +332,7 @@ export const useEditor = create<EditorState>()(
           if (sel.kind === "clip") s.timeline.clips = s.timeline.clips.filter((c) => c.id !== sel.id);
           else if (sel.kind === "caption") s.timeline.captions = s.timeline.captions.filter((c) => c.id !== sel.id);
           else if (sel.kind === "overlay") s.timeline.overlays = s.timeline.overlays.filter((o) => o.id !== sel.id);
+          else if (sel.kind === "layer") s.timeline.layers = (s.timeline.layers ?? []).filter((l) => l.id !== sel.id);
           else s.timeline.audio = s.timeline.audio.filter((a) => a.id !== sel.id);
           s.selection = null;
           s.previewVariantId = null;
@@ -331,6 +386,20 @@ export const useEditor = create<EditorState>()(
         }),
       retimeItem: (kind, id, start, end) =>
         set((s) => {
+          if (kind === "layer") {
+            const l = s.timeline.layers?.find((x) => x.id === id);
+            if (!l) return;
+            const dur = s.assets[l.assetId]?.duration ?? l.out;
+            const newStart = Math.max(0, +start.toFixed(2));
+            // שינוי ההתחלה מהקצה חותך את תחילת הקובץ; גרירה מזיזה את כל השכבה
+            const moved = Math.abs((end - start) - (l.out - l.in)) < 0.01;
+            if (!moved) {
+              if (Math.abs(newStart - l.start) > 0.001) l.in = Math.min(l.out - MIN_CLIP_SEC, Math.max(0, l.in + (newStart - l.start)));
+              l.out = Math.min(dur, Math.max(l.in + MIN_CLIP_SEC, l.in + (end - newStart)));
+            }
+            l.start = newStart;
+            return;
+          }
           const list = kind === "overlay" ? s.timeline.overlays : s.timeline.captions;
           const item = list.find((x) => x.id === id);
           if (!item) return;

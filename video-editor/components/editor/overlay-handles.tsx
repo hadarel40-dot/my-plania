@@ -42,6 +42,7 @@ export function OverlayHandles() {
 
   return (
     <div ref={layerRef} className="pointer-events-none absolute inset-0">
+      <LayerHandles layerRef={layerRef} />
       <CaptionHandle layerRef={layerRef} />
       {visible.map((o) => {
         // גודל משוער של הפריט על המסך (unit = רוחב התצוגה / 1080)
@@ -116,3 +117,63 @@ function CaptionHandle({ layerRef }: { layerRef: React.RefObject<HTMLDivElement 
     </div>
   );
 }
+
+/**
+ * חלונות וידאו (אוברליי) על הנגן: גרירה מזיזה את החלון, לחיצה בוחרת אותו (נפתחות ההגדרות).
+ * בתאומים ומסך מפוצל אין מה להזיז: לחיצה על החצי בוחרת את השכבה.
+ */
+function LayerHandles({ layerRef }: { layerRef: React.RefObject<HTMLDivElement | null> }) {
+  const t = usePlayback((s) => s.currentTime);
+  // מערך קבוע כשאין שכבות (מערך חדש בכל קריאה גורם לרינדור אינסופי)
+  const layers = useEditor((s) => s.timeline.layers ?? NO_LAYERS);
+  const assets = useEditor((s) => s.assets);
+  const selectedId = useEditor((s) => (s.selection?.kind === "layer" ? s.selection.id : null));
+  const aspect = useEditor((s) => s.timeline.aspect);
+  const visible = layers.filter((l) => t >= l.start && t < l.start + (l.out - l.in));
+  if (!visible.length) return null;
+  const [aw, ah] = aspect === "16:9" ? [16, 9] : aspect === "1:1" ? [1, 1] : [9, 16];
+
+  function onDown(e: React.PointerEvent, id: string) {
+    e.stopPropagation();
+    const rect = layerRef.current!.getBoundingClientRect();
+    const l = useEditor.getState().timeline.layers!.find((x) => x.id === id)!;
+    useEditor.getState().select({ kind: "layer", id });
+    if (l.layout !== "pip") return;
+    const finish = beginGesture();
+    const x0 = l.x, y0 = l.y, cx = e.clientX, cy = e.clientY;
+    const move = (ev: PointerEvent) => {
+      const clamp = (v: number) => Math.max(0.05, Math.min(0.95, v));
+      useEditor.getState().updateLayer(id, { x: +clamp(x0 + (ev.clientX - cx) / rect.width).toFixed(3), y: +clamp(y0 + (ev.clientY - cy) / rect.height).toFixed(3) });
+    };
+    const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up); finish(); };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  }
+
+  return (
+    <>
+      {visible.map((l) => {
+        const asset = assets[l.assetId];
+        let style: React.CSSProperties;
+        if (l.layout === "pip") {
+          const ratio = l.shape === "circle" ? 1 : asset?.width && asset.height ? asset.height / asset.width : 16 / 9;
+          // רוחב החלון ביחס לרוחב המסך, והגובה ביחס לגובה (לפי יחס המסך)
+          const wPct = l.scale * 100, hPct = l.scale * ratio * (aw / ah) * 100;
+          style = { left: `${l.x * 100 - wPct / 2}%`, top: `${l.y * 100 - hPct / 2}%`, width: `${wPct}%`, height: `${hPct}%` };
+        } else if (l.layout === "clone-left") style = { left: 0, top: 0, width: "50%", height: "100%" };
+        else if (l.layout === "clone-right" || l.layout === "split-right") style = { left: "50%", top: 0, width: "50%", height: "100%" };
+        else style = { left: 0, top: "50%", width: "100%", height: "50%" };
+        return (
+          <div key={l.id} onPointerDown={(e) => onDown(e, l.id)} title={l.layout === "pip" ? "גרירה להזזה" : "לחיצה לעריכה"}
+            // תאומים / מפוצל תופסים חצי מסך: רק מסמנים אותם כשהם נבחרים, בלי לחסום לחיצות על הנגן
+            className={cn("absolute touch-none rounded-md border-2 transition-colors", l.layout === "pip" ? "pointer-events-auto cursor-move" : "pointer-events-none",
+              l.id === selectedId ? "border-dashed border-emerald-400" : "border-transparent hover:border-white/40")}
+            style={style} />
+        );
+      })}
+    </>
+  );
+}
+
+const NO_LAYERS: import("@/lib/editor/types").VideoLayer[] = [];

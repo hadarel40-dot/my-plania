@@ -57,6 +57,7 @@ export function TimelinePanel({ fill = false }: { fill?: boolean } = {}) {
 
   const duration = timelineDuration(timeline);
   const overlayLanes = useMemo(() => assignLanes(timeline.overlays), [timeline.overlays]);
+  const layerLanes = useMemo(() => assignLanes((timeline.layers ?? []).map((l) => ({ id: l.id, start: l.start, end: l.start + l.out - l.in }))), [timeline.layers]);
   const audioLanes = useMemo(
     () => assignLanes(timeline.audio.map((a) => ({ id: a.id, start: a.start, end: a.start + a.out - a.in }))),
     [timeline.audio],
@@ -109,6 +110,16 @@ export function TimelinePanel({ fill = false }: { fill?: boolean } = {}) {
                 timeFromClientX={timeFromClientX} />
             ))}
           </Track>
+
+          {(timeline.layers?.length ?? 0) > 0 && (
+            <Track label="⧉" lanes={layerLanes.count}>
+              {(timeline.layers ?? []).map((l) => (
+                <TimedBlock key={l.id} kind="layer" id={l.id} start={l.start} end={l.start + l.out - l.in} pps={pps}
+                  lane={layerLanes.lanes.get(l.id) ?? 0} label={`⧉ ${LAYER_NAMES[l.layout]}`}
+                  selected={selection?.kind === "layer" && selection.id === l.id} />
+              ))}
+            </Track>
+          )}
 
           <Track label="Aa" lanes={overlayLanes.count}>
             {timeline.overlays.map((o) => (
@@ -256,14 +267,19 @@ function Handle({ side, onPointerDown }: { side: "left" | "right"; onPointerDown
   );
 }
 
+export const LAYER_NAMES: Record<import("@/lib/editor/types").LayerLayout, string> = {
+  pip: "חלון", "clone-left": "תאומים", "clone-right": "תאומים", "split-right": "מסך מפוצל", "split-bottom": "מסך מפוצל",
+};
+
 const BLOCK_COLORS = {
   overlay: { idle: "border-violet-500/60 bg-violet-900/70 hover:bg-violet-800", active: "bg-violet-700" },
   caption: { idle: "border-sky-600/60 bg-sky-900/70 hover:bg-sky-800", active: "bg-sky-700" },
+  layer: { idle: "border-emerald-500/60 bg-emerald-900/70 hover:bg-emerald-800", active: "bg-emerald-700" },
 };
 
 /** פריט עם התחלה וסוף (טקסט / כתובית): גרירה מזיזה, הקצוות משנים אורך */
 function TimedBlock({ kind, id, start, end, pps, label, selected, lane }: {
-  kind: "overlay" | "caption"; id: string; start: number; end: number; pps: number; label: string; selected: boolean; lane: number;
+  kind: "overlay" | "caption" | "layer"; id: string; start: number; end: number; pps: number; label: string; selected: boolean; lane: number;
 }) {
   const { select, retimeItem } = useEditor.getState();
   const drag = (mode: "move" | "start" | "end") => (e: React.PointerEvent) => {

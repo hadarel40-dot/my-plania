@@ -3,7 +3,7 @@ import type { Clip, Timeline } from "./types";
 /** מהירות הקליפ (1 = רגיל) */
 export const clipSpeed = (c: Clip) => c.speed ?? 1;
 /** האורך בציר הזמן: קליפ מהיר תופס פחות זמן ממה שצולם */
-export const clipLength = (c: Clip) => (c.out - c.in) / clipSpeed(c);
+export const clipLength = (c: Clip) => c.freeze ?? (c.out - c.in) / clipSpeed(c);
 
 /** מעברים שבהם שני הקליפים חופפים (הבא נכנס מעל הקודם), כמו ב-CapCut */
 export const OVERLAP_TRANSITIONS = ["fade", "slide", "zoom", "blur"] as const;
@@ -85,6 +85,13 @@ export function cutClips(clips: Clip[], plan: Map<string, SourceRange[]>) {
   const next: Clip[] = [];
   let newT = 0;
   for (const { clip, start } of layoutClips(clips)) {
+    // תמונה קפואה לא נחתכת (אין בה דיבור או שתיקות): נשארת כמו שהיא
+    if (clip.freeze) {
+      next.push(clip);
+      pieces.push({ oldStart: start, clip, newStart: newT, srcIn: clip.in, srcOut: clip.out });
+      newT += clip.freeze;
+      continue;
+    }
     const ranges = (plan.get(clip.id) ?? [{ start: clip.in, end: clip.out }])
       .map((r) => ({ start: Math.max(clip.in, r.start), end: Math.min(clip.out, r.end) }))
       .filter((r) => r.end - r.start >= MIN_CLIP_SEC);
@@ -101,6 +108,11 @@ export function cutClips(clips: Clip[], plan: Map<string, SourceRange[]>) {
   const mapTime = (t: number) => {
     if (t >= oldEnd) return newT + (t - oldEnd);
     for (const p of pieces) {
+      if (p.clip.freeze) {
+        if (t < p.oldStart) return p.newStart;
+        if (t < p.oldStart + p.clip.freeze) return p.newStart + (t - p.oldStart);
+        continue;
+      }
       const speed = clipSpeed(p.clip);
       const src = p.clip.in + (t - p.oldStart) * speed;
       if (t < p.oldStart) return p.newStart;

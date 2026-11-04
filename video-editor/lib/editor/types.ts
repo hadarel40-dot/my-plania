@@ -69,6 +69,34 @@ export interface Clip {
   adjust?: Adjust;
   /** כשהסרטון לא ממלא את המסך: חיתוך (ברירת מחדל) או רקע מטושטש מאותו סרטון */
   fill?: "crop" | "blur";
+  /** הקפאת תמונה: הקליפ מציג את הפריים הראשון שלו קפוא, למשך כך וכך שניות */
+  freeze?: number;
+}
+
+/**
+ * שכבת וידאו מעל הסרטון הראשי (אוברליי):
+ * pip = חלון קטן שאפשר להזיז ולשנות גודל; clone-* = אפקט תאומים (חצי מסך מצילום אחר
+ * מאותה נקודה, כך שאותו אדם מופיע פעמיים); split-* = מסך מפוצל (צד/למטה).
+ */
+export type LayerLayout = "pip" | "clone-left" | "clone-right" | "split-right" | "split-bottom";
+export interface VideoLayer {
+  id: string;
+  assetId: string;
+  /** מתי השכבה מתחילה בציר הזמן */
+  start: number;
+  /** נקודות החיתוך בקובץ */
+  in: number;
+  out: number;
+  layout: LayerLayout;
+  /** בחלון קטן: מרכז (0..1), רוחב יחסי למסך, צורה ומסגרת */
+  x: number;
+  y: number;
+  scale: number;
+  shape: "rect" | "rounded" | "circle";
+  border: boolean;
+  opacity: number;
+  volume: number;
+  flip?: boolean;
 }
 
 export type TransitionType = "fade" | "slide" | "zoom" | "blur" | "flash" | "punch" | "glitch" | "whip";
@@ -192,6 +220,8 @@ export interface Timeline {
   moments?: Moment[];
   /** זום קצר פנימה ברגעים של הדגשה (כמו עורך שמקרב לפנים במשפט חשוב) */
   zooms?: { start: number; end: number; scale: number }[];
+  /** שכבות וידאו מעל הסרטון (אוברליי, תאומים, מסך מפוצל) */
+  layers?: VideoLayer[];
   fps: number;
   aspect: Aspect;
   clips: Clip[];
@@ -230,6 +260,7 @@ export type Selection =
   | { kind: "caption"; id: string }
   | { kind: "overlay"; id: string }
   | { kind: "audio"; id: string }
+  | { kind: "layer"; id: string }
   | null;
 
 /** הפרויקט כפי שהוא נשמר (בדפדפן או בטבלת projects) */

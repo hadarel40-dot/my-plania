@@ -1,4 +1,4 @@
-import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Freeze, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import type { Adjust, Clip, ClipEffect, Look, MediaAsset, TransitionType } from "@/lib/editor/types";
 
 export interface ClipLayerProps {
@@ -52,8 +52,15 @@ export function ClipLayer({ clip, asset, look, duration, intro, Video, mode, fps
         </div>
       )}
       <AbsoluteFill style={{ transform: `${motion} scale(${look.zoom}) scaleX(${look.flip ? -1 : 1}) ${inStyle.transform ?? ""}`, opacity: inStyle.opacity }}>
-        <Video {...common} volume={clip.volume ?? 1}
-          style={{ ...(blurFill ? coverBoxFor(asset, W, H, 0.5, 0.5, "contain") : box), filter }} />
+        {clip.freeze ? (
+          // הקפאת תמונה: הפריים הראשון של הקטע נשאר על המסך, בלי סאונד
+          <Freeze frame={0}>
+            <Video {...common} volume={0} muted style={{ ...(blurFill ? coverBoxFor(asset, W, H, 0.5, 0.5, "contain") : box), filter }} />
+          </Freeze>
+        ) : (
+          <Video {...common} volume={clip.volume ?? 1}
+            style={{ ...(blurFill ? coverBoxFor(asset, W, H, 0.5, 0.5, "contain") : box), filter }} />
+        )}
       </AbsoluteFill>
       {flash > 0 && <AbsoluteFill style={{ backgroundColor: "white", opacity: flash }} />}
     </AbsoluteFill>
@@ -144,4 +151,64 @@ function coverBoxFor(asset: MediaAsset, W: number, H: number, fx: number, fy: nu
   const left = fit === "contain" ? (W - w) / 2 : Math.min(0, Math.max(W - w, W / 2 - fx * w));
   const top = fit === "contain" ? (H - h) / 2 : Math.min(0, Math.max(H - h, H / 2 - fy * h));
   return { position: "absolute", left, top, width: w, height: h, maxWidth: "none", objectFit: "fill" };
+}
+
+/**
+ * שכבת וידאו מעל הסרטון הראשי. הכל בנוי ממיקום וחיתוך (overflow) ולא ממסכות CSS,
+ * כדי שייראה זהה בנגן ובייצוא.
+ *  pip: חלון שמרכזו ב-x,y ורוחבו scale מהמסך, בצורת מלבן / מעוגל / עיגול, עם מסגרת לבנה.
+ *  clone-left / clone-right: חצי מסך מהצילום השני, בלי להזיז את התמונה (אפקט תאומים).
+ *  split-right / split-bottom: הסרטון השני ממלא חצי מסך (מסך מפוצל).
+ */
+export function VideoLayerView({ layer, asset, Video, mode, fps }: {
+  layer: import("@/lib/editor/types").VideoLayer; asset: MediaAsset;
+  Video: React.ComponentType<Record<string, unknown>>; mode: "html5" | "media"; fps: number;
+}) {
+  const { width: W, height: H } = useVideoConfig();
+  const common = {
+    src: asset.url,
+    trimBefore: Math.round(layer.in * fps),
+    volume: layer.volume,
+    muted: layer.volume === 0,
+    ...(mode === "html5" ? { pauseWhenBuffering: true } : { objectFit: "fill" as const }),
+  };
+  const flip = layer.flip ? "scaleX(-1)" : undefined;
+  const full = coverBoxFor(asset, W, H, 0.5, 0.5, "cover");
+
+  if (layer.layout === "clone-left" || layer.layout === "clone-right") {
+    const left = layer.layout === "clone-left";
+    return (
+      <div style={{ position: "absolute", top: 0, height: H, width: W / 2, left: left ? 0 : W / 2, overflow: "hidden", opacity: layer.opacity }}>
+        <div style={{ position: "absolute", top: 0, left: left ? 0 : -W / 2, width: W, height: H, transform: flip }}>
+          <Video {...common} style={full} />
+        </div>
+      </div>
+    );
+  }
+  if (layer.layout === "split-right" || layer.layout === "split-bottom") {
+    const side = layer.layout === "split-right";
+    const bw = side ? W / 2 : W, bh = side ? H : H / 2;
+    return (
+      <div style={{ position: "absolute", left: side ? W / 2 : 0, top: side ? 0 : H / 2, width: bw, height: bh, overflow: "hidden", opacity: layer.opacity,
+        borderInlineStart: side ? `${Math.round(W / 270)}px solid white` : undefined, borderTop: side ? undefined : `${Math.round(W / 270)}px solid white` }}>
+        <div style={{ position: "absolute", inset: 0, transform: flip }}>
+          <Video {...common} style={coverBoxFor(asset, bw, bh, 0.5, 0.5, "cover")} />
+        </div>
+      </div>
+    );
+  }
+  // חלון קטן
+  const bw = Math.round(W * layer.scale);
+  const ratio = layer.shape === "circle" ? 1 : asset.width && asset.height ? asset.height / asset.width : 16 / 9;
+  const bh = Math.round(bw * ratio);
+  const radius = layer.shape === "circle" ? bw / 2 : layer.shape === "rounded" ? W / 30 : 0;
+  const border = layer.border ? Math.max(3, Math.round(W / 180)) : 0;
+  return (
+    <div style={{ position: "absolute", left: layer.x * W - bw / 2, top: layer.y * H - bh / 2, width: bw, height: bh, borderRadius: radius,
+      overflow: "hidden", opacity: layer.opacity, boxShadow: `0 ${W / 90}px ${W / 30}px rgba(0,0,0,.45)`, border: border ? `${border}px solid white` : undefined, boxSizing: "border-box" }}>
+      <div style={{ position: "absolute", inset: 0, transform: flip }}>
+        <Video {...common} style={coverBoxFor(asset, bw - border * 2, bh - border * 2, 0.5, 0.5, "cover")} />
+      </div>
+    </div>
+  );
 }

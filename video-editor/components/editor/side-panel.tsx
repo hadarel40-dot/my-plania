@@ -14,6 +14,7 @@ import { CaptionColors, CaptionInspector, CaptionPosition, CaptionSize, CaptionT
 import { openCaptionsSheet } from "./captions-sheet";
 import { OverlayInspector } from "./overlay-inspector";
 import { AudioInspector } from "./audio-inspector";
+import { LayerInspector } from "./layer-inspector";
 import { VariantsPanel } from "./variants-panel";
 import { OPEN_SMART_EVENT, SmartTab } from "./smart-tab";
 import { MusicLibrary } from "./music-library";
@@ -48,6 +49,7 @@ export function SidePanel({ tab: fixedTab, inspect = true }: {
 
   if (inspect && selection?.kind === "overlay") return <Shell><OverlayInspector id={selection.id} onClose={() => select(null)} /></Shell>;
   if (inspect && selection?.kind === "audio") return <Shell><AudioInspector id={selection.id} onClose={() => select(null)} /></Shell>;
+  if (inspect && selection?.kind === "layer") return <Shell><LayerInspector id={selection.id} onClose={() => select(null)} /></Shell>;
   if (inspect && selection?.kind === "caption") return <CaptionPanel id={selection.id} />;
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [

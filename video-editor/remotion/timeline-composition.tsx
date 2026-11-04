@@ -3,7 +3,7 @@ import { AbsoluteFill, Html5Audio, Html5Video, Sequence, interpolate, spring, us
 import type { AudioClip, Caption, Look, MediaAsset, Timeline } from "@/lib/editor/types";
 import { OverlayView } from "./overlay-view";
 import { layoutClips, transitionOverlap } from "@/lib/editor/timeline-utils";
-import { ClipLayer } from "./clip-layer";
+import { ClipLayer, VideoLayerView } from "./clip-layer";
 import { wordTimes } from "@/lib/editor/captions";
 import { fontFamily } from "@/lib/editor/fonts";
 
@@ -61,6 +61,18 @@ export function TimelineComposition({ timeline, assets, override }: CompositionP
         );
       })}
       </ZoomLayer>
+
+      {(timeline.layers ?? []).map((l) => {
+        const asset = assets[l.assetId];
+        if (!asset) return null;
+        const from = Math.round(l.start * fps);
+        const duration = Math.max(1, Math.round((l.out - l.in) * fps));
+        return (
+          <Sequence key={l.id} from={from} durationInFrames={duration} premountFor={Math.round(fps * 1.5)}>
+            <VideoLayerView layer={l} asset={asset} Video={VideoTag} mode={mediaMode} fps={fps} />
+          </Sequence>
+        );
+      })}
 
       {timeline.captions.map((cap) => {
         const from = Math.round(cap.start * fps);

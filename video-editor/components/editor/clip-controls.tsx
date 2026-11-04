@@ -3,6 +3,8 @@ import { useEditor, beginGesture } from "@/stores/editor-store";
 import type { Adjust, Clip, ClipEffect, TransitionType } from "@/lib/editor/types";
 import { Section } from "./ui";
 import { cn } from "@/lib/utils";
+import { usePlayback } from "@/stores/playback-store";
+import { layoutClips } from "@/lib/editor/timeline-utils";
 
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.5, 2, 3];
 
@@ -47,6 +49,7 @@ export function ClipControls({ clip, isFirst }: { clip: Clip; isFirst: boolean }
 
   return (
     <>
+      <Tricks clip={clip} />
       <Section title="מהירות" hint={speed < 1 ? "הילוך איטי" : speed > 1 ? "הילוך מהיר" : undefined}>
         <div className="flex flex-wrap gap-1.5">
           {SPEEDS.map((v) => (
@@ -114,5 +117,41 @@ function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; chi
       className={cn("rounded-full border px-3 py-1 text-xs", on ? "border-violet-500 bg-violet-500/15 text-white" : "border-zinc-700 text-zinc-300 hover:border-zinc-500")}>
       {children}
     </button>
+  );
+}
+
+/** טריקים של עריכה: שכפול, הקפאת תמונה, ותאומים / מסך מפוצל עם סרטון אחר */
+function Tricks({ clip }: { clip: Clip }) {
+  const assets = useEditor((s) => s.assets);
+  const others = Object.values(assets).filter((a) => a.kind !== "audio" && a.origin !== "ai_variant" && a.id !== clip.assetId);
+  const at = () => usePlayback.getState().currentTime;
+  const clipStart = () => layoutClips(useEditor.getState().timeline.clips).find((l) => l.clip.id === clip.id);
+  const addWith = (assetId: string, layout: "clone-right" | "split-right" | "pip") => {
+    const hit = clipStart();
+    if (!hit) return;
+    useEditor.getState().addLayer(assetId, hit.start, layout, hit.end - hit.start);
+  };
+  return (
+    <Section title="✨ טריקים">
+      <div className="grid grid-cols-2 gap-1.5">
+        <Chip on={false} onClick={() => useEditor.getState().duplicateClip(clip.id)}>⧉ שכפול הקליפ</Chip>
+        <Chip on={false} onClick={() => useEditor.getState().freezeFrame(at())}>❄️ הקפאת תמונה</Chip>
+      </div>
+      <p className="mt-1 text-[11px] text-zinc-500">הקפאה: הסרטון עוצר לשנייה וחצי על הפריים שבנקודת הניגון, וממשיך.</p>
+      {others.length > 0 && (
+        <div className="mt-3 space-y-1.5">
+          <p className="text-xs text-zinc-400">עם סרטון נוסף, מעל הקליפ הזה:</p>
+          <select id={`trick-${clip.id}`} defaultValue={others[0].id} className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm">
+            {others.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </select>
+          <div className="grid grid-cols-3 gap-1.5">
+            {([["clone-right", "👯 תאומים"], ["split-right", "◧ מפוצל"], ["pip", "🪟 חלון"]] as const).map(([l, label]) => (
+              <Chip key={l} on={false} onClick={() => addWith((document.getElementById(`trick-${clip.id}`) as HTMLSelectElement).value, l)}>{label}</Chip>
+            ))}
+          </div>
+          <p className="text-[11px] leading-relaxed text-zinc-500">תאומים: מצלמים פעמיים מאותה נקודה (על חצובה), פעם בצד אחד ופעם בצד השני, והאדם מופיע פעמיים.</p>
+        </div>
+      )}
+    </Section>
   );
 }

@@ -81,6 +81,12 @@ export function MediaBin() {
                 {a.origin === "sample" ? "דוגמה" : a.storagePath ? "בענן" : "מקומי"}
               </p>
             </div>
+            {a.kind !== "audio" && (
+              <button onClick={() => useEditor.getState().addLayer(a.id, usePlayback.getState().currentTime)} title="שכבה מעל הסרטון (אוברליי)" aria-label="הוספה כשכבה"
+                className="self-center rounded-md border border-emerald-600/60 px-1.5 py-1 text-[11px] text-emerald-300 hover:bg-emerald-900/40">
+                ⧉ שכבה
+              </button>
+            )}
             <button onClick={() => addToTimeline(a)} title="הוסף לציר הזמן" aria-label="הוסף לציר הזמן"
               className="self-center rounded p-1 text-zinc-500 hover:bg-zinc-700 hover:text-white md:opacity-0 md:group-hover:opacity-100">
               <Plus className="size-4" />
@@ -89,7 +95,7 @@ export function MediaBin() {
         ))}
 
         <p className="pt-2 text-center text-[11px] leading-relaxed text-zinc-600">
-          <span className="md:hidden">לחיצה על + מוסיפה לציר הזמן</span>
+          <span className="md:hidden">+ מוסיף לסוף הסרטון · ⧉ שכבה מוסיף מעל הסרטון (חלון, תאומים, מסך מפוצל)</span>
           <span className="hidden md:inline">גרור קבצים לכאן · לחיצה כפולה מוסיפה לציר הזמן</span>
         </p>
       </div>
