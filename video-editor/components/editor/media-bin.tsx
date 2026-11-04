@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Film, Loader2, Music, Plus, Upload } from "lucide-react";
 import { usePlayback } from "@/stores/playback-store";
 import { useEditor } from "@/stores/editor-store";
@@ -98,8 +98,23 @@ export function MediaBin() {
 }
 
 export function FileInput({ onFiles }: { onFiles: (files: FileList | null) => void }) {
+  const ref = useRef<HTMLInputElement>(null);
+  // סגירת הגלריה בלי לבחור: מורידים את ההודעה "בוחרים סרטונים"
+  useEffect(() => {
+    const el = ref.current;
+    const cancel = () => useUploads.getState().setPicking(false);
+    el?.addEventListener("cancel", cancel);
+    return () => el?.removeEventListener("cancel", cancel);
+  }, []);
   return (
-    <input type="file" accept="video/*,audio/*" multiple className="sr-only"
-      onChange={(e) => { onFiles(e.target.files); e.target.value = ""; }} />
+    <input ref={ref} type="file" accept="video/*,audio/*" multiple className="sr-only"
+      // מיד בלחיצה מראים שמשהו קורה: באייפון עוברות כמה שניות בין הבחירה לבין הגעת הקבצים
+      onClick={() => useUploads.getState().setPicking(true)}
+      onChange={(e) => {
+        const files = e.target.files;
+        if (!files?.length) useUploads.getState().setPicking(false);
+        onFiles(files);
+        e.target.value = "";
+      }} />
   );
 }

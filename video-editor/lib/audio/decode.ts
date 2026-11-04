@@ -14,7 +14,11 @@ const cache = new Map<string, Promise<Float32Array>>();
 export function decodeAssetAudio(asset: Pick<MediaAsset, "id" | "url">): Promise<Float32Array> {
   let pending = cache.get(asset.id);
   if (!pending) {
-    pending = decode(asset.url);
+    // שומר: בטלפון פענוח לפעמים נתקע בלי שגיאה. אחרי 40 שניות ממשיכים בלי הסאונד של הקובץ
+    pending = Promise.race([
+      decode(asset.url),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("קריאת הסאונד לקחה יותר מדי זמן")), 40_000)),
+    ]);
     pending.catch(() => cache.delete(asset.id));
     cache.set(asset.id, pending);
   }

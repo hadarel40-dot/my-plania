@@ -25,3 +25,11 @@ body {
   background: var(--color-zinc-800);
   border-radius: 4px;
 }
+
+/* תגובה מיידית ללחיצה בטלפון: הכפתור "נלחץ" עוד לפני שהפעולה מסתיימת */
+button:not(:disabled):active,
+label:has(> input[type="file"]):active {
+  transform: scale(0.96);
+  transition: transform 60ms;
+}
+* { -webkit-tap-highlight-color: transparent; }

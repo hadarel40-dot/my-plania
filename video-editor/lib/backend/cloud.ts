@@ -57,6 +57,15 @@ export function createCloudBackend(projectId: string, userId: string): ProjectBa
       const objectName = `${userId}/${projectId}/${assetId}-${safeName}`;
 
       await new Promise<void>((resolve, reject) => {
+        // שומר: אם אין שום התקדמות דקה וחצי (למשל הרשת נפלה בלי שגיאה), עוצרים עם הודעה ברורה
+        let last = Date.now();
+        const watchdog = setInterval(() => {
+          if (Date.now() - last < 90_000) return;
+          clearInterval(watchdog);
+          logEvent("tus_stalled", { size: file.size });
+          void upload.abort();
+          reject(new Error("ההעלאה נתקעה. כדאי לבדוק את החיבור לאינטרנט ולהעלות שוב."));
+        }, 5000);
         const upload = new tus.Upload(file, {
           endpoint: `${SUPABASE_URL}/storage/v1/upload/resumable`,
           retryDelays: [0, 3000, 5000, 10000, 20000],
@@ -76,13 +85,14 @@ export function createCloudBackend(projectId: string, userId: string): ProjectBa
           chunkSize: 6 * 1024 * 1024, // Supabase דורש בדיוק 6MB לחלק
           onError: (err) => {
             const status = (err as { originalResponse?: { getStatus(): number } | null }).originalResponse?.getStatus();
+            clearInterval(watchdog);
             logEvent("tus_error", { status, size: file.size, error: errorText(err) });
             reject(new Error(status === 413
               ? "הקובץ גדול מדי לאחסון (המקסימום 50MB)"
               : "ההעלאה נכשלה. כדאי לבדוק את החיבור לאינטרנט ולנסות שוב."));
           },
-          onProgress: (sent, total) => onProgress?.(Math.round((sent / total) * 100)),
-          onSuccess: () => resolve(),
+          onProgress: (sent, total) => { last = Date.now(); onProgress?.(Math.round((sent / total) * 100)); },
+          onSuccess: () => { clearInterval(watchdog); resolve(); },
         });
         // אם אותו קובץ התחיל לעלות קודם ונקטע, ממשיכים מאיפה שנעצר
         upload.findPreviousUploads().then((previous) => {

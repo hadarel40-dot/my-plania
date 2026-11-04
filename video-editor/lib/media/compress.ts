@@ -18,6 +18,21 @@ export const mb = (bytes: number) => Math.round(bytes / 1024 / 1024);
 /** onProgress מקבל 0..1 */
 export async function prepareVideoForUpload(file: File, onProgress?: (p: number) => void): Promise<File> {
   if (file.size <= TARGET_BYTES) return file;
+  // כמה קבצים עולים במקביל, אבל כיווץ כבד מדי לטלפון: אחד-אחד, בתור
+  const turn = compressLock;
+  let done!: () => void;
+  compressLock = new Promise<void>((r) => { done = r; });
+  await turn;
+  try {
+    return await prepareNow(file, onProgress);
+  } finally {
+    done();
+  }
+}
+
+let compressLock: Promise<void> = Promise.resolve();
+
+async function prepareNow(file: File, onProgress?: (p: number) => void): Promise<File> {
   const started = Date.now();
   try {
     const result = await compress(file, onProgress);

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Player, type PlayerRef } from "@remotion/player";
-import { Pause, Play, SkipBack, SkipForward, Upload } from "lucide-react";
+import { Loader2, Pause, Play, SkipBack, SkipForward, Upload } from "lucide-react";
 import { TimelineComposition, type CompositionProps } from "@/remotion/timeline-composition";
 import { useEditor } from "@/stores/editor-store";
 import { usePlayback } from "@/stores/playback-store";
@@ -32,6 +32,7 @@ export function Preview() {
   const duration = timelineDuration(timeline);
   const durationInFrames = Math.max(1, Math.ceil(duration * timeline.fps));
   const hasPlayer = duration > 0;
+  const busyUploading = useUploads((s) => s.picking || s.items.length > 0);
 
   // עותקים קטנים לתצוגה ברקע (הייצוא משתמש במקור)
   useEffect(() => {
@@ -111,7 +112,8 @@ export function Preview() {
             />
           ) : (
             <div dir="rtl" className="grid h-full place-items-center px-6 text-center text-sm text-zinc-400">
-              <label className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-dashed border-zinc-600 px-6 py-8 hover:border-violet-500 hover:text-white">
+              <EmptyUploadState />
+              <label className={cn("flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-dashed border-zinc-600 px-6 py-8 hover:border-violet-500 hover:text-white active:scale-95 transition", busyUploading && "hidden")}>
                 <Upload className="size-8 text-violet-400" />
                 <span className="font-medium">העלאת סרטונים</span>
                 <span className="text-xs text-zinc-500">הסרטונים נכנסים לציר הזמן לפי הסדר</span>
@@ -120,6 +122,7 @@ export function Preview() {
             </div>
           )}
           {duration > 0 && <OverlayHandles />}
+          <ActivityBar />
           {duration > 0 && <AutoEditSuggestion />}
           {previewVariant && (
             <div dir="rtl" className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-blue-600/80 to-transparent px-3 py-2 text-xs font-medium">
@@ -157,6 +160,62 @@ export function Preview() {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+/** סך ההתקדמות של סבב ההעלאה (0..100) */
+function useUploadSummary() {
+  const items = useUploads((s) => s.items);
+  const total = useUploads((s) => s.total);
+  const done = useUploads((s) => s.done);
+  const picking = useUploads((s) => s.picking);
+  const percent = total ? Math.round((done * 100 + items.reduce((sum, i) => sum + i.progress, 0)) / total) : 0;
+  const compressing = items.some((i) => i.stage === "compress");
+  return { uploading: items.length > 0, picking, total, done, percent, compressing };
+}
+
+/** בפרויקט ריק: במקום כפתור ההעלאה, מה קורה עכשיו (בוחרים / מכינים / מעלים) */
+function EmptyUploadState() {
+  const { uploading, picking, total, done, percent, compressing } = useUploadSummary();
+  if (!uploading && !picking) return null;
+  return (
+    <div className="flex w-full max-w-60 flex-col items-center gap-3">
+      <Loader2 className="size-8 animate-spin text-violet-400" />
+      <p className="font-medium text-zinc-200">
+        {uploading ? `מעלה סרטונים · ${Math.min(done + 1, total)} מתוך ${total}` : "מחכה לסרטונים מהגלריה…"}
+      </p>
+      {uploading
+        ? <div className="h-1.5 w-full overflow-hidden rounded bg-zinc-800"><div className="h-full rounded bg-gradient-to-l from-violet-500 to-fuchsia-500 transition-[width]" style={{ width: `${percent}%` }} /></div>
+        : <>
+            <p className="text-xs text-zinc-500">אחרי הבחירה האייפון מכין את הסרטונים. זה יכול לקחת כמה שניות</p>
+            <label className="cursor-pointer text-xs text-violet-300 underline">
+              לבחור שוב
+              <FileInput onFiles={(files) => files?.length && useUploads.getState().enqueue([...files])} />
+            </label>
+          </>}
+      {compressing && <p className="text-xs text-zinc-500">סרטון גדול מכווץ קודם, כדי שייכנס</p>}
+    </div>
+  );
+}
+
+/** פס מצב קטן בראש הנגן: העלאה, או עריכה אוטומטית שרצה */
+function ActivityBar() {
+  const { uploading, picking, total, done, percent } = useUploadSummary();
+  const hasClips = useEditor((s) => s.timeline.clips.length > 0);
+  const busy = useAutoEditRun((s) => s.busy);
+  const text = busy
+    ? busy
+    : uploading ? `מעלה ${Math.min(done + 1, total)} מתוך ${total} · ${percent}%`
+      : picking ? "מחכה לסרטונים מהגלריה…" : null;
+  if (!text || (!hasClips && !busy)) return null;
+  return (
+    <div dir="rtl" className="pointer-events-none absolute inset-x-1.5 top-1.5 z-10 overflow-hidden rounded-xl bg-black/80 shadow-lg backdrop-blur">
+      <div className="flex items-start gap-1.5 px-2 py-1.5 text-[11px] font-medium">
+        <Loader2 className="mt-px size-3.5 shrink-0 animate-spin text-fuchsia-400" />
+        <span className="min-w-0 leading-snug">{busy ? `✨ ${text}` : text}</span>
+      </div>
+      {uploading && !busy && <div className="h-0.5 bg-gradient-to-l from-violet-500 to-fuchsia-500 transition-[width]" style={{ width: `${percent}%` }} />}
     </div>
   );
 }
