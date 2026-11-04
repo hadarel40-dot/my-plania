@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Music, Palette, Play, Plus, Sparkles, Square, Type, Upload, Volume2, VolumeX, Wand2 } from "lucide-react";
+import { Copy, Music, Palette, Scissors, Play, Plus, Sparkles, Square, Type, Upload, Volume2, VolumeX, Wand2 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { useEditor } from "@/stores/editor-store";
 import { usePlayback } from "@/stores/playback-store";
@@ -19,8 +19,9 @@ import { VariantsPanel } from "./variants-panel";
 import { OPEN_SMART_EVENT, SmartTab } from "./smart-tab";
 import { MusicLibrary } from "./music-library";
 import { ClipControls } from "./clip-controls";
+import { BgTab, TricksTab } from "./tricks-tab";
 
-export type Tab = "smart" | "text" | "sound" | "style" | "ai";
+export type Tab = "smart" | "text" | "sound" | "style" | "bg" | "tricks" | "ai";
 
 /**
  * הפאנל הצדדי. כשנבחר פריט בציר הזמן (טקסט, כתובית, סאונד) מוצג העורך שלו;
@@ -45,7 +46,7 @@ export function SidePanel({ tab: fixedTab, inspect = true }: {
 
   // בחירת קליפ חדש פותחת את לשונית הסגנון (אבל לא נועלת אותה)
   const selectedClipId = selection?.kind === "clip" ? selection.id : null;
-  useEffect(() => { if (selectedClipId) setTab((t) => (t === "ai" ? t : "style")); }, [selectedClipId]);
+  useEffect(() => { if (selectedClipId) setTab((t) => (t === "ai" || t === "bg" || t === "tricks" ? t : "style")); }, [selectedClipId]);
 
   if (inspect && selection?.kind === "overlay") return <Shell><OverlayInspector id={selection.id} onClose={() => select(null)} /></Shell>;
   if (inspect && selection?.kind === "audio") return <Shell><AudioInspector id={selection.id} onClose={() => select(null)} /></Shell>;
@@ -57,6 +58,8 @@ export function SidePanel({ tab: fixedTab, inspect = true }: {
     { id: "text", label: "טקסט", icon: <Type className="size-4" /> },
     { id: "sound", label: "סאונד", icon: <Music className="size-4" /> },
     { id: "style", label: "סגנון", icon: <Palette className="size-4" /> },
+    { id: "bg", label: "רקע", icon: <Scissors className="size-4" /> },
+    { id: "tricks", label: "טריקים", icon: <Copy className="size-4" /> },
     ...(aiAvailable ? [{ id: "ai" as Tab, label: "AI", icon: <Sparkles className="size-4" /> }] : []),
   ];
 
@@ -77,6 +80,8 @@ export function SidePanel({ tab: fixedTab, inspect = true }: {
         {tab === "text" && <TextTab />}
         {tab === "sound" && <SoundTab />}
         {tab === "style" && <StyleTab />}
+        {tab === "bg" && <BgTab />}
+        {tab === "tricks" && <TricksTab />}
       </div>
     </Shell>
   );
@@ -88,10 +93,10 @@ function Shell({ children }: { children: React.ReactNode }) {
 
 function TabBar({ tabs, tab, onTab }: { tabs: { id: Tab; label: string; icon: React.ReactNode }[]; tab: Tab; onTab: (t: Tab) => void }) {
   return (
-    <div className="flex w-full border-b border-zinc-800 bg-zinc-900/40 md:w-[22rem] md:border-s">
+    <div className="no-scrollbar flex w-full overflow-x-auto border-b border-zinc-800 bg-zinc-900/40 md:w-[22rem] md:border-s">
       {tabs.map((t) => (
         <button key={t.id} onClick={() => onTab(t.id)}
-          className={cn("flex flex-1 items-center justify-center gap-1.5 border-b-2 py-3 text-sm transition",
+          className={cn("flex min-w-[3.4rem] flex-1 flex-col items-center justify-center gap-0.5 border-b-2 px-1 py-2 text-[11.5px] transition",
             t.id === tab ? "border-violet-500 text-white" : "border-transparent text-zinc-500 hover:text-zinc-300")}>
           {t.icon}{t.label}
         </button>

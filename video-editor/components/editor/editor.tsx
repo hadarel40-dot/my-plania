@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { AlertTriangle, Check, FileJson, ChevronRight, Clapperboard, Cloud, Download, Film, FilePlus2, GanttChart, Loader2, LogOut, Music, Palette, Pencil, Sparkles, Type, Wand2, X } from "lucide-react";
+import { AlertTriangle, Check, Copy, Scissors, FileJson, ChevronRight, Clapperboard, Cloud, Download, Film, FilePlus2, GanttChart, Loader2, LogOut, Music, Palette, Pencil, Sparkles, Type, Wand2, X } from "lucide-react";
 import { redo, undo, useEditor, type AiMode } from "@/stores/editor-store";
 import { usePlayback } from "@/stores/playback-store";
 import { useUploads } from "@/stores/upload-store";
@@ -111,6 +111,8 @@ function PhoneLayout({ top }: { top: React.ReactNode }) {
     { id: "text", label: "טקסט", icon: <Type className="size-5" /> },
     { id: "sound", label: "סאונד", icon: <Music className="size-5" /> },
     { id: "style", label: clipSelected ? "עריכת קליפ" : "סגנון", icon: <Palette className="size-5" /> },
+    { id: "bg", label: "הסרת רקע", icon: <Scissors className="size-5" /> },
+    { id: "tricks", label: "טריקים", icon: <Copy className="size-5" /> },
     ...(aiAvailable ? [{ id: "ai" as Sheet, label: "AI", icon: <Sparkles className="size-5" /> }] : []),
   ];
 
@@ -131,14 +133,19 @@ function PhoneLayout({ top }: { top: React.ReactNode }) {
           </div>
         ))}
       </div>
-      <nav className="flex shrink-0 gap-0.5 border-t border-zinc-800/70 bg-zinc-950 px-1 pt-1 pb-[max(env(safe-area-inset-bottom),4px)]">
+      {/* הסרגל נגלל לצדדים: כל הכלים זמינים, וכל כפתור בגודל נוח ללחיצה */}
+      <nav className="relative shrink-0 border-t border-zinc-800/70 bg-zinc-950 pb-[max(env(safe-area-inset-bottom),4px)]">
+        <div className="no-scrollbar flex snap-x gap-0.5 overflow-x-auto px-1 pt-1">
         {buttons.map((b) => (
-          <button key={b.id ?? "timeline"} onClick={() => setSheet((v) => (v === b.id ? null : b.id))}
-            className={cn("flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] transition",
+          <button key={b.id ?? "timeline"} onClick={(e) => { e.currentTarget.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" }); setSheet((v) => (v === b.id ? null : b.id)); }}
+            className={cn("flex min-w-[4.4rem] flex-none snap-start flex-col items-center gap-0.5 whitespace-nowrap rounded-xl px-1.5 py-1.5 text-[11px] transition",
               sheet === b.id ? "bg-violet-500/15 text-violet-200" : b.id === "edit" || (b.id === "style" && clipSelected) ? "text-amber-300" : "text-zinc-400")}>
             {b.icon}{b.label}
           </button>
         ))}
+        </div>
+        {/* רמז שיש עוד כפתורים בצד */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-zinc-950 to-transparent" />
       </nav>
     </div>
   );

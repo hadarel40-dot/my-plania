@@ -82,3 +82,7 @@ label:has(> input[type="file"]):active {
 }
 /* בלי הגדלה בלחיצה כפולה (והלחיצות מגיבות מהר יותר) */
 html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
+
+/* פס גלילה מוסתר (סרגלים שנגללים לצד) */
+.no-scrollbar { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
