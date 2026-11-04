@@ -56,8 +56,8 @@ const GEMINI_MODELS: { model: string; fast: boolean }[] = [
   ...(process.env.GEMINI_MODEL ? [{ model: process.env.GEMINI_MODEL, fast: false }] : []),
   // הגרסאות הישנות (2.5) כבר לא זמינות למשתמשים חדשים, ולכן החדשות קודם
   { model: "gemini-3.8-flash", fast: true },
-  { model: "gemini-flash-latest", fast: true },
   { model: "gemini-3.5-flash-lite", fast: true },
+  { model: "gemini-flash-latest", fast: true },
   { model: "gemini-flash-lite-latest", fast: true },
   { model: "gemini-2.5-flash", fast: true },
 ];
@@ -65,7 +65,7 @@ const GEMINI_MODELS: { model: string; fast: boolean }[] = [
 /** מוסיף לבקשה הגדרת חשיבה מינימלית (בגרסאות 3 ומעלה: רמת חשיבה נמוכה; בישנות: תקציב 0) */
 function withFastThinking(body: unknown, model: string) {
   const b = body as { generationConfig?: Record<string, unknown> };
-  const thinkingConfig = /gemini-2\./.test(model) ? { thinkingBudget: 0 } : { thinkingLevel: "low" };
+  const thinkingConfig = /gemini-2\./.test(model) ? { thinkingBudget: 0 } : { thinkingLevel: "minimal" };
   return { ...b, generationConfig: { ...(b.generationConfig ?? {}), thinkingConfig } };
 }
 

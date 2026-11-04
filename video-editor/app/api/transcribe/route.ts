@@ -12,6 +12,14 @@ Transcribe exactly what is said, in the language it is said in (Hebrew stays Heb
 Return short caption segments of 1-5 words that follow natural phrasing, each with start and end in seconds from the start of the audio, as precise as you can (two decimals).
 Segments must be in order and must not overlap. If there is no speech, return an empty list.`;
 
+/** רוב האותיות בתמלול צריכות להיות בעברית או באנגלית */
+function looksRight(segments: { text: string }[]) {
+  const letters = segments.map((s) => s.text).join("").replace(/[^\p{L}]/gu, "");
+  if (!letters.length) return true;
+  const ok = letters.replace(/[^\u05d0-\u05eaA-Za-z]/g, "").length;
+  return ok / letters.length > 0.8;
+}
+
 /** תמלול קטע סאונד (WAV) לכתוביות עם Gemini */
 export async function POST(request: Request) {
   if (brainProvider() !== "gemini") return NextResponse.json({ error: "תמלול בענן זמין רק עם Gemini" }, { status: 404 });
@@ -19,11 +27,18 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as { audio?: string; duration?: number } | null;
   if (!body?.audio || body.audio.length > 4_000_000) return NextResponse.json({ error: "קטע הסאונד חסר או גדול מדי" }, { status: 400 });
   try {
-    const { segments } = await askBrain({
-      system: SYSTEM,
+    const ask = (extra = "") => askBrain({
+      system: SYSTEM + extra,
       schema: TranscriptSchema,
-      parts: [{ text: `Audio length: ${(body.duration ?? 0).toFixed(1)}s.` }, { audioWav: body.audio }],
+      parts: [{ text: `Audio length: ${(body.duration ?? 0).toFixed(1)}s.` }, { audioWav: body.audio! }],
     });
+    let { segments } = await ask();
+    // שומר: תמלול שיצא באותיות של שפה אחרת (קרה עם גרסה חדשה של Gemini) לא נכנס לכתוביות
+    if (!looksRight(segments)) {
+      console.warn("transcribe: wrong script", segments.slice(0, 3).map((s) => s.text));
+      ({ segments } = await ask("\nIMPORTANT: Hebrew must be written in Hebrew letters (א-ת). Never output Armenian, Cyrillic or other scripts."));
+      if (!looksRight(segments)) return NextResponse.json({ error: "התמלול יצא לא תקין", detail: segments.slice(0, 3).map((s) => s.text).join(" | ") }, { status: 422 });
+    }
     const max = (body.duration ?? Infinity) + 0.5;
     return NextResponse.json({
       segments: segments

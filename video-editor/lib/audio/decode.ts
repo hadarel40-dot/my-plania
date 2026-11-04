@@ -1,5 +1,6 @@
 "use client";
 import type { MediaAsset } from "@/lib/editor/types";
+import { logEvent } from "@/lib/telemetry";
 
 /** קצב הדגימה של כל ניתוחי הסאונד (כמו ש-Whisper מצפה לקבל) */
 export const ANALYSIS_RATE = 16000;
@@ -29,7 +30,18 @@ async function decode(url: string): Promise<Float32Array> {
   const data = await (await fetch(url)).arrayBuffer();
   const ctx = new AudioContext({ sampleRate: ANALYSIS_RATE });
   try {
-    const buf = await ctx.decodeAudioData(data);
+    let buf = await ctx.decodeAudioData(data);
+    // יש טלפונים שמתעלמים מקצב הדגימה שביקשנו: אז ממירים ל-16kHz בעצמנו, אחרת הסאונד
+    // נשמע מואט (והתמלול, זיהוי השתיקות והקצב יוצאים שגויים)
+    if (buf.sampleRate !== ANALYSIS_RATE) {
+      logEvent("audio_resample", { from: buf.sampleRate, ctx: ctx.sampleRate });
+      const off = new OfflineAudioContext(buf.numberOfChannels, Math.ceil(buf.duration * ANALYSIS_RATE), ANALYSIS_RATE);
+      const src = off.createBufferSource();
+      src.buffer = buf;
+      src.connect(off.destination);
+      src.start();
+      buf = await off.startRendering();
+    }
     if (buf.numberOfChannels === 1) return buf.getChannelData(0);
     const mono = new Float32Array(buf.length);
     for (let c = 0; c < buf.numberOfChannels; c++) {
