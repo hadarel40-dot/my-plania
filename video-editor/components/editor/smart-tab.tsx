@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { Captions, Crop, Loader2, Music2, Scissors, Send, Sparkles, TrendingUp } from "lucide-react";
 import type { Trends, TrendsRequest } from "@/lib/ai/smart-plan";
 import { logEvent } from "@/lib/telemetry";
-import { useEditor } from "@/stores/editor-store";
+import { beginGesture, useEditor } from "@/stores/editor-store";
 import type { Timeline, TransitionStyle } from "@/lib/editor/types";
 import { applyTransitionStyle, autoEditAll, autoReframe, currentStyle, removeSilences, syncToBeat, type AutoEditReport, type EditOption } from "@/lib/editor/auto-edit";
 import { GENRES, genreInfo, type VideoGenre } from "@/lib/editor/genres";
@@ -116,6 +116,8 @@ export async function runAutoEdit(genre?: VideoGenre) {
   const set = useAutoEditRun.setState;
   if (genre) { set({ genre }); rememberStyle({ genre }); }
   set({ report: null, error: null, options: [], chosen: null, hooks: null, before: useEditor.getState().timeline, busy: "מתחיל…" });
+  // כל העריכה האוטומטית היא צעד אחד ב"ביטול" (ולא עשרות צעדי ביניים)
+  const endGesture = beginGesture();
   try {
     const { report, options } = await autoEditAll((busy) => set({ busy }), useAutoEditRun.getState().genre);
     set({ report, options, chosen: options[0]?.id ?? null });
@@ -126,6 +128,7 @@ export async function runAutoEdit(genre?: VideoGenre) {
   } catch (e) {
     set({ error: e instanceof Error ? e.message : "משהו השתבש" });
   } finally {
+    endGesture();
     set({ busy: null });
   }
 }
@@ -161,6 +164,31 @@ async function loadHooks(report?: AutoEditReport | null) {
   }
 }
 
+/**
+ * ביטול העריכה האוטומטית: חוזרים לסרטון כמו שהיה לפניה. גם אחרי רענון הדף (אז לפי
+ * הצילומים המקוריים ששמורים בפרויקט). אפשר להחזיר את העריכה עם "ביטול" בציר הזמן.
+ */
+export function undoAutoEdit() {
+  const { before } = useAutoEditRun.getState();
+  const tl = useEditor.getState().timeline;
+  const endGesture = beginGesture();
+  if (before) useEditor.setState({ timeline: before, selection: null });
+  else if (tl.raw?.length) {
+    useEditor.setState({
+      timeline: {
+        ...tl, clips: tl.raw, raw: undefined, captions: [], zooms: [], moments: [],
+        overlays: tl.overlays.filter((o) => !o.fromTemplate),
+        audio: tl.audio.filter((a) => !a.auto && !a.moment && !a.fromTemplate),
+      },
+      selection: null,
+    });
+  }
+  endGesture();
+  useAutoEditRun.setState({ options: [], chosen: null, report: null, before: null, hooks: null });
+  usePlayback.getState().seek(0);
+  logEvent("auto_edit_undone", {});
+}
+
 /** שומר את השינוי בגרסה שמוצגת, כדי שמעבר לגרסה אחרת וחזרה לא יבטל אותו */
 function saveIntoChosen() {
   const { options, chosen } = useAutoEditRun.getState();
@@ -177,6 +205,7 @@ function QuickFixes() {
   const level = useEditor((s) => s.timeline.animationLevel ?? "some");
   const run = async (id: string, fix: () => Promise<string> | string) => {
     setBusy(id); setMessage(null);
+    const endGesture = beginGesture();
     try {
       setMessage(await fix());
       saveIntoChosen();
@@ -186,6 +215,7 @@ function QuickFixes() {
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "לא הצליח");
     } finally {
+      endGesture();
       setBusy(null);
     }
   };
@@ -315,7 +345,7 @@ function TransitionStylePicker() {
         ))}
       </div>
       {hasClips && (
-        <button onClick={() => applyTransitionStyle(style)} className="mt-1 text-[11px] text-zinc-500 underline hover:text-white">
+        <button onClick={() => { const end = beginGesture(); applyTransitionStyle(style); end(); saveIntoChosen(); }} className="mt-1 text-[11px] text-zinc-500 underline hover:text-white">
           להחיל עכשיו על כל הקליפים
         </button>
       )}
@@ -375,8 +405,6 @@ function AutoEditButton({ disabled }: { disabled: boolean }) {
   };
   const setGenre = (g: VideoGenre) => useAutoEditRun.setState({ genre: g });
   const run = () => runAutoEdit();
-  const setReport = (r: AutoEditReport | null) => useAutoEditRun.setState({ report: r });
-  const setBefore = (b: Timeline | null) => useAutoEditRun.setState({ before: b });
 
   const genres: { id: VideoGenre; label: string }[] = [
     { id: "auto", label: "לזהות לבד" },
@@ -423,7 +451,13 @@ function AutoEditButton({ disabled }: { disabled: boolean }) {
         <>
       {options.length > 1 && (
         <div className="mt-3">
-          <p className="text-sm font-medium">בחרו גרסה <span className="text-xs font-normal text-zinc-500">· לחיצה מציגה אותה בנגן</span></p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-medium">בחרו גרסה <span className="text-xs font-normal text-zinc-500">· לחיצה מציגה אותה בנגן</span></p>
+            <button onClick={undoAutoEdit}
+              className="shrink-0 rounded-full border border-zinc-600 px-3 py-1 text-xs text-zinc-200 hover:border-red-400 hover:text-white">
+              ↩️ ביטול העריכה
+            </button>
+          </div>
           <div className="mt-2 grid gap-2">
             {options.map((o, i) => (
               <button key={o.id} onClick={() => choose(o)}
@@ -450,7 +484,7 @@ function AutoEditButton({ disabled }: { disabled: boolean }) {
           {report.skipped.map((d) => <p key={d} className="text-amber-300">– {d}</p>)}
           <p className="pt-1 text-zinc-400">מכאן אפשר לשנות כל דבר: לחיצה על טקסט, כתובית או קליפ פותחת את העריכה שלו.</p>
           {before && (
-            <button onClick={() => { useEditor.setState({ timeline: before }); setReport(null); setBefore(null); useAutoEditRun.setState({ options: [], chosen: null }); }}
+            <button onClick={undoAutoEdit}
               className="mt-1 text-zinc-400 underline hover:text-white">
               לא אהבתי, חזרה לסרטון כמו שהיה
             </button>
@@ -473,7 +507,7 @@ function AutoEditButton({ disabled }: { disabled: boolean }) {
           {report.skipped.map((d) => <p key={d} className="text-amber-300">– {d}</p>)}
           <p className="pt-1 text-zinc-400">מכאן אפשר לשנות כל דבר: לחיצה על טקסט, כתובית או קליפ פותחת את העריכה שלו.</p>
           {before && (
-            <button onClick={() => { useEditor.setState({ timeline: before }); setReport(null); setBefore(null); useAutoEditRun.setState({ options: [], chosen: null }); }}
+            <button onClick={undoAutoEdit}
               className="mt-1 text-zinc-400 underline hover:text-white">
               לא אהבתי, חזרה לסרטון כמו שהיה
             </button>
