@@ -41,7 +41,8 @@ export async function removeSilences(onStatus: (s: string) => void): Promise<num
     const asset = useEditor.getState().assets[clip.assetId];
     if (!asset) continue;
     const samples = await decodeAssetAudio(asset);
-    const speech = findSpeech(samples, { from: clip.in, to: clip.out });
+    // שוליים קצת רחבים יותר סביב כל מילה, כדי שהחיתוך לא יקטע את סוף המילה או את תחילתה
+    const speech = findSpeech(samples, { from: clip.in, to: clip.out, pad: 0.17, minSilence: 0.5 });
     // בלי דיבור בכלל (למשל צילום בלי קול): לא מוחקים את הקליפ
     if (speech.length) plan.set(clip.id, speech);
   }
