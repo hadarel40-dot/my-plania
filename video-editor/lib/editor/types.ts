@@ -88,6 +88,8 @@ export type OverlayAnimOut = "fade" | "pop" | "slide-down" | "none";
 export interface Overlay {
   /** נוסף מתבנית (מוחלף כשבוחרים תבנית אחרת) */
   fromTemplate?: boolean;
+  /** משפט הפתיחה (ההוק): אפשר להחליף אותו בלחיצה באחת ההצעות */
+  hook?: boolean;
   id: string;
   kind: "text" | "emoji";
   text: string;

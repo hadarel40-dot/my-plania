@@ -1,4 +1,6 @@
 "use client";
+import { genreInfo, type GenreInfo, type VideoGenre } from "./genres";
+import { favoritePick, hasMyCaptionStyle, loadMyStyle } from "./my-style";
 import { useEditor } from "@/stores/editor-store";
 import { decodeAssetAudio } from "@/lib/audio/decode";
 import { findSpeech } from "@/lib/audio/silence";
@@ -122,6 +124,7 @@ export interface AutoEditReport { done: string[]; skipped: string[] }
  * כל שלב שנכשל מדולג, והשאר ממשיך. התוצאה נשארת עריכה רגילה שאפשר לשנות.
  */
 export type AutoEditMode = "auto" | "talking" | "vibe";
+export type { VideoGenre };
 
 /** גרסה של העריכה האוטומטית, לבחירה */
 export interface EditOption {
@@ -140,8 +143,10 @@ export interface AutoEditResult {
  * עריכה אוטומטית שמחזירה כמה גרסאות לבחירה. העבודה הכבדה (ניתוח, כתוביות, בינה מלאכותית)
  * נעשית פעם אחת, ומהתוצאה נבנות גרסאות שונות בקצב, במוזיקה ובעיצוב. הראשונה מוחלת.
  */
-export async function autoEditAll(onStatus: (s: string) => void, mode: AutoEditMode = "auto"): Promise<AutoEditResult> {
+export async function autoEditAll(onStatus: (s: string) => void, genre: VideoGenre = "auto"): Promise<AutoEditResult> {
   if (!useEditor.getState().timeline.clips.length) throw new Error("קודם מעלים סרטון");
+  activeGenre = genreInfo(genre);
+  let mode: AutoEditMode = activeGenre?.mode ?? "auto";
   const auto = mode === "auto";
   if (auto) {
     onStatus("בודק אם מדברים בסרטון…");
@@ -152,12 +157,20 @@ export async function autoEditAll(onStatus: (s: string) => void, mode: AutoEditM
     const result = mode === "vibe" ? await autoEditVibe(onStatus) : await autoEditTalking(onStatus);
     if (auto && mode === "talking") result.report.done.unshift("זוהה סרטון דיבור (אם זה סרטון אווירה, בחרו \"אווירה\" ונסו שוב)");
     if (result.options[0]) useEditor.setState({ timeline: result.options[0].timeline, selection: null });
-    logEvent("auto_edit_done", { mode, auto, ms: Date.now() - started, options: result.options.length, skipped: result.report.skipped });
+    logEvent("auto_edit_done", { mode, genre, auto, ms: Date.now() - started, options: result.options.length, skipped: result.report.skipped });
     return result;
   } catch (e) {
-    logEvent("auto_edit_failed", { mode, auto, ms: Date.now() - started, error: errorText(e) });
+    logEvent("auto_edit_failed", { mode, genre, auto, ms: Date.now() - started, error: errorText(e) });
     throw e;
   }
+}
+
+/** סוג הסרטון שנבחר בשאלה "מה הסרטון?" (לריצה הנוכחית) */
+let activeGenre: GenreInfo | null = null;
+
+/** ההוראות שהמוח מקבל: מה סוג הסרטון, ואחריו מה שנכתב לעורך */
+function brainNotes() {
+  return [activeGenre?.hint, useEditor.getState().notes].filter(Boolean).join("\n");
 }
 
 /**
@@ -259,6 +272,11 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
 
   // הגרסאות: הראשונה לפי המוח (אם מחובר), והשאר בסגנונות אחרים
   const looks: TalkingLook[] = [];
+  const mine = loadMyStyle();
+  if (hasMyCaptionStyle(mine)) looks.push({
+    template: s0?.plan.template ?? "talking", preset: mine.captionPreset!, accent: mine.accent ?? "#facc15", font: mine.captionFont!,
+    color: s0?.plan.color_style ?? "vivid", title: "הסגנון שלי", description: "הכתוביות והגופן שנבחרו בפעמים הקודמות", punchZoom: true,
+  });
   if (s0) looks.push({ template: s0.plan.template, preset: s0.plan.caption_style, accent: s0.plan.accent, font: s0.plan.caption_font, color: s0.plan.color_style, title: `הבחירה של ${brainName()}`, description: "הסגנון שהבינה המלאכותית בחרה לתוכן", punchZoom: true });
   for (const l of TALKING_LOOKS) if (looks.length < 3 && !looks.some((x) => x.template === l.template)) looks.push({ ...l });
   // סגנון המעברים: בלי = בלי זום ומעברים; נקי = זום לסירוגין בלבד; מוגזם = פאנץ' והבזקים בכל חיתוך
@@ -287,7 +305,7 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
       useEditor.getState().timeline.clips.forEach((clip, k) => { if (k > 0) updateClip(clip.id, { transitionIn: look.cutTransition }); });
     }
     if (musicClip()) await syncToBeat(() => undefined).catch(() => undefined);
-    options.push({ id: `talk-${i}`, title: look.title, description: look.description, timeline: useEditor.getState().timeline });
+    options.push({ id: `talk-${look.title === "הסגנון שלי" ? "mine" : look.template}-${i}`, title: look.title, description: look.description, timeline: useEditor.getState().timeline });
   }
   report.done.push(`נבנו ${options.length} גרסאות לבחירה`);
   return { report, options };
@@ -306,7 +324,7 @@ async function smartCuts(): Promise<SmartCuts> {
     segments: captions.map((c) => ({ start: c.start, end: c.end, text: c.text })),
     duration: timelineDuration(timeline),
     hasMusic: timeline.audio.some((a) => a.out - a.in > 5),
-    notes: useEditor.getState().notes,
+    notes: brainNotes(),
   };
   const response = await fetch("/api/smart-edit", {
     method: "POST",
@@ -387,14 +405,14 @@ interface VibeLook {
 /** סגנון תנועה לגרסה: אילו מעברים ואילו תנועות מצלמה, בסבב */
 interface Motion { transitions: { type: TransitionType; duration: number }[]; effects: ClipEffect[] }
 
-const T = (type: TransitionType, duration: number) => ({ type, duration });
+export const T = (type: TransitionType, duration: number) => ({ type, duration });
 const NO_MOTION: Motion = { transitions: [], effects: [] };
 
 /**
  * לכל סגנון מעברים, שלוש גרסאות תנועה (לשלוש הגרסאות של סרטון אווירה):
  * נקי = חיתוכים ומעט המסה, דינמי = מגוון, מוגזם = הבזקים, גליצ'ים ורעידות.
  */
-const MOTION_BY_STYLE: Record<TransitionStyle, [Motion, Motion, Motion]> = {
+export const MOTION_BY_STYLE: Record<TransitionStyle, [Motion, Motion, Motion]> = {
   none: [NO_MOTION, NO_MOTION, NO_MOTION],
   clean: [
     { transitions: [T("fade", 0.3)], effects: ["zoom-in", "none", "zoom-out", "none"] },
@@ -413,7 +431,7 @@ const MOTION_BY_STYLE: Record<TransitionStyle, [Motion, Motion, Motion]> = {
   ],
 };
 
-const currentStyle = (): TransitionStyle => useEditor.getState().timeline.transitionStyle ?? "clean";
+export const currentStyle = (): TransitionStyle => useEditor.getState().timeline.transitionStyle ?? loadMyStyle().transitionStyle ?? "clean";
 
 /** מחיל את סגנון המעברים הנוכחי על כל הקליפים בציר הזמן (כפתור בלשונית חכם) */
 export function applyTransitionStyle(style: TransitionStyle) {
@@ -422,7 +440,7 @@ export function applyTransitionStyle(style: TransitionStyle) {
 }
 
 /** מוסיף לכל קליפ בציר הזמן מעבר ותנועה לפי הסגנון (בסבב, כדי שלא יהיה חד-גוני) */
-function applyMotion(motion: Motion) {
+export function applyMotion(motion: Motion) {
   const { timeline, updateClip } = useEditor.getState();
   timeline.clips.forEach((clip, i) => {
     updateClip(clip.id, {
@@ -483,7 +501,7 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditResu
         shots: candidates.map((c) => ({ id: c.id, start: c.start, end: c.end, clip: clipOrder.indexOf(c.clipId), image: c.thumb })),
         target,
         hasMusic: !!userMusic,
-        notes,
+        notes: brainNotes(),
       };
       const res = await fetch("/api/smart-vibe", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => null);
@@ -501,7 +519,7 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditResu
   }
 
   // 3. הגרסאות: מומלצת, קצבית, ורגועה-קולנועית. מצבי רוח שונים זה מזה
-  const mainMood: MusicMood = plan?.music ?? moodFromNotes(notes) ?? "chill";
+  const mainMood: MusicMood = plan?.music ?? moodFromNotes(notes) ?? activeGenre?.mood ?? "chill";
   const style = currentStyle();
   const looks: VibeLook[] = [
     { title: plan ? `הבחירה של ${brainName()}` : "מומלץ", description: "קטע של כשתי שניות מכל צילום, מעברי המסה וזום עדין", pace: [1.3, 2.6], mood: mainMood, color: plan?.color_style ?? "cinematic", useBrainOrder: true, motion: MOTION_BY_STYLE[style][0] },
@@ -509,10 +527,16 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditResu
     { title: "רגוע וקולנועי", description: "קטעים ארוכים, תנועת מצלמה איטית ומעברים רכים", pace: [2.2, 3.4], mood: mainMood === "cinematic" ? "romantic" : "cinematic", color: "warm", useBrainOrder: false, motion: MOTION_BY_STYLE[style][2] },
   ];
 
+  // הסגנון שלי: אם בדרך כלל בוחרים גרסה אחרת, היא עוברת להיות הראשונה
+  const fav = favoritePick("vibe");
+  const order = looks.map((_, i) => i);
+  if (fav && fav < looks.length) { order.splice(fav, 1); order.unshift(fav); }
+
   onStatus("4/4 · בונה גרסאות…");
   const base = useEditor.getState().timeline;
   const options: EditOption[] = [];
-  for (const [i, look] of looks.entries()) {
+  for (const [pos, i] of order.entries()) {
+    const look = looks[i];
     useEditor.setState({ timeline: base });
     // מוזיקה: של המשתמשת אם יש; אחרת, בגרסה הראשונה מהספרייה הגדולה ובשאר מובנית
     let bpm = 0;
@@ -520,7 +544,7 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditResu
       const a = useEditor.getState().assets[userMusic.assetId];
       bpm = a.bpm ?? detectBeats(await decodeAssetAudio(a)).bpm;
     } else if (!noMusic) {
-      bpm = await addVibeMusic(look.mood, i === 0, report);
+      bpm = await addVibeMusic(look.mood, pos === 0, report);
     }
     const shotLen = bpm ? beatsShot(bpm, look.pace) : (look.pace[0] + look.pace[1]) / 2;
     const chosen = look.useBrainOrder && brainShots.length >= 2
@@ -539,12 +563,12 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditResu
     if (plan?.text.trim()) {
       const preset = presetById("typewriter");
       useEditor.setState((st) => ({
-        timeline: { ...st.timeline, overlays: [...st.timeline.overlays, { ...preset.fields, y: 0.16, id: uid("ovl"), text: plan!.text.trim(), start: 0.3, end: 3, fromTemplate: true }] },
+        timeline: { ...st.timeline, overlays: [...st.timeline.overlays, { ...preset.fields, y: 0.16, id: uid("ovl"), text: plan!.text.trim(), start: 0.3, end: 3, fromTemplate: true, hook: true }] },
       }));
     }
     const length = useEditor.getState().timeline.clips.reduce((sum, c) => sum + c.out - c.in, 0);
     options.push({
-      id: `vibe-${i}`, title: look.title,
+      id: `vibe-${i}`, title: pos === 0 && fav === i ? `הסגנון שלי · ${look.title}` : look.title,
       description: `${look.description} · ${useEditor.getState().timeline.clips.length} קטעים, ${Math.round(length)} שנ׳`,
       timeline: useEditor.getState().timeline,
     });
@@ -564,7 +588,7 @@ function vibeTarget(footage: number, clipCount: number, shotLen: number) {
  * מוסיף מוזיקה לגרסה ומחזיר את הקצב. בגרסה הראשונה מנסים קודם את הספרייה הגדולה
  * (עד 10 שניות); אחרת, ובכל כישלון, שיר מובנה שתמיד עובד.
  */
-async function addVibeMusic(mood: MusicMood, tryLibrary: boolean, report: AutoEditReport): Promise<number> {
+export async function addVibeMusic(mood: MusicMood, tryLibrary: boolean, report: AutoEditReport): Promise<number> {
   if (tryLibrary) {
     try {
       const tracks = await Promise.race([
@@ -612,7 +636,7 @@ function beatsShot(bpm: number, [min, max]: [number, number] = [1.3, 2.6]) {
 const brainName = () => useEditor.getState().cloud?.brain ?? "הבינה המלאכותית";
 
 /** קטע המוזיקה (הסאונד הארוך ביותר בציר הזמן), אם יש */
-function musicClip() {
+export function musicClip() {
   const { timeline, assets } = useEditor.getState();
   return [...timeline.audio]
     .filter((a) => a.out - a.in > 5 && assets[a.assetId])

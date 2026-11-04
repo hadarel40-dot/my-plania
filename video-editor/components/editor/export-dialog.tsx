@@ -7,19 +7,21 @@ import { cn } from "@/lib/utils";
 import { keepAwake } from "@/lib/keep-awake";
 import { errorText, logEvent } from "@/lib/telemetry";
 
-/** בטלפון: תפריט השיתוף של המכשיר, שבו יש "שמירת סרטון" לגלריה (ואינסטגרם, וואטסאפ...) */
-function canShareFile(blob: Blob, name: string) {
+/** בטלפון: תפריט השיתוף של המכשיר, שבו יש "שמירה" לגלריה (ואינסטגרם, וואטסאפ...) */
+function canShareFiles(files: File[]) {
   if (typeof navigator === "undefined" || !navigator.canShare) return false;
-  try { return navigator.canShare({ files: [new File([blob], name, { type: "video/mp4" })] }); } catch { return false; }
+  try { return navigator.canShare({ files }); } catch { return false; }
 }
 
-async function shareFile(blob: Blob, name: string) {
+async function shareFiles(files: File[]) {
   try {
-    await navigator.share({ files: [new File([blob], name, { type: "video/mp4" })] });
+    await navigator.share({ files });
+    logEvent("export_shared", { files: files.length });
   } catch { /* המשתמש סגר את התפריט */ }
 }
 
 type Phase = { kind: "idle" } | { kind: "rendering"; progress: number } | { kind: "done"; url: string; size: number; blob: Blob } | { kind: "error"; message: string };
+type Cover = { blob: Blob; url: string } | "making" | null;
 
 /** ייצוא הפרויקט לקובץ MP4, כולו בתוך הדפדפן */
 export function ExportDialog({ onClose }: { onClose: () => void }) {
@@ -29,6 +31,7 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
     typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches ? "720p" : "1080p");
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const abortRef = useRef<AbortController | null>(null);
+  const [cover, setCover] = useState<Cover>(null);
 
   async function start() {
     const { timeline, assets } = useEditor.getState();
@@ -48,6 +51,12 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
       });
       logEvent("export_done", { quality, size: blob.size, ms: Date.now() - started });
       setPhase({ kind: "done", url: URL.createObjectURL(blob), size: blob.size, blob });
+      // תמונת שער: הפריים הכי יפה עם משפט הפתיחה (אם לא מצליח, שומרים רק את הסרטון)
+      setCover("making");
+      import("@/lib/export/cover")
+        .then(({ makeCover }) => makeCover(timeline, assets))
+        .then((c) => setCover(c ? { blob: c, url: URL.createObjectURL(c) } : null))
+        .catch((e) => { logEvent("cover_failed", { error: errorText(e) }); setCover(null); });
     } catch (e) {
       if (controller.signal.aborted) setPhase({ kind: "idle" });
       else {
@@ -62,10 +71,17 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
   function close() {
     abortRef.current?.abort();
     if (phase.kind === "done") URL.revokeObjectURL(phase.url);
+    if (cover && cover !== "making") URL.revokeObjectURL(cover.url);
     onClose();
   }
 
-  const fileName = `${(title || "video").replace(/[\\/:*?"<>|]+/g, "-")}.mp4`;
+  const baseName = (title || "video").replace(/[\\/:*?"<>|]+/g, "-");
+  const fileName = `${baseName}.mp4`;
+  const files = phase.kind === "done"
+    ? [new File([phase.blob], fileName, { type: "video/mp4" }), ...(cover && cover !== "making" ? [new File([cover.blob], `${baseName} - שער.jpg`, { type: "image/jpeg" })] : [])]
+    : [];
+  // אם המכשיר לא יודע לשתף סרטון ותמונה יחד, משתפים רק את הסרטון
+  const shareable = files.length && canShareFiles(files) ? files : files.length && canShareFiles(files.slice(0, 1)) ? files.slice(0, 1) : null;
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4" onClick={close}>
@@ -108,17 +124,34 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
 
         {phase.kind === "done" && (
           <div className="space-y-3">
-            <video src={phase.url} controls className="max-h-64 w-full rounded-lg bg-black" />
-            {canShareFile(phase.blob, fileName) && (
-              <button onClick={() => shareFile(phase.blob, fileName)}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-violet-600 py-2.5 text-sm font-medium hover:bg-violet-500">
-                <Share2 className="size-4" /> שמירה לגלריה או שיתוף
+            <div className="flex gap-2">
+              <video src={phase.url} controls playsInline className="max-h-64 min-w-0 flex-1 rounded-lg bg-black" />
+              {cover && (
+                <div className="w-24 shrink-0 text-center">
+                  {cover === "making"
+                    ? <div className="grid aspect-[9/16] place-items-center rounded-lg bg-zinc-800"><Loader2 className="size-4 animate-spin" /></div>
+                    // eslint-disable-next-line @next/next/no-img-element
+                    : <img src={cover.url} alt="תמונת שער" className="aspect-[9/16] w-full rounded-lg object-cover" />}
+                  <span className="text-[10px] text-zinc-400">תמונת שער</span>
+                </div>
+              )}
+            </div>
+            {shareable && (
+              <button onClick={() => shareFiles(shareable)} disabled={cover === "making"}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-l from-violet-600 to-fuchsia-600 py-3 text-sm font-semibold disabled:opacity-60">
+                <Share2 className="size-4" /> {cover === "making" ? "מכין תמונת שער…" : shareable.length > 1 ? "שמירה לגלריה (סרטון + שער)" : "שמירה לגלריה או שיתוף"}
               </button>
+            )}
+            {shareable && shareable.length > 1 && (
+              <p className="text-[11px] leading-relaxed text-zinc-400">בתפריט שנפתח בוחרים &quot;שמירה&quot;. באינסטגרם: עריכת שער ← הוספה מהגלריה ← תמונת השער.</p>
             )}
             <a href={phase.url} download={fileName}
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 py-2.5 text-sm font-medium hover:bg-emerald-500">
               <Download className="size-4" /> הורדת הסרטון ({(phase.size / 1024 / 1024).toFixed(1)}MB)
             </a>
+            {cover && cover !== "making" && (
+              <a href={cover.url} download={`${baseName} - שער.jpg`} className="block text-center text-xs text-zinc-400 underline">הורדת תמונת השער</a>
+            )}
           </div>
         )}
 

@@ -21,7 +21,7 @@ export interface FrameSample {
 const W = 96;
 const THUMB_W = 256;
 
-function loadVideo(url: string) {
+export function loadVideo(url: string) {
   const video = document.createElement("video");
   video.muted = true;
   video.playsInline = true;
@@ -37,7 +37,7 @@ function loadVideo(url: string) {
   });
 }
 
-function seek(video: HTMLVideoElement, time: number) {
+export function seekVideo(video: HTMLVideoElement, time: number) {
   return new Promise<void>((resolve) => {
     const timer = setTimeout(resolve, 3000);
     video.onseeked = () => { clearTimeout(timer); resolve(); };
@@ -66,7 +66,7 @@ export async function sampleClip(
   const out: FrameSample[] = [];
   let prev: Float32Array | null = null;
   for (let t = from + step / 2; t < to; t += step) {
-    await seek(video, t);
+    await seekVideo(video, t);
     ctx.drawImage(video, 0, 0, W, h);
     const { data } = ctx.getImageData(0, 0, W, h);
     const gray = new Float32Array(W * h);

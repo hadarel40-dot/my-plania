@@ -77,3 +77,14 @@ export interface TrendsRequest {
   topic: string;
   kind: "talking" | "vibe";
 }
+
+/** שלוש הצעות למשפט הפתיחה (ההוק) */
+export const HooksSchema = z.object({
+  hooks: z.array(z.string()).describe("שלושה משפטי פתיחה שונים, עד 8 מילים כל אחד"),
+});
+
+export interface HooksRequest {
+  /** סוג הסרטון, ההוראות, התמלול ותקציר העריכה */
+  context: string;
+  current?: string;
+}

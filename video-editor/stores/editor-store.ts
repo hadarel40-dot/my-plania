@@ -349,7 +349,7 @@ export const useEditor = create<EditorState>()(
           if (!template || duration <= 0) return;
           const r = resolveTemplate(template, duration);
           // הטקסט הראשון של התבנית הוא ההוק: אם יש משפט מהתמלול, הוא נכנס במקום הטקסט לדוגמה
-          if (options?.hook && r.overlays[0]) r.overlays[0].text = options.hook;
+          if (options?.hook && r.overlays[0]) Object.assign(r.overlays[0], { text: options.hook, hook: true });
           // בעריכה חכמה הטקסטים כתובים לפי התוכן, ולכן הטקסטים הכלליים של התבנית (מלבד ההוק) לא נכנסים
           if (options?.hookOnly) r.overlays.splice(1);
           r.overlays.push(...(options?.extraOverlays ?? []));

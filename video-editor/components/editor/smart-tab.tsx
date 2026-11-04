@@ -6,7 +6,11 @@ import type { Trends, TrendsRequest } from "@/lib/ai/smart-plan";
 import { logEvent } from "@/lib/telemetry";
 import { useEditor } from "@/stores/editor-store";
 import type { Timeline, TransitionStyle } from "@/lib/editor/types";
-import { applyTransitionStyle, autoEditAll, autoReframe, removeSilences, syncToBeat, type AutoEditMode, type AutoEditReport, type EditOption } from "@/lib/editor/auto-edit";
+import { applyTransitionStyle, autoEditAll, autoReframe, currentStyle, removeSilences, syncToBeat, type AutoEditReport, type EditOption } from "@/lib/editor/auto-edit";
+import { GENRES, genreInfo, type VideoGenre } from "@/lib/editor/genres";
+import { forgetMyStyle, loadMyStyle, rememberPick, rememberStyle } from "@/lib/editor/my-style";
+import { canRestoreCaptions, currentHook, makeShorter, moreEnergy, otherMusic, setHookText, toggleCaptions } from "@/lib/editor/quick-fixes";
+import { FONTS } from "@/lib/editor/fonts";
 import { usePlayback } from "@/stores/playback-store";
 import { TEMPLATES } from "@/lib/editor/templates";
 import { Section } from "./ui";
@@ -95,21 +99,30 @@ export const useAutoEditRun = create<{
   error: string | null;
   /** ציר הזמן לפני העריכה האוטומטית, כדי שאפשר יהיה לחזור אליו בלחיצה אחת */
   before: Timeline | null;
-  mode: AutoEditMode;
+  /** סוג הסרטון (התשובה ל"מה הסרטון?") */
+  genre: VideoGenre;
   /** הגרסאות לבחירה, ואיזו מוצגת עכשיו */
   options: EditOption[];
   chosen: string | null;
-}>(() => ({ busy: null, report: null, error: null, before: null, mode: "auto", options: [], chosen: null }));
+  /** הצעות למשפט פתיחה מהמוח (null: עוד לא ביקשנו) */
+  hooks: string[] | null;
+  hooksBusy: boolean;
+}>(() => ({ busy: null, report: null, error: null, before: null, genre: "auto", options: [], chosen: null, hooks: null, hooksBusy: false }));
 
 /** פותח את לשונית "חכם" (בטלפון: המגירה), למשל מהכפתור שעל הנגן */
 export const OPEN_SMART_EVENT = "editor:open-smart";
 
-export async function runAutoEdit() {
+export async function runAutoEdit(genre?: VideoGenre) {
   const set = useAutoEditRun.setState;
-  set({ report: null, error: null, options: [], chosen: null, before: useEditor.getState().timeline, busy: "מתחיל…" });
+  if (genre) { set({ genre }); rememberStyle({ genre }); }
+  set({ report: null, error: null, options: [], chosen: null, hooks: null, before: useEditor.getState().timeline, busy: "מתחיל…" });
   try {
-    const { report, options } = await autoEditAll((busy) => set({ busy }), useAutoEditRun.getState().mode);
+    const { report, options } = await autoEditAll((busy) => set({ busy }), useAutoEditRun.getState().genre);
     set({ report, options, chosen: options[0]?.id ?? null });
+    // הגרסה הראשונה מתנגנת מיד
+    usePlayback.getState().seek(0);
+    usePlayback.getState().player?.play();
+    void loadHooks(report);
   } catch (e) {
     set({ error: e instanceof Error ? e.message : "משהו השתבש" });
   } finally {
@@ -117,9 +130,151 @@ export async function runAutoEdit() {
   }
 }
 
+/** משפטי פתיחה: המוח כותב שלוש הצעות לפי התוכן, ברקע, אחרי שהגרסאות מוכנות */
+async function loadHooks(report?: AutoEditReport | null) {
+  const { cloud, timeline, notes, title } = useEditor.getState();
+  if (!cloud?.smartEdit) return;
+  const set = useAutoEditRun.setState;
+  set({ hooksBusy: true });
+  try {
+    const genre = genreInfo(useAutoEditRun.getState().genre);
+    const transcript = timeline.captions.map((c) => c.text).join(" ").slice(0, 1500);
+    const context = [
+      genre && `סוג: ${genre.label}`,
+      title && title !== "פרויקט חדש" && `שם: ${title}`,
+      notes && `הוראות: ${notes}`,
+      transcript && `תמלול: ${transcript}`,
+      report?.done.length && `מה נעשה בעריכה: ${report.done.join(" · ")}`,
+    ].filter(Boolean).join("\n");
+    const res = await fetch("/api/hooks", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ context, current: currentHook() }) });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.hooks) {
+      logEvent("brain_failed", { route: "hooks", status: res.status, error: data?.error, detail: data?.detail });
+      set({ hooks: [] });
+      return;
+    }
+    set({ hooks: data.hooks as string[] });
+  } catch {
+    set({ hooks: [] });
+  } finally {
+    set({ hooksBusy: false });
+  }
+}
+
+/** שומר את השינוי בגרסה שמוצגת, כדי שמעבר לגרסה אחרת וחזרה לא יבטל אותו */
+function saveIntoChosen() {
+  const { options, chosen } = useAutoEditRun.getState();
+  const timeline = useEditor.getState().timeline;
+  useAutoEditRun.setState({ options: options.map((o) => (o.id === chosen ? { ...o, timeline } : o)) });
+}
+
+/** תיקונים בלחיצה: כל כפתור משנה דבר אחד בגרסה שמוצגת */
+function QuickFixes() {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const hasCaptions = useEditor((s) => s.timeline.captions.length > 0);
+  const run = async (id: string, fix: () => Promise<string> | string) => {
+    setBusy(id); setMessage(null);
+    try {
+      setMessage(await fix());
+      saveIntoChosen();
+      logEvent("quick_fix", { fix: id });
+      usePlayback.getState().seek(0);
+      usePlayback.getState().player?.play();
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "לא הצליח");
+    } finally {
+      setBusy(null);
+    }
+  };
+  const fixes: { id: string; label: string; fix: () => Promise<string> | string; show: boolean }[] = [
+    { id: "shorter", label: "✂️ יותר קצר", fix: makeShorter, show: true },
+    { id: "energy", label: "⚡ יותר אנרגטי", fix: moreEnergy, show: true },
+    { id: "music", label: "🎵 מוזיקה אחרת", fix: otherMusic, show: true },
+    { id: "captions", label: hasCaptions ? "💬 בלי כתוביות" : "💬 להחזיר כתוביות", fix: toggleCaptions, show: hasCaptions || canRestoreCaptions() },
+  ];
+  return (
+    <div className="mt-3">
+      <p className="text-sm font-medium">תיקונים בלחיצה</p>
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
+        {fixes.filter((f) => f.show).map((f) => (
+          <button key={f.id} onClick={() => run(f.id, f.fix)} disabled={!!busy}
+            className="flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-950 px-3 py-1.5 text-xs hover:border-violet-500 disabled:opacity-50">
+            {busy === f.id && <Loader2 className="size-3 animate-spin" />}{f.label}
+          </button>
+        ))}
+      </div>
+      {message && <p className="mt-1 text-[11px] text-emerald-300">✓ {message}</p>}
+    </div>
+  );
+}
+
+/** משפט הפתיחה: ההוק הנוכחי ושלוש הצעות של המוח. לחיצה מחליפה את הטקסט בכל הגרסאות */
+function HookPicker() {
+  const { hooks, hooksBusy } = useAutoEditRun();
+  const current = useEditor((s) => s.timeline.overlays.find((o) => o.hook)?.text ?? null);
+  const smart = useEditor((s) => !!s.cloud?.smartEdit);
+  if (!smart) return null;
+  const pick = (text: string) => {
+    setHookText(text);
+    // אותו משפט פתיחה בכל הגרסאות
+    const { options, chosen } = useAutoEditRun.getState();
+    const now = useEditor.getState().timeline;
+    useAutoEditRun.setState({
+      options: options.map((o) => {
+        if (o.id === chosen) return { ...o, timeline: now };
+        const i = o.timeline.overlays.findIndex((x) => x.hook);
+        if (i < 0) return o;
+        const overlays = [...o.timeline.overlays];
+        overlays[i] = { ...overlays[i], text };
+        return { ...o, timeline: { ...o.timeline, overlays } };
+      }),
+    });
+    logEvent("hook_pick", {});
+    usePlayback.getState().seek(0);
+    usePlayback.getState().player?.play();
+  };
+  return (
+    <div className="mt-3">
+      <p className="text-sm font-medium">משפט פתיחה <span className="text-xs font-normal text-zinc-500">· מה שרואים בשנייה הראשונה</span></p>
+      {hooksBusy && <p className="mt-1 flex items-center gap-1.5 text-xs text-zinc-400"><Loader2 className="size-3 animate-spin" /> כותב הצעות…</p>}
+      <div className="mt-1.5 grid gap-1.5">
+        {(hooks ?? []).map((h) => (
+          <button key={h} onClick={() => pick(h)} dir="auto"
+            className={cn("rounded-lg border px-3 py-2 text-start text-sm",
+              current === h ? "border-violet-500 bg-violet-500/10" : "border-zinc-800 bg-zinc-950 hover:border-zinc-600")}>
+            {h}
+          </button>
+        ))}
+      </div>
+      {!hooksBusy && (
+        <button onClick={() => loadHooks(useAutoEditRun.getState().report)} className="mt-1 text-[11px] text-zinc-500 underline hover:text-white">
+          {hooks?.length ? "עוד הצעות" : "להציע משפטי פתיחה"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** מה העורך זוכר מהבחירות הקודמות. העריכה האוטומטית מתחילה משם */
+function MyStyleLine() {
+  const [style, setStyle] = useState(() => (typeof window === "undefined" ? {} : loadMyStyle()));
+  const parts = [
+    style.captionFont && `גופן ${FONTS.find((f) => f.id === style.captionFont)?.label ?? style.captionFont}`,
+    style.transitionStyle && `מעברים ${({ none: "בלי", clean: "נקיים", dynamic: "דינמיים", extreme: "מוגזמים" } as const)[style.transitionStyle]}`,
+  ].filter(Boolean);
+  if (!parts.length) return null;
+  return (
+    <p className="mb-2 text-[11px] text-zinc-500">
+      ⭐ הסגנון שלי: {parts.join(" · ")}{" "}
+      <button onClick={() => { forgetMyStyle(); setStyle({}); }} className="underline hover:text-white">איפוס</button>
+    </p>
+  );
+}
+
 /** כמה מעברים ותנועה: בלי / נקיים / דינמיים / מוגזמים. העריכה האוטומטית משתמשת בבחירה */
 function TransitionStylePicker() {
-  const style = useEditor((s) => s.timeline.transitionStyle ?? "clean");
+  const style = useEditor((s) => s.timeline.transitionStyle ?? null) ?? currentStyle();
   const hasClips = useEditor((s) => s.timeline.clips.length > 1);
   const options: { id: TransitionStyle; label: string }[] = [
     { id: "none", label: "בלי" },
@@ -132,7 +287,7 @@ function TransitionStylePicker() {
       <div className="flex flex-wrap items-center gap-1.5 text-xs">
         <span className="text-zinc-500">מעברים:</span>
         {options.map((o) => (
-          <button key={o.id} onClick={() => useEditor.getState().setTransitionStyle(o.id)}
+          <button key={o.id} onClick={() => { useEditor.getState().setTransitionStyle(o.id); rememberStyle({ transitionStyle: o.id }); }}
             className={cn("rounded-full border px-2.5 py-1",
               style === o.id ? "border-violet-500 bg-violet-500/15 text-white" : "border-zinc-700 text-zinc-400 hover:border-zinc-500")}>
             {o.label}
@@ -169,35 +324,40 @@ function EditorNotes() {
 }
 
 function AutoEditButton({ disabled }: { disabled: boolean }) {
-  const { busy, report, error, before, mode, options, chosen } = useAutoEditRun();
+  const { busy, report, error, before, genre, options, chosen } = useAutoEditRun();
   const choose = (o: EditOption) => {
     useEditor.setState({ timeline: o.timeline, selection: null });
+    // הסגנון שלי: איזו גרסה נבחרה, ובאיזה סגנון כתוביות
+    rememberPick(o.id.replace(/-\d+$/, (m) => (o.id.startsWith("vibe") ? m : "")));
+    const cs = o.timeline.captionStyle;
+    if (o.timeline.captions.length && cs?.font) rememberStyle({ captionPreset: cs.preset, captionFont: cs.font, accent: cs.accent });
     usePlayback.getState().seek(0);
     useAutoEditRun.setState({ chosen: o.id });
     // מנגנים מיד מההתחלה, כדי לראות את הגרסה בלי עוד לחיצה
     usePlayback.getState().player?.play();
   };
-  const setMode = (m: AutoEditMode) => useAutoEditRun.setState({ mode: m });
-  const run = runAutoEdit;
+  const setGenre = (g: VideoGenre) => useAutoEditRun.setState({ genre: g });
+  const run = () => runAutoEdit();
   const setReport = (r: AutoEditReport | null) => useAutoEditRun.setState({ report: r });
   const setBefore = (b: Timeline | null) => useAutoEditRun.setState({ before: b });
 
-  const modes: { id: AutoEditMode; label: string }[] = [
+  const genres: { id: VideoGenre; label: string }[] = [
     { id: "auto", label: "לזהות לבד" },
-    { id: "talking", label: "🎤 דיבור" },
-    { id: "vibe", label: "🌅 אווירה" },
+    ...GENRES.map((g) => ({ id: g.id, label: `${g.emoji} ${g.label}` })),
   ];
+  const mode = genreInfo(genre)?.mode ?? "auto";
 
   return (
     <div>
       <EditorNotes />
+      <MyStyleLine />
       <TransitionStylePicker />
       <div className="mb-2 flex flex-wrap items-center gap-1.5 text-xs">
-        <span className="text-zinc-500">סוג הסרטון:</span>
-        {modes.map((m) => (
-          <button key={m.id} onClick={() => setMode(m.id)} disabled={!!busy}
+        <span className="text-zinc-500">מה הסרטון?</span>
+        {genres.map((m) => (
+          <button key={m.id} onClick={() => setGenre(m.id)} disabled={!!busy}
             className={cn("rounded-full border px-2.5 py-1",
-              mode === m.id ? "border-violet-500 bg-violet-500/15 text-white" : "border-zinc-700 text-zinc-400 hover:border-zinc-500")}>
+              genre === m.id ? "border-violet-500 bg-violet-500/15 text-white" : "border-zinc-700 text-zinc-400 hover:border-zinc-500")}>
             {m.label}
           </button>
         ))}
@@ -236,6 +396,8 @@ function AutoEditButton({ disabled }: { disabled: boolean }) {
             ))}
           </div>
           <p className="mt-1.5 text-[11px] text-zinc-500">הגרסה שמוצגת היא זו שנשמרת. אפשר לעבור ביניהן כמה שרוצים, ולערוך כל אחת אחר כך.</p>
+          <QuickFixes />
+          <HookPicker />
         </div>
       )}
       {report && (

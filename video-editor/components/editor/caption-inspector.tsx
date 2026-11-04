@@ -1,4 +1,5 @@
 "use client";
+import { rememberStyle } from "@/lib/editor/my-style";
 import { Type } from "lucide-react";
 import { useEditor } from "@/stores/editor-store";
 import type { Caption, CaptionPreset } from "@/lib/editor/types";
@@ -22,7 +23,13 @@ const POSITIONS = [
 ];
 
 export function CaptionInspector({ caption }: { caption: Caption }) {
-  const { updateCaption, styleAllCaptions: styleAll } = useEditor.getState();
+  const { updateCaption, styleAllCaptions } = useEditor.getState();
+  // כל בחירה כאן נזכרת ב"הסגנון שלי", והעריכה האוטומטית הבאה מתחילה ממנה
+  const styleAll = (patch: Parameters<typeof styleAllCaptions>[0]) => {
+    styleAllCaptions(patch);
+    const now = useEditor.getState().timeline.captionStyle;
+    if (now) rememberStyle({ captionPreset: now.preset, captionFont: now.font, accent: now.accent });
+  };
   const set = (patch: Partial<Caption>) => updateCaption(caption.id, patch);
 
   return (

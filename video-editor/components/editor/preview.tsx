@@ -13,6 +13,8 @@ import { FileInput } from "./media-bin";
 import { OPEN_SMART_EVENT, runAutoEdit, useAutoEditRun } from "./smart-tab";
 import { Sparkles, X as XIcon } from "lucide-react";
 import { useUploads } from "@/stores/upload-store";
+import { GENRES, type VideoGenre } from "@/lib/editor/genres";
+import { loadMyStyle } from "@/lib/editor/my-style";
 import { ensurePreviewProxies, setProxyPause, usePreviewProxies } from "@/lib/media/preview-proxy";
 
 export function Preview() {
@@ -175,24 +177,38 @@ function CtrlBtn({ children, label, onClick }: { children: React.ReactNode; labe
 }
 
 /**
- * אחרי העלאה, כשעוד לא נערך כלום: כפתור על הנגן שמפעיל עריכה אוטומטית ופותח את
- * לשונית "חכם" (שם הגרסאות לבחירה).
+ * אחרי העלאה, כשעוד לא נערך כלום: שאלה אחת, "מה הסרטון?". לחיצה על תשובה מפעילה
+ * את העריכה האוטומטית המתאימה ופותחת את לשונית "חכם" (שם הגרסאות לבחירה).
  */
 function AutoEditSuggestion() {
   const uploading = useUploads((s) => s.items.length > 0);
   const untouched = useEditor((s) => s.timeline.overlays.length === 0 && s.timeline.captions.length === 0 && s.timeline.audio.length === 0);
   const ran = useAutoEditRun((s) => !!s.busy || s.options.length > 0 || !!s.report);
   const [dismissed, setDismissed] = useState(false);
+  const [last] = useState(() => (typeof window === "undefined" ? undefined : loadMyStyle().genre));
   if (uploading || !untouched || ran || dismissed) return null;
+  const go = (genre: VideoGenre) => {
+    window.dispatchEvent(new Event(OPEN_SMART_EVENT));
+    void runAutoEdit(genre);
+  };
   return (
-    <div dir="rtl" className="absolute inset-x-3 bottom-3 flex items-center gap-2">
-      <button onClick={() => { window.dispatchEvent(new Event(OPEN_SMART_EVENT)); void runAutoEdit(); }}
-        className="flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-l from-violet-600 to-fuchsia-600 py-2.5 text-sm font-semibold shadow-xl">
-        <Sparkles className="size-4" /> לערוך אוטומטית
-      </button>
-      <button onClick={() => setDismissed(true)} aria-label="לא עכשיו" className="grid size-9 place-items-center rounded-full bg-black/60 text-zinc-300">
-        <XIcon className="size-4" />
-      </button>
+    <div dir="rtl" className="absolute inset-x-1.5 bottom-1.5 rounded-xl bg-black/80 p-2 shadow-2xl backdrop-blur">
+      <div className="mb-1 flex items-center justify-between">
+        <p className="flex items-center gap-1 text-xs font-semibold"><Sparkles className="size-3.5 text-fuchsia-400" /> מה הסרטון?</p>
+        <button onClick={() => setDismissed(true)} aria-label="לא עכשיו" className="grid size-6 place-items-center rounded-full text-zinc-400 hover:bg-white/10">
+          <XIcon className="size-3.5" />
+        </button>
+      </div>
+      <div className="grid gap-1">
+        {GENRES.map((g) => (
+          <button key={g.id} onClick={() => go(g.id)}
+            className={cn("flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1.5 text-start text-xs font-medium",
+              last === g.id ? "bg-gradient-to-l from-violet-600 to-fuchsia-600" : "bg-white/10 hover:bg-white/20")}>
+            <span className="text-sm leading-none">{g.emoji}</span>{g.label}
+          </button>
+        ))}
+      </div>
+      <button onClick={() => go("auto")} className="mt-1 w-full text-center text-[10px] text-zinc-400 underline">שהעורך יזהה לבד</button>
     </div>
   );
 }
