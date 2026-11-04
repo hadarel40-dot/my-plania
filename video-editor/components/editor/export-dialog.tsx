@@ -61,7 +61,9 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
       if (controller.signal.aborted) setPhase({ kind: "idle" });
       else {
         logEvent("export_failed", { quality, ms: Date.now() - started, error: errorText(e) });
-        setPhase({ kind: "error", message: e instanceof Error ? e.message : "הייצוא נכשל" });
+        // הודעה בעברית; הפרטים הטכניים נשמרים ביומן
+        const raw = e instanceof Error ? e.message : "";
+        setPhase({ kind: "error", message: /[\u0590-\u05ff]/.test(raw) ? raw : "הייצוא נכשל. אפשר לנסות שוב, ואם זה חוזר, לבחור איכות 720p." });
       }
     } finally {
       release();
