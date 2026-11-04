@@ -6,7 +6,9 @@ import { importFile } from "@/lib/media/import";
 import type { NewBackground } from "@/lib/video/remove-bg";
 import { cn } from "@/lib/utils";
 
+const CHECKER = "repeating-conic-gradient(#9ca3af 0% 25%, #e5e7eb 0% 50%) 50% / 10px 10px";
 const CHOICES: { id: string; label: string; bg: NewBackground; swatch: string }[] = [
+  { id: "none", label: "בלי רקע", bg: { kind: "none" }, swatch: CHECKER },
   { id: "blur", label: "טשטוש", bg: { kind: "blur" }, swatch: "linear-gradient(135deg,#6b7280,#d1d5db)" },
   { id: "black", label: "שחור", bg: { kind: "color", color: "#0a0a0a" }, swatch: "#0a0a0a" },
   { id: "white", label: "לבן", bg: { kind: "color", color: "#ffffff" }, swatch: "#ffffff" },
@@ -24,10 +26,10 @@ const CHOICES: { id: string; label: string; bg: NewBackground; swatch: string }[
  * את הרקע. נוצר סרטון חדש שמחליף את המקור בציר הזמן (המקור נשמר, ואפשר לחזור אליו).
  */
 export function RemoveBgPanel({ sourceId, currentId, onApply, onRestore }: {
-  sourceId: string; currentId: string; onApply: (assetId: string) => void; onRestore: () => void;
+  sourceId: string; currentId: string; onApply: (assetId: string, transparent: boolean, focus: { x: number; y: number } | null) => void; onRestore: () => void;
 }) {
   const asset = useEditor((s) => s.assets[sourceId]);
-  const [choice, setChoice] = useState("blur");
+  const [choice, setChoice] = useState("none");
   const [image, setImage] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,12 +43,16 @@ export function RemoveBgPanel({ sourceId, currentId, onApply, onRestore }: {
     try {
       const { removeBackground } = await import("@/lib/video/remove-bg");
       const bg = choice === "image" && image ? { kind: "image" as const, url: image } : CHOICES.find((c) => c.id === choice)!.bg;
-      const file = await removeBackground(asset, bg, (p) => setProgress(Math.round(p * 90)), setStage, best ? "best" : "auto");
+      const res = await removeBackground(asset, bg, (p) => setProgress(Math.round(p * 90)), setStage, best ? "best" : "auto");
       setProgress(92);
-      const done = await importFile(file, (p) => setProgress(90 + Math.round(p / 10)));
-      useEditor.getState().addAsset({ ...done, name: file.name });
+      const done = await importFile(res.file, (p) => setProgress(90 + Math.round(p / 10)));
+      const final = res.alphaPacked
+        // הקובץ כפול ברוחבו (צבע + מסכה): המידות האמיתיות הן של החצי
+        ? { ...done, name: res.file.name, alphaPacked: true, width: Math.round(done.width / 2) || res.width, height: done.height || res.height, thumbnailUrl: res.thumbnail ?? done.thumbnailUrl }
+        : { ...done, name: res.file.name };
+      useEditor.getState().addAsset(final);
       const end = beginGesture();
-      onApply(done.id);
+      onApply(final.id, res.alphaPacked, res.focus);
       end();
     } catch (e) {
       setError(e instanceof Error ? e.message : "הסרת הרקע נכשלה");
@@ -57,7 +63,8 @@ export function RemoveBgPanel({ sourceId, currentId, onApply, onRestore }: {
 
   return (
     <div className="space-y-2 rounded-xl border border-zinc-800 bg-zinc-900/50 p-3">
-      <p className="text-xs font-medium text-zinc-200">✂️ הסרת רקע: האדם נשאר, הרקע מתחלף</p>
+      <p className="text-xs font-medium text-zinc-200">✂️ הסרת רקע: בוחרים מה יהיה במקום הרקע</p>
+      {choice === "none" && <p className="text-[11px] leading-relaxed text-violet-200">בלי רקע: האדם לבד, שקוף. אחר כך בוחרים מה יופיע מאחוריו (סרטון או תמונה מהגלריה), ואפשר להזיז ולהגדיל אותו.</p>}
       <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6">
         {CHOICES.map((c) => (
           <button key={c.id} onClick={() => setChoice(c.id)} disabled={progress !== null}

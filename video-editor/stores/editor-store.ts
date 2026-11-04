@@ -259,7 +259,8 @@ export const useEditor = create<EditorState>()(
           if (!asset) return;
           const clip = makeClip(asset);
           s.timeline.clips.push(clip);
-          s.selection = { kind: "clip", id: clip.id };
+          // כמו בקאפקאט: אחרי העלאה שום דבר לא נבחר, והסרגל נשאר על הכלים הכלליים
+          if (s.selection?.kind === "clip") s.selection = null;
         }),
 
       moveClip: (clipId, toIndex) =>

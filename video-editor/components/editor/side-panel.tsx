@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Copy, Music, Palette, Scissors, Play, Plus, Sparkles, Square, Type, Upload, Volume2, VolumeX, Wand2 } from "lucide-react";
+import { Copy, MessageCircle, Music, Palette, Scissors, Play, Plus, Sparkles, Square, Type, Upload, Volume2, VolumeX, Wand2 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { useEditor } from "@/stores/editor-store";
 import { usePlayback } from "@/stores/playback-store";
@@ -20,8 +20,10 @@ import { OPEN_SMART_EVENT, SmartTab } from "./smart-tab";
 import { MusicLibrary } from "./music-library";
 import { ClipControls } from "./clip-controls";
 import { BgTab, TricksTab } from "./tricks-tab";
+import { AssistantTab } from "./assistant-tab";
+import { OPEN_TOOL_EVENT, type ToolName } from "@/lib/editor/chat";
 
-export type Tab = "smart" | "text" | "sound" | "style" | "bg" | "tricks" | "ai";
+export type Tab = "assistant" | "smart" | "text" | "sound" | "style" | "bg" | "tricks" | "ai";
 
 /**
  * הפאנל הצדדי. כשנבחר פריט בציר הזמן (טקסט, כתובית, סאונד) מוצג העורך שלו;
@@ -44,9 +46,20 @@ export function SidePanel({ tab: fixedTab, inspect = true }: {
     return () => window.removeEventListener(OPEN_SMART_EVENT, open);
   }, [select]);
 
+  useEffect(() => {
+    const open = (e: Event) => {
+      const map: Partial<Record<ToolName, Tab>> = { background: "bg", tricks: "tricks", music: "sound", text: "text", smart: "smart" };
+      const t = map[(e as CustomEvent<ToolName>).detail];
+      if ((e as CustomEvent<ToolName>).detail === "captions") openCaptionsSheet();
+      else if (t) { setTab(t); select(null); }
+    };
+    window.addEventListener(OPEN_TOOL_EVENT, open);
+    return () => window.removeEventListener(OPEN_TOOL_EVENT, open);
+  }, [select]);
+
   // בחירת קליפ חדש פותחת את לשונית הסגנון (אבל לא נועלת אותה)
   const selectedClipId = selection?.kind === "clip" ? selection.id : null;
-  useEffect(() => { if (selectedClipId) setTab((t) => (t === "ai" || t === "bg" || t === "tricks" ? t : "style")); }, [selectedClipId]);
+  useEffect(() => { if (selectedClipId) setTab((t) => (t === "ai" || t === "bg" || t === "tricks" || t === "assistant" ? t : "style")); }, [selectedClipId]);
 
   if (inspect && selection?.kind === "overlay") return <Shell><OverlayInspector id={selection.id} onClose={() => select(null)} /></Shell>;
   if (inspect && selection?.kind === "audio") return <Shell><AudioInspector id={selection.id} onClose={() => select(null)} /></Shell>;
@@ -54,6 +67,7 @@ export function SidePanel({ tab: fixedTab, inspect = true }: {
   if (inspect && selection?.kind === "caption") return <CaptionPanel id={selection.id} />;
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
+    { id: "assistant", label: "עוזר", icon: <MessageCircle className="size-4" /> },
     { id: "smart", label: "חכם", icon: <Wand2 className="size-4" /> },
     { id: "text", label: "טקסט", icon: <Type className="size-4" /> },
     { id: "sound", label: "סאונד", icon: <Music className="size-4" /> },
@@ -62,6 +76,15 @@ export function SidePanel({ tab: fixedTab, inspect = true }: {
     { id: "tricks", label: "טריקים", icon: <Copy className="size-4" /> },
     ...(aiAvailable ? [{ id: "ai" as Tab, label: "AI", icon: <Sparkles className="size-4" /> }] : []),
   ];
+
+  if (tab === "assistant") {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col md:w-[22rem] md:flex-none md:shrink-0 md:border-s md:border-zinc-800">
+        {!fixedTab && <TabBar tabs={tabs} tab={tab} onTab={setTab} />}
+        <AssistantTab />
+      </div>
+    );
+  }
 
   if (tab === "ai" && aiAvailable) {
     return (

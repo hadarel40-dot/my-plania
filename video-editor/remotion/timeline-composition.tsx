@@ -56,7 +56,8 @@ export function TimelineComposition({ timeline, assets, override }: CompositionP
           : null;
         return (
           <Sequence key={clip.id} from={from} durationInFrames={duration} premountFor={Math.round(fps * 1.5)}>
-            <ClipLayer clip={clip} asset={asset} look={look} duration={duration} fps={fps} mode={mediaMode} Video={VideoTag} intro={intro} />
+            <ClipLayer clip={clip} asset={asset} look={look} duration={duration} fps={fps} mode={mediaMode} Video={VideoTag} intro={intro}
+              backdrop={clip.backdrop ? assets[clip.backdrop] ?? null : null} />
           </Sequence>
         );
       })}

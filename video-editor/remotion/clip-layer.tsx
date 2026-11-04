@@ -1,4 +1,5 @@
 import { AbsoluteFill, Freeze, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import { AlphaVideo } from "./alpha-video";
 import type { Adjust, Clip, ClipEffect, Look, MediaAsset, TransitionType } from "@/lib/editor/types";
 
 export interface ClipLayerProps {
@@ -12,13 +13,15 @@ export interface ClipLayerProps {
   Video: React.ComponentType<Record<string, unknown>>;
   mode: "html5" | "media";
   fps: number;
+  /** כשהאדם בלי רקע: מה מופיע מאחוריו */
+  backdrop?: MediaAsset | null;
 }
 
 /**
  * קליפ אחד בקומפוזיציה, עם כל מה שמשפיע עליו: מהירות, תנועת מצלמה, התאמות צבע,
  * רקע מטושטש, ומעברים. הכל מחושב מהפריים, ולכן זהה בנגן ובייצוא.
  */
-export function ClipLayer({ clip, asset, look, duration, intro, Video, mode, fps }: ClipLayerProps) {
+export function ClipLayer({ clip, asset, look, duration, intro, Video, mode, fps, backdrop }: ClipLayerProps) {
   const frame = useCurrentFrame();
   const { width: W, height: H } = useVideoConfig();
   const speed = clip.speed ?? 1;
@@ -33,8 +36,12 @@ export function ClipLayer({ clip, asset, look, duration, intro, Video, mode, fps
 
   const motion = effectTransform(clip.effect ?? "none", frame, duration, fps);
   const filter = [look.filter !== "none" ? look.filter : "", adjustFilter(clip.adjust), inStyle.filter ?? ""].filter(Boolean).join(" ") || undefined;
-  const box = coverBox(asset, clip, W, H);
-  const blurFill = clip.fill === "blur" && !!asset.width && Math.abs(asset.width / asset.height - W / H) > 0.05;
+  const alpha = !!asset.alphaPacked;
+  // אדם בלי רקע: הוא ממוקם ומוגדל בתוך המסך, ומאחוריו הרקע שנבחר
+  const cut = clip.cutout ?? { x: 0.5, y: 0.5, scale: 1 };
+  const pw = W * cut.scale, ph = H * cut.scale;
+  const box = alpha ? coverBoxFor(asset, pw, ph, clip.focusX ?? 0.5, clip.focusY ?? 0.5, "cover") : coverBox(asset, clip, W, H);
+  const blurFill = !alpha && clip.fill === "blur" && !!asset.width && Math.abs(asset.width / asset.height - W / H) > 0.05;
   const common = {
     src: asset.url,
     trimBefore: Math.round(clip.in * fps),
@@ -44,6 +51,10 @@ export function ClipLayer({ clip, asset, look, duration, intro, Video, mode, fps
 
   return (
     <AbsoluteFill style={{ overflow: "hidden", ...outerStyle(intro, frame) }}>
+      {alpha && backdrop && (
+        <Video src={backdrop.url} volume={0} muted loop style={coverBoxFor(backdrop, W, H, 0.5, 0.5, "cover")}
+          {...(mode === "html5" ? { pauseWhenBuffering: true } : { objectFit: "fill" as const })} />
+      )}
       {blurFill && (
         // הרקע המטושטש מצויר ברבע גודל ואז מוגדל: נראה אותו דבר, אבל חישוב הטשטוש
         // קל פי 16 (בטלפון זה ההבדל בין נגינה חלקה לקטועה)
@@ -52,7 +63,15 @@ export function ClipLayer({ clip, asset, look, duration, intro, Video, mode, fps
         </div>
       )}
       <AbsoluteFill style={{ transform: `${motion} scale(${look.zoom}) scaleX(${look.flip ? -1 : 1}) ${inStyle.transform ?? ""}`, opacity: inStyle.opacity }}>
-        {clip.freeze ? (
+        {alpha ? (
+          <div style={{ position: "absolute", left: cut.x * W - pw / 2, top: cut.y * H - ph / 2, width: pw, height: ph, filter }}>
+            {clip.freeze ? (
+              <Freeze frame={0}><AlphaVideo Video={Video} mode={mode} common={{ ...common, volume: 0, muted: true }} style={box} /></Freeze>
+            ) : (
+              <AlphaVideo Video={Video} mode={mode} common={{ ...common, volume: clip.volume ?? 1 }} style={box} />
+            )}
+          </div>
+        ) : clip.freeze ? (
           // הקפאת תמונה: הפריים הראשון של הקטע נשאר על המסך, בלי סאונד
           <Freeze frame={0}>
             <Video {...common} volume={0} muted style={{ ...(blurFill ? coverBoxFor(asset, W, H, 0.5, 0.5, "contain") : box), filter }} />
@@ -174,6 +193,16 @@ export function VideoLayerView({ layer, asset, Video, mode, fps }: {
   };
   const flip = layer.flip ? "scaleX(-1)" : undefined;
   const full = coverBoxFor(asset, W, H, 0.5, 0.5, "cover");
+
+  if (asset.alphaPacked) {
+    // אדם בלי רקע מעל הסרטון: מרכז ב-x,y, וגודל scale מהמסך (1 = כל המסך)
+    const pw = W * layer.scale, ph = H * layer.scale;
+    return (
+      <div style={{ position: "absolute", left: layer.x * W - pw / 2, top: layer.y * H - ph / 2, width: pw, height: ph, opacity: layer.opacity, transform: flip }}>
+        <AlphaVideo Video={Video} mode={mode} common={common} style={coverBoxFor(asset, pw, ph, 0.5, 0.5, "cover")} />
+      </div>
+    );
+  }
 
   if (layer.layout === "clone-left" || layer.layout === "clone-right") {
     const left = layer.layout === "clone-left";

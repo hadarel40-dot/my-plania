@@ -3,6 +3,7 @@ import { useRef } from "react";
 import { beginGesture, useEditor } from "@/stores/editor-store";
 import { usePlayback } from "@/stores/playback-store";
 import { cn } from "@/lib/utils";
+import { layoutClips } from "@/lib/editor/timeline-utils";
 
 /**
  * שכבת "ידיות" מעל הנגן: לכל טקסט/אימוג'י שמופיע כרגע יש אזור שאפשר לתפוס
@@ -42,6 +43,7 @@ export function OverlayHandles() {
 
   return (
     <div ref={layerRef} className="pointer-events-none absolute inset-0">
+      <CutoutHandle layerRef={layerRef} />
       <LayerHandles layerRef={layerRef} />
       <CaptionHandle layerRef={layerRef} />
       {visible.map((o) => {
@@ -156,7 +158,10 @@ function LayerHandles({ layerRef }: { layerRef: React.RefObject<HTMLDivElement |
       {visible.map((l) => {
         const asset = assets[l.assetId];
         let style: React.CSSProperties;
-        if (l.layout === "pip") {
+        if (asset?.alphaPacked) {
+          // אדם בלי רקע: הקופסה היא חלק מהמסך עצמו (scale מהמסך), באותו יחס
+          style = { left: `${(l.x - l.scale / 2) * 100}%`, top: `${(l.y - l.scale / 2) * 100}%`, width: `${l.scale * 100}%`, height: `${l.scale * 100}%` };
+        } else if (l.layout === "pip") {
           const ratio = l.shape === "circle" ? 1 : asset?.width && asset.height ? asset.height / asset.width : 16 / 9;
           // רוחב החלון ביחס לרוחב המסך, והגובה ביחס לגובה (לפי יחס המסך)
           const wPct = l.scale * 100, hPct = l.scale * ratio * (aw / ah) * 100;
@@ -177,3 +182,43 @@ function LayerHandles({ layerRef }: { layerRef: React.RefObject<HTMLDivElement |
 }
 
 const NO_LAYERS: import("@/lib/editor/types").VideoLayer[] = [];
+
+/**
+ * אדם בלי רקע (בקליפ הראשי): ידית עגולה במרכז שלו לגרירה, וקו מקווקו סביבו.
+ * הידית קטנה בכוונה, כדי שלחיצה על שאר הנגן תמשיך לעבוד.
+ */
+function CutoutHandle({ layerRef }: { layerRef: React.RefObject<HTMLDivElement | null> }) {
+  const t = usePlayback((s) => s.currentTime);
+  const clips = useEditor((s) => s.timeline.clips);
+  const assets = useEditor((s) => s.assets);
+  const hit = layoutClips(clips).find((l) => t >= l.start && t < l.end);
+  const clip = hit?.clip;
+  if (!clip || !assets[clip.assetId]?.alphaPacked) return null;
+  const cut = clip.cutout ?? { x: 0.5, y: 0.5, scale: 1 };
+
+  function onDown(e: React.PointerEvent) {
+    e.stopPropagation();
+    const rect = layerRef.current!.getBoundingClientRect();
+    const finish = beginGesture();
+    const x0 = cut.x, y0 = cut.y, cx = e.clientX, cy = e.clientY, src = clip!.sourceAssetId;
+    const move = (ev: PointerEvent) => {
+      const clamp = (v: number) => Math.max(-0.2, Math.min(1.2, v));
+      const next = { x: +clamp(x0 + (ev.clientX - cx) / rect.width).toFixed(3), y: +clamp(y0 + (ev.clientY - cy) / rect.height).toFixed(3), scale: cut.scale };
+      useEditor.setState((s) => ({ timeline: { ...s.timeline, clips: s.timeline.clips.map((c) => (c.sourceAssetId === src ? { ...c, cutout: next } : c)) } }));
+    };
+    const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up); finish(); };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  }
+
+  return (
+    <>
+      <div className="pointer-events-none absolute rounded-md border border-dashed border-white/40"
+        style={{ left: `${(cut.x - cut.scale / 2) * 100}%`, top: `${(cut.y - cut.scale / 2) * 100}%`, width: `${cut.scale * 100}%`, height: `${cut.scale * 100}%` }} />
+      <div onPointerDown={onDown} title="גרירה להזזת האדם"
+        className="pointer-events-auto absolute grid size-10 -translate-x-1/2 -translate-y-1/2 cursor-move touch-none place-items-center rounded-full border-2 border-white bg-violet-600/80 text-lg text-white shadow-lg"
+        style={{ left: `${Math.min(92, Math.max(8, cut.x * 100))}%`, top: `${Math.min(92, Math.max(8, cut.y * 100))}%` }}>✥</div>
+    </>
+  );
+}

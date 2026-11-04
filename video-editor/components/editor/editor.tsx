@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { AlertTriangle, Check, Copy, Scissors, FileJson, ChevronRight, Clapperboard, Cloud, Download, Film, FilePlus2, GanttChart, Loader2, LogOut, Music, Palette, Pencil, Sparkles, Type, Wand2, X } from "lucide-react";
-import { redo, undo, useEditor, type AiMode } from "@/stores/editor-store";
+import { AlertTriangle, Captions, MessageCircle, Check, Copy, Gauge, Layers, Scissors, Snowflake, Trash2, UserRound, FileJson, ChevronRight, Clapperboard, Cloud, Download, Film, FilePlus2, GanttChart, Loader2, LogOut, Music, Palette, Pencil, Sparkles, Type, Wand2, X } from "lucide-react";
+import { beginGesture, redo, undo, useEditor, type AiMode } from "@/stores/editor-store";
 import { usePlayback } from "@/stores/playback-store";
 import { useUploads } from "@/stores/upload-store";
 import { MediaBin } from "./media-bin";
@@ -10,6 +10,8 @@ import { Preview } from "./preview";
 import { TimelinePanel } from "./timeline";
 import { SidePanel, type Tab } from "./side-panel";
 import { OPEN_SMART_EVENT } from "./smart-tab";
+import { openCaptionsSheet } from "./captions-sheet";
+import { OPEN_TOOL_EVENT, type ToolName } from "@/lib/editor/chat";
 import { ExportDialog } from "./export-dialog";
 import { useProjectBootstrap, type SaveState } from "./use-project-bootstrap";
 import { clearProject } from "@/lib/persistence";
@@ -91,6 +93,19 @@ function PhoneLayout({ top }: { top: React.ReactNode }) {
   const aiAvailable = useEditor((s) => !!s.cloud?.video);
   const uploading = useUploads((s) => s.items.length > 0);
 
+  // העוזר (או כל מקום אחר) יכול לפתוח כלי: הסרת רקע, טריקים, כתוביות...
+  useEffect(() => {
+    const open = (e: Event) => {
+      const tool = (e as CustomEvent<ToolName>).detail;
+      if (tool === "captions") { openCaptionsSheet(); return; }
+      const map: Record<Exclude<ToolName, "captions">, Sheet> = { background: "bg", tricks: "tricks", music: "sound", text: "text", media: "media", smart: "smart" };
+      useEditor.getState().select(null);
+      setSheet(map[tool]);
+    };
+    window.addEventListener(OPEN_TOOL_EVENT, open);
+    return () => window.removeEventListener(OPEN_TOOL_EVENT, open);
+  }, []);
+
   // הכפתור "לערוך אוטומטית" שעל הנגן פותח את לשונית "חכם", שם מופיעות הגרסאות
   useEffect(() => {
     const open = () => setSheet("smart");
@@ -103,17 +118,35 @@ function PhoneLayout({ top }: { top: React.ReactNode }) {
     setSheet((v) => (!editable ? (v === "edit" ? null : v) : v && v !== "media" ? "edit" : v));
   }, [editable]);
 
-  const buttons: { id: Sheet | null; label: string; icon: React.ReactNode }[] = [
-    { id: null, label: "ציר הזמן", icon: <GanttChart className="size-5" /> },
-    ...(editable ? [{ id: "edit" as Sheet, label: "עריכה", icon: <Pencil className="size-5" /> }] : []),
-    { id: "media", label: "מדיה", icon: uploading ? <Loader2 className="size-5 animate-spin text-blue-400" /> : <Film className="size-5" /> },
-    { id: "smart", label: "חכם", icon: <Wand2 className="size-5" /> },
-    { id: "text", label: "טקסט", icon: <Type className="size-5" /> },
-    { id: "sound", label: "סאונד", icon: <Music className="size-5" /> },
-    { id: "style", label: clipSelected ? "עריכת קליפ" : "סגנון", icon: <Palette className="size-5" /> },
-    { id: "bg", label: "הסרת רקע", icon: <Scissors className="size-5" /> },
-    { id: "tricks", label: "טריקים", icon: <Copy className="size-5" /> },
-    ...(aiAvailable ? [{ id: "ai" as Sheet, label: "AI", icon: <Sparkles className="size-5" /> }] : []),
+  const hasCaptions = useEditor((s) => s.timeline.captions.length > 0);
+  const transcribing = useEditor((s) => s.transcribing);
+  const act = (fn: () => void) => () => { const end = beginGesture(); fn(); end(); };
+  const now = () => usePlayback.getState().currentTime;
+  // כמו בקאפקאט: כשקליפ נבחר, הסרגל מתחלף לכלים של הקליפ (וחץ חזרה לכלים הכלליים)
+  const buttons: ToolButton[] = clipSelected ? [
+    { id: "back", label: "חזרה", icon: <ChevronRight className="size-5" />, action: () => { useEditor.getState().select(null); setSheet(null); } },
+    { id: "split", label: "פיצול", icon: <Scissors className="size-5" />, action: act(() => useEditor.getState().splitAt(now())) },
+    { id: "style", sheet: "style", label: "מהירות ומעבר", icon: <Gauge className="size-5" /> },
+    { id: "filters", sheet: "style", label: "פילטרים", icon: <Palette className="size-5" /> },
+    { id: "bg", sheet: "bg", label: "הסרת רקע", icon: <UserRound className="size-5" /> },
+    { id: "tricks", sheet: "tricks", label: "שכבות וטריקים", icon: <Layers className="size-5" /> },
+    { id: "dup", label: "שכפול", icon: <Copy className="size-5" />, action: act(() => { const sel = useEditor.getState().selection; if (sel?.kind === "clip") useEditor.getState().duplicateClip(sel.id); }) },
+    { id: "freeze", label: "הקפאה", icon: <Snowflake className="size-5" />, action: act(() => useEditor.getState().freezeFrame(now())) },
+    { id: "delete", label: "מחיקה", icon: <Trash2 className="size-5" />, action: act(() => useEditor.getState().removeSelected()), tone: "danger" },
+  ] : [
+    { id: "timeline", sheet: null, label: "ציר הזמן", icon: <GanttChart className="size-5" /> },
+    { id: "assistant", sheet: "assistant", label: "עוזר", icon: <MessageCircle className="size-5" />, tone: "brand" },
+    ...(editable ? [{ id: "edit", sheet: "edit" as Sheet, label: "עריכה", icon: <Pencil className="size-5" />, tone: "active" as const }] : []),
+    { id: "media", sheet: "media", label: "מדיה", icon: uploading ? <Loader2 className="size-5 animate-spin text-blue-400" /> : <Film className="size-5" /> },
+    { id: "smart", sheet: "smart", label: "חכם", icon: <Wand2 className="size-5" /> },
+    { id: "text", sheet: "text", label: "טקסט", icon: <Type className="size-5" /> },
+    { id: "captions", label: "כתוביות", icon: transcribing ? <Loader2 className="size-5 animate-spin text-violet-300" /> : <Captions className="size-5" />,
+      action: () => { if (hasCaptions) openCaptionsSheet(); else { setSheet(null); void useEditor.getState().autoTranscribe().catch(() => undefined); } } },
+    { id: "sound", sheet: "sound", label: "סאונד", icon: <Music className="size-5" /> },
+    { id: "style", sheet: "style", label: "סגנון", icon: <Palette className="size-5" /> },
+    { id: "bg", sheet: "bg", label: "הסרת רקע", icon: <UserRound className="size-5" /> },
+    { id: "tricks", sheet: "tricks", label: "שכבות וטריקים", icon: <Layers className="size-5" /> },
+    ...(aiAvailable ? [{ id: "ai", sheet: "ai" as Sheet, label: "AI", icon: <Sparkles className="size-5" /> }] : []),
   ];
 
   return (
@@ -136,19 +169,37 @@ function PhoneLayout({ top }: { top: React.ReactNode }) {
       {/* הסרגל נגלל לצדדים: כל הכלים זמינים, וכל כפתור בגודל נוח ללחיצה */}
       <nav className="relative shrink-0 border-t border-zinc-800/70 bg-zinc-950 pb-[max(env(safe-area-inset-bottom),4px)]">
         <div className="no-scrollbar flex snap-x gap-0.5 overflow-x-auto px-1 pt-1">
-        {buttons.map((b) => (
-          <button key={b.id ?? "timeline"} onClick={(e) => { e.currentTarget.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" }); setSheet((v) => (v === b.id ? null : b.id)); }}
-            className={cn("flex min-w-[4.4rem] flex-none snap-start flex-col items-center gap-0.5 whitespace-nowrap rounded-xl px-1.5 py-1.5 text-[11px] transition",
-              sheet === b.id ? "bg-violet-500/15 text-violet-200" : b.id === "edit" || (b.id === "style" && clipSelected) ? "text-amber-300" : "text-zinc-400")}>
-            {b.icon}{b.label}
-          </button>
-        ))}
+        {buttons.map((b) => {
+          const on = b.sheet !== undefined && sheet === b.sheet && (b.sheet !== "style" || b.id === "style");
+          return (
+            <button key={b.id} onClick={(e) => {
+              e.currentTarget.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" });
+              if (b.action) b.action();
+              else setSheet((v) => (v === b.sheet ? null : b.sheet ?? null));
+            }}
+              className={cn("flex min-w-[4.1rem] flex-none snap-start flex-col items-center gap-0.5 whitespace-nowrap rounded-xl px-1.5 py-1.5 text-[11px] transition active:scale-95",
+                on ? "bg-violet-500/15 text-violet-200" : b.tone === "danger" ? "text-red-300" : b.tone === "active" ? "text-amber-300" : b.tone === "brand" ? "text-fuchsia-300" : clipSelected ? "text-zinc-200" : "text-zinc-400")}>
+              {b.icon}{b.label}
+            </button>
+          );
+        })}
         </div>
         {/* רמז שיש עוד כפתורים בצד */}
         <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-zinc-950 to-transparent" />
       </nav>
     </div>
   );
+}
+
+interface ToolButton {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  /** מגירה שנפתחת (null = ציר הזמן) */
+  sheet?: Sheet | null;
+  /** פעולה מיידית (פיצול, שכפול, מחיקה...) */
+  action?: () => void;
+  tone?: "danger" | "active" | "brand";
 }
 
 const PANEL_KEY = "ai-video-editor:panel-height";

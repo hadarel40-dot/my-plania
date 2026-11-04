@@ -8,7 +8,21 @@ export type NewBackground =
   | { kind: "blur" }
   | { kind: "color"; color: string }
   | { kind: "gradient"; from: string; to: string }
-  | { kind: "image"; url: string };
+  | { kind: "image"; url: string }
+  /** בלי רקע בכלל: האדם שקוף, ואפשר לשים אותו מעל כל סרטון או תמונה */
+  | { kind: "none" };
+
+export interface RemoveBgResult {
+  file: File;
+  /** בלי רקע: הקובץ "כפול" (צבע + מסכה), והמידות האמיתיות */
+  alphaPacked: boolean;
+  width: number;
+  height: number;
+  /** תמונה ממוזערת (האדם על משבצות) */
+  thumbnail: string | null;
+  /** איפה האדם נמצא בתמונה (0..1), כדי למרכז אותו כשהמסך בפורמט אחר */
+  focus: { x: number; y: number } | null;
+}
 
 /** המודל המדויק (מזהה גם שיער, בגדים ועור בנפרד); אם לא נטען, המודל הקטן */
 const MODEL_HQ = "/models/selfie_multiclass_256x256.tflite";
@@ -25,7 +39,8 @@ export async function removeBackground(
   asset: MediaAsset, bg: NewBackground, onProgress: (p: number) => void, onStage?: (s: string) => void,
   /** "best": תמיד המודל המדויק, בכל פריים (איטי יותר במכשירים חלשים) */
   quality: "auto" | "best" = "auto",
-): Promise<File> {
+): Promise<RemoveBgResult> {
+  const packed = bg.kind === "none";
   const started = Date.now();
   const { Input, Output, BlobSource, UrlSource, ALL_FORMATS, VideoSampleSink, EncodedPacketSink, CanvasSource, EncodedAudioPacketSource, BufferTarget, Mp4OutputFormat } = await import("mediabunny");
   const { FilesetResolver, ImageSegmenter } = await import("@mediapipe/tasks-vision");
@@ -101,12 +116,12 @@ export async function removeBackground(
     const track = await input.getPrimaryVideoTrack();
     if (!track) throw new Error("אין וידאו בקובץ");
     const duration = await input.computeDuration();
-    // עד 1080p בצלע הקצרה: האיכות של הסרטון נשמרת
-    const scale = Math.min(1, 1080 / Math.min(track.displayWidth, track.displayHeight));
+    // עד 1080p בצלע הקצרה: האיכות של הסרטון נשמרת. בלי רקע הקובץ כפול ברוחבו, אז עד 720p
+    const scale = Math.min(1, (packed ? 720 : 1080) / Math.min(track.displayWidth, track.displayHeight));
     const W = Math.round((track.displayWidth * scale) / 2) * 2;
     const H = Math.round((track.displayHeight * scale) / 2) * 2;
 
-    const out = new OffscreenCanvas(W, H);
+    const out = new OffscreenCanvas(packed ? W * 2 : W, H);
     const ctx = out.getContext("2d")!;
     const frame = new OffscreenCanvas(W, H);
     const fctx = frame.getContext("2d")!;
@@ -158,7 +173,7 @@ export async function removeBackground(
     };
 
     const output = new Output({ format: new Mp4OutputFormat({ fastStart: "in-memory" }), target: new BufferTarget() });
-    const bitrate = Math.min(10_000_000, Math.round(W * H * 6));
+    const bitrate = Math.min(10_000_000, Math.round(W * H * (packed ? 9 : 6)));
     const videoSource = new CanvasSource(out as unknown as HTMLCanvasElement, { codec: "avc", bitrate, keyFrameInterval: 1 });
     output.addVideoTrack(videoSource);
     // הסאונד המקורי עובר כמו שהוא (בלי קידוד מחדש), אם הוא בפורמט שמתאים ל-MP4
@@ -176,6 +191,8 @@ export async function removeBackground(
 
     const lum = new Float32Array(GW * GH);
     const p = new Float32Array(GW * GH);
+    let thumbnail: string | null = null;
+    let fx = 0, fy = 0, fw = 0;
     let n = 0, segMs = 0, refineMs = 0, encMs = 0;
     for await (const sample of new VideoSampleSink(track).samples()) {
       fctx.globalCompositeOperation = "source-over";
@@ -203,6 +220,13 @@ export async function removeBackground(
       // 2. החלקה בין פריימים, רק במקומות שכמעט לא זזו (אחרת נשארת "רוח רפאים" בתנועה)
       if (prev) for (let i = 0; i < cur.length; i++) { if (Math.abs(cur[i] - prev[i]) < 0.35) cur[i] = cur[i] * 0.65 + prev[i] * 0.35; }
       prev = cur;
+      if (n < 45) {
+        // מרכז האדם (ממוצע משוקלל), מהשניות הראשונות
+        for (let yy = 0; yy < SH; yy += 4) for (let xx = 0; xx < SW; xx += 4) {
+          const v = cur[yy * SW + xx];
+          if (v > 0.5) { fx += v * xx; fy += v * yy; fw += v; }
+        }
+      }
       for (let i = 0; i < cur.length; i++) lowData.data[i * 4 + 3] = Math.round(cur[i] * 255);
       lctx.putImageData(lowData, 0, 0);
       }
@@ -225,6 +249,22 @@ export async function removeBackground(
       }
       gmctx.putImageData(alphaData, 0, 0);
 
+      if (packed) {
+        // בלי רקע: משמאל התמונה כמו שהיא, מימין המסכה בשחור-לבן (הנגן מרכיב אותן לשקיפות)
+        for (let i = 0; i < q.length; i++) {
+          const a = alphaData.data[i * 4 + 3];
+          alphaData.data[i * 4] = a; alphaData.data[i * 4 + 1] = a; alphaData.data[i * 4 + 2] = a; alphaData.data[i * 4 + 3] = 255;
+        }
+        gmctx.putImageData(alphaData, 0, 0);
+        ctx.drawImage(frame, 0, 0);
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(gmask, W, 0, W, H);
+        if (!thumbnail) thumbnail = makeThumb(frame, gmask, W, H);
+        await videoSource.add(ts, dur);
+        onProgress(0.05 + Math.min(0.92, (ts / duration) * 0.92));
+        n++;
+        continue;
+      }
       // 4. הרכבה: רקע חדש, ומעליו האדם חתוך לפי המסכה
       drawBackground();
       fctx.globalCompositeOperation = "destination-in";
@@ -250,7 +290,9 @@ export async function removeBackground(
     const buffer = (output.target as InstanceType<typeof BufferTarget>).buffer!;
     logEvent("remove_bg_done", { ms: Date.now() - started, frames: n, size: buffer.byteLength, bg: bg.kind, audio: !!audio, multiclass, stride, tried, quality, w: W, h: H, segMs: Math.round(segMs / Math.max(1, n)), refineMs: Math.round(refineMs / Math.max(1, n)), encMs: Math.round(encMs / Math.max(1, n)) });
     onProgress(1);
-    return new File([buffer], asset.name.replace(/\.[^.]+$/, "") + " (רקע חדש).mp4", { type: "video/mp4" });
+    const name = asset.name.replace(/\.[^.]+$/, "") + (packed ? " (בלי רקע).mp4" : " (רקע חדש).mp4");
+    return { file: new File([buffer], name, { type: "video/mp4" }), alphaPacked: packed, width: W, height: H, thumbnail,
+      focus: fw > 0 ? { x: +(fx / fw / SW).toFixed(3), y: +(fy / fw / SH).toFixed(3) } : null };
   } catch (e) {
     logEvent("remove_bg_failed", { ms: Date.now() - started, error: errorText(e) });
     throw e;
@@ -258,6 +300,31 @@ export async function removeBackground(
     seg.close();
     input.dispose();
   }
+}
+
+/** תמונה ממוזערת של האדם השקוף, על משבצות אפורות */
+function makeThumb(frame: OffscreenCanvas, mask: OffscreenCanvas, W: number, H: number): string | null {
+  try {
+    const h = 160, w = Math.round((160 * W) / H);
+    const c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    const x = c.getContext("2d")!;
+    for (let yy = 0; yy < h; yy += 10) for (let xx = 0; xx < w; xx += 10) { x.fillStyle = (xx + yy) % 20 ? "#9ca3af" : "#e5e7eb"; x.fillRect(xx, yy, 10, 10); }
+    const p = new OffscreenCanvas(w, h);
+    const pc = p.getContext("2d")!;
+    pc.drawImage(frame, 0, 0, w, h);
+    // המסכה כאן בשחור-לבן: ממירים בהירות לשקיפות
+    const m = new OffscreenCanvas(w, h);
+    const mc = m.getContext("2d", { willReadFrequently: true })!;
+    mc.drawImage(mask, 0, 0, w, h);
+    const d = mc.getImageData(0, 0, w, h);
+    for (let i = 0; i < d.data.length; i += 4) d.data[i + 3] = d.data[i];
+    mc.putImageData(d, 0, 0);
+    pc.globalCompositeOperation = "destination-in";
+    pc.drawImage(m, 0, 0);
+    x.drawImage(p, 0, 0);
+    return c.toDataURL("image/jpeg", 0.75);
+  } catch { return null; }
 }
 
 /** הורדת המודל פעם אחת (עם התקדמות), ושמירה בדפדפן לפעמים הבאות */

@@ -22,21 +22,7 @@ export async function makeShorter(): Promise<string> {
   const { timeline } = useEditor.getState();
   const before = videoEnd(timeline.clips);
   if (isTalking() || timeline.clips.length < 4) {
-    const factor = 1.15;
-    const old = layoutClips(timeline.clips);
-    if (old.some(({ clip }) => (clip.speed ?? 1) * factor > 2)) return "הסרטון כבר מהיר מאוד, אי אפשר לקצר יותר בלי לאבד את הדיבור";
-    useEditor.setState((s) => {
-      const clips = s.timeline.clips.map((c) => ({ ...c, speed: +((c.speed ?? 1) * factor).toFixed(3) }));
-      const next = layoutClips(clips);
-      const mapTime = (t: number) => {
-        const k = old.findIndex((l) => t < l.end);
-        if (k < 0) return t - before + videoEnd(clips);
-        return next[k].start + Math.max(0, t - old[k].start) / factor;
-      };
-      const remap = <X extends { start: number; end: number }>(items: X[]) =>
-        items.map((it) => ({ ...it, start: +mapTime(it.start).toFixed(2), end: +Math.max(mapTime(it.end), mapTime(it.start) + 0.2).toFixed(2) }));
-      return { timeline: { ...s.timeline, clips, captions: remap(s.timeline.captions), overlays: remap(s.timeline.overlays) } };
-    });
+    if (timeline.clips.some((c) => (c.speed ?? 1) * 1.15 > 2) || !scaleSpeed(1.15)) return "הסרטון כבר מהיר מאוד, אי אפשר לקצר יותר בלי לאבד את הדיבור";
   } else {
     // מורידים בערך שליש מהקטעים, בפיזור, ושומרים על הראשון והאחרון
     const ids = timeline.clips.map((c) => c.id);
@@ -55,8 +41,32 @@ export async function makeShorter(): Promise<string> {
   return `קוצר מ-${Math.round(before)} ל-${Math.round(after)} שניות`;
 }
 
+/**
+ * משנה את המהירות של כל הקליפים פי factor, והכתוביות והטקסטים זזים איתם (נשארים על
+ * המילים). מחזיר false אם זה יעבור את המהירות המקסימלית (פי 2)
+ */
+export function scaleSpeed(factor: number): boolean {
+  const { timeline } = useEditor.getState();
+  const before = videoEnd(timeline.clips);
+  const old = layoutClips(timeline.clips);
+  if (old.some(({ clip }) => (clip.speed ?? 1) * factor > 3 || (clip.speed ?? 1) * factor < 0.25)) return false;
+  useEditor.setState((s) => {
+    const clips = s.timeline.clips.map((c) => ({ ...c, speed: +((c.speed ?? 1) * factor).toFixed(3) }));
+    const next = layoutClips(clips);
+    const mapTime = (t: number) => {
+      const k = old.findIndex((l) => t < l.end);
+      if (k < 0) return t - before + videoEnd(clips);
+      return next[k].start + Math.max(0, t - old[k].start) / factor;
+    };
+    const remap = <X extends { start: number; end: number }>(items: X[]) =>
+      items.map((it) => ({ ...it, start: +mapTime(it.start).toFixed(2), end: +Math.max(mapTime(it.end), mapTime(it.start) + 0.2).toFixed(2) }));
+    return { timeline: { ...s.timeline, clips, captions: remap(s.timeline.captions), overlays: remap(s.timeline.overlays) } };
+  });
+  return true;
+}
+
 /** הקריאה לפעולה תמיד בשלוש השניות האחרונות, גם אחרי קיצור */
-function keepEndingAtEnd() {
+export function keepEndingAtEnd() {
   const end = videoEnd(useEditor.getState().timeline.clips);
   useEditor.setState((s) => ({
     timeline: {
@@ -93,13 +103,13 @@ const MOOD_CYCLE: MusicMood[] = ["energetic", "happy", "pop", "chill", "cinemati
 let moodTurn = 0;
 
 /** מוזיקה אחרת: מחליף את השיר בשיר אחר (מהספרייה הגדולה, ואם לא זמינה, מהמובנים) */
-export async function otherMusic(): Promise<string> {
+export async function otherMusic(wanted?: MusicMood): Promise<string> {
   const old = musicClip();
   const oldAsset = old ? useEditor.getState().assets[old.assetId] : null;
   const volume = old?.volume;
   // מסירים את השיר הקודם
   if (old) useEditor.setState((s) => ({ timeline: { ...s.timeline, audio: s.timeline.audio.filter((a) => a.id !== old.id) } }));
-  const mood = MOOD_CYCLE[moodTurn++ % MOOD_CYCLE.length];
+  const mood = wanted ?? MOOD_CYCLE[moodTurn++ % MOOD_CYCLE.length];
   let name = "";
   try {
     const tracks = await searchLibrary(MUSIC_MOODS[mood], { timeoutMs: 4000 });
@@ -182,7 +192,7 @@ export function setAnimationLevel(level: AnimationLevel) {
 export const hasMoments = () => !!useEditor.getState().timeline.moments?.length;
 
 /** בלי מוזיקה: מוריד את השיר ומחזיר את הסאונד המקורי של הסרטונים. ועם: מוסיף שיר */
-export async function toggleMusic(): Promise<string> {
+export async function toggleMusic(mood?: MusicMood): Promise<string> {
   const music = musicClip();
   const talking = isTalking();
   if (music) {
@@ -195,7 +205,7 @@ export async function toggleMusic(): Promise<string> {
     }));
     return "המוזיקה הוסרה, והסאונד המקורי חזר. אפשר להוסיף מוזיקה אחר כך, גם באינסטגרם";
   }
-  const msg = await otherMusic();
+  const msg = await otherMusic(mood);
   // בסרטון אווירה השיר מחליף את הסאונד המקורי; בדיבור הדיבור נשאר והשיר שקט מתחתיו
   const added = musicClip();
   if (added && talking) useEditor.getState().updateAudioClip(added.id, { volume: 0.15 });

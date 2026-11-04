@@ -50,6 +50,7 @@ export function BgTab() {
       </div>
       <Target clip={clip} selected={selected} index={index} />
       <BgFor clip={clip} />
+      <Behind clip={clip} />
     </div>
   );
 }
@@ -58,7 +59,11 @@ function BgFor({ clip }: { clip: Clip }) {
   return (
     <RemoveBgPanel sourceId={clip.sourceAssetId} currentId={clip.assetId}
       // הרקע מתחלף בכל הקליפים מאותו סרטון (למשל אחרי חיתוך שתיקות)
-      onApply={(newId) => useEditor.setState((s) => ({ timeline: { ...s.timeline, clips: s.timeline.clips.map((c) => (c.sourceAssetId === clip.sourceAssetId ? { ...c, assetId: newId, activeVariantId: null } : c)) } }))}
+      onApply={(newId, transparent, focus) => patchSameSource(clip, () => ({
+        assetId: newId, activeVariantId: null,
+        // בלי רקע: האדם במרכז המסגרת, גם כשהסרטון צולם לרוחב
+        ...(transparent && focus ? { focusX: focus.x, focusY: Math.min(0.5, focus.y) } : {}),
+      }))}
       onRestore={() => useEditor.setState((s) => ({ timeline: { ...s.timeline, clips: s.timeline.clips.map((c) => (c.sourceAssetId === clip.sourceAssetId ? { ...c, assetId: c.sourceAssetId } : c)) } }))} />
   );
 }
@@ -131,7 +136,7 @@ export function TricksPanel({ clip, withBg = true }: { clip: Clip; withBg?: bool
           <p className="text-xs text-zinc-400">צריך להעלות עוד סרטון (בלשונית &quot;מדיה&quot;) בשביל תאומים, מסך מפוצל או חלון.</p>
         )}
       </div>
-      {withBg && <BgFor clip={clip} />}
+      {withBg && <><BgFor clip={clip} /><Behind clip={clip} /></>}
     </div>
   );
 }
@@ -144,5 +149,83 @@ function Card({ icon, title, text, onClick }: { icon: string; title: string; tex
       <span className="text-sm font-semibold text-zinc-100">{title}</span>
       <span className="text-[11px] leading-snug text-zinc-400">{text}</span>
     </button>
+  );
+}
+
+/** כל הקליפים מאותו סרטון (למשל אחרי חיתוך שתיקות) מקבלים את אותו שינוי */
+function patchSameSource(clip: Clip, patch: (c: Clip) => Partial<Clip>) {
+  useEditor.setState((s) => ({ timeline: { ...s.timeline, clips: s.timeline.clips.map((c) => (c.sourceAssetId === clip.sourceAssetId ? { ...c, ...patch(c) } : c)) } }));
+}
+
+/** אדם בלי רקע: מה מופיע מאחוריו, ואיפה הוא עומד */
+function Behind({ clip }: { clip: Clip }) {
+  const asset = useEditor((s) => s.assets[clip.assetId]);
+  const assets = useEditor((s) => s.assets);
+  const aspect = useEditor((s) => s.timeline.aspect);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  if (!asset?.alphaPacked) return null;
+  const options = Object.values(assets).filter((a) => a.kind !== "audio" && !a.alphaPacked && a.id !== clip.sourceAssetId);
+  const cut = clip.cutout ?? { x: 0.5, y: 0.5, scale: 1 };
+  const setBackdrop = (id: string | undefined) => patchSameSource(clip, () => ({ backdrop: id }));
+  const move = (dx: number, dy: number, ds: number) => patchSameSource(clip, (c) => {
+    const cur = c.cutout ?? { x: 0.5, y: 0.5, scale: 1 };
+    return { cutout: { x: +Math.min(1.2, Math.max(-0.2, cur.x + dx)).toFixed(3), y: +Math.min(1.2, Math.max(-0.2, cur.y + dy)).toFixed(3), scale: +Math.min(2, Math.max(0.2, cur.scale + ds)).toFixed(2) } };
+  });
+
+  async function upload(file: File) {
+    setError(null);
+    try {
+      const { importFile } = await import("@/lib/media/import");
+      let video = file;
+      if (file.type.startsWith("image/") || /\.(jpe?g|png|heic|webp)$/i.test(file.name)) {
+        setBusy("מכין את התמונה…");
+        const { imageToVideo } = await import("@/lib/video/still-video");
+        video = await imageToVideo(file, aspect);
+      }
+      setBusy("מעלה…");
+      const done = await importFile(video);
+      useEditor.getState().addAsset({ ...done, name: file.name });
+      setBackdrop(done.id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "ההעלאה נכשלה");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <div className="space-y-3 rounded-xl border border-violet-500/40 bg-violet-500/5 p-3">
+      <p className="text-sm font-semibold">🖼️ מה יופיע מאחורי האדם?</p>
+      <div className="grid grid-cols-4 gap-1.5">
+        <button onClick={() => setBackdrop(undefined)} className={cn("flex aspect-[3/4] flex-col items-center justify-end rounded-lg border bg-black p-1 text-[10px]", !clip.backdrop ? "border-violet-400 text-white" : "border-zinc-700 text-zinc-400")}>שחור</button>
+        {options.map((a) => (
+          <button key={a.id} onClick={() => setBackdrop(a.id)} title={a.name}
+            className={cn("flex aspect-[3/4] flex-col items-center justify-end overflow-hidden rounded-lg border bg-zinc-800 bg-cover bg-center p-1 text-[10px]", clip.backdrop === a.id ? "border-violet-400 ring-2 ring-violet-400" : "border-zinc-700")}
+            style={a.thumbnailUrl ? { backgroundImage: `url(${a.thumbnailUrl})` } : undefined}>
+            <span className="max-w-full truncate rounded bg-black/60 px-1">{a.name.replace(/\.[^.]+$/, "")}</span>
+          </button>
+        ))}
+        <label className="flex aspect-[3/4] cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-zinc-500 text-center text-[10px] text-zinc-300">
+          <span className="text-xl">📷</span>תמונה או סרטון מהגלריה
+          <input type="file" accept="image/*,video/*" className="sr-only" disabled={!!busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void upload(f); }} />
+        </label>
+      </div>
+      {busy && <p className="text-xs text-zinc-300">⏳ {busy}</p>}
+      {error && <p className="text-xs text-red-300">{error}</p>}
+
+      <div className="space-y-1.5">
+        <p className="text-xs text-zinc-400">איפה האדם עומד (אפשר גם לגרור אותו בנגן)</p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {([["→", 0.05, 0, 0], ["←", -0.05, 0, 0], ["↑", 0, -0.05, 0], ["↓", 0, 0.05, 0]] as const).map(([l, dx, dy, ds]) => (
+            <button key={l} onClick={() => move(dx, dy, ds)} className="grid size-9 place-items-center rounded-lg border border-zinc-700 text-base hover:border-violet-400">{l}</button>
+          ))}
+          <button onClick={() => move(0, 0, -0.1)} className="h-9 rounded-lg border border-zinc-700 px-3 text-sm hover:border-violet-400">קטן יותר</button>
+          <button onClick={() => move(0, 0, 0.1)} className="h-9 rounded-lg border border-zinc-700 px-3 text-sm hover:border-violet-400">גדול יותר</button>
+          <button onClick={() => patchSameSource(clip, () => ({ cutout: undefined }))} className="h-9 rounded-lg px-2 text-xs text-zinc-400 hover:text-white">איפוס</button>
+        </div>
+        <p className="text-[11px] text-zinc-500" dir="rtl">גודל: {Math.round(cut.scale * 100)}%</p>
+      </div>
+    </div>
   );
 }
