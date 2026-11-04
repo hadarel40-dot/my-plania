@@ -1,11 +1,11 @@
-import { Captions, Clapperboard, Film, KeyRound, LogOut, Sparkles } from "lucide-react";
+import { Captions, Clapperboard, Film, KeyRound, LogOut, ShieldCheck, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { createProject, deleteProject } from "@/app/actions";
 import type { ProjectMeta } from "@/lib/editor/project-meta";
 import { CreateButton } from "./create-button";
 import { DeleteButton } from "./delete-button";
 import { PasswordCard } from "./password-card";
-import { InviteButton } from "./invite-button";
+
 
 interface Row { id: string; title: string; updated_at: string; meta: Partial<ProjectMeta> | null }
 
@@ -26,8 +26,9 @@ function updatedLabel(iso: string) {
 const formatDuration = (sec: number) =>
   `${Math.floor(sec / 60)}:${Math.floor(sec % 60).toString().padStart(2, "0")}`;
 
-export function ProjectList({ email, projects, error, showPassword, hasPassword }: {
+export function ProjectList({ email, projects, error, showPassword, hasPassword, admin }: {
   email: string; projects: Row[]; error: string | null; showPassword: boolean; hasPassword: boolean;
+  admin: { pending: number } | null;
 }) {
   return (
     <div className="h-screen overflow-y-auto bg-zinc-950 text-zinc-100">
@@ -41,7 +42,12 @@ export function ProjectList({ email, projects, error, showPassword, hasPassword 
             className="rounded-md p-1.5 hover:bg-zinc-800 hover:text-white">
             <KeyRound className="size-4" />
           </Link>
-          <InviteButton />
+          {admin && (
+            <Link href="/admin" title="ניהול" className="relative flex items-center gap-1 rounded-full border border-zinc-700 px-2.5 py-1 text-zinc-300 hover:border-violet-500 hover:text-white">
+              <ShieldCheck className="size-3.5" /> ניהול
+              {admin.pending > 0 && <span className="absolute -end-1.5 -top-1.5 grid size-4 place-items-center rounded-full bg-amber-400 text-[10px] font-bold text-zinc-950">{admin.pending}</span>}
+            </Link>
+          )}
           <button title="התנתקות" aria-label="התנתקות" className="rounded-md p-1.5 hover:bg-zinc-800 hover:text-white">
             <LogOut className="size-4" />
           </button>

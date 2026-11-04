@@ -22,6 +22,13 @@ export default function LoginPage() {
     e.preventDefault();
     setState("sending");
     const { error } = await getSupabaseBrowser().auth.signInWithPassword({ email, password });
+    if (error && /banned/i.test(error.message)) {
+      // חשבון שעוד לא אושר (או שהושהה) נראה כ"חסום": מסבירים מה קורה
+      const { data } = await getSupabaseBrowser().rpc("join_status", { p_email: email });
+      setError(data === "pending" ? "הבקשה להצטרפות עוד ממתינה לאישור. אחרי האישור אפשר להיכנס." : "החשבון הזה הושהה. אפשר לפנות למנהלת העורך.");
+      setState("error");
+      return;
+    }
     if (error) {
       setError(networkError(error)
         ? "אין חיבור לשרת ההתחברות. כדאי לבדוק את החיבור לאינטרנט ולנסות שוב."

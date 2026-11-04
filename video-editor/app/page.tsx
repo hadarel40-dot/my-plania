@@ -20,9 +20,14 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ p
 
   // מי שעוד לא בחר סיסמה רואה את בחירת הסיסמה, כדי שבפעם הבאה לא יצטרך קישור מהמייל
   const hasPassword = user.user_metadata?.has_password === true;
+  // המנהלת רואה כפתור ניהול, עם מספר הבקשות שממתינות לאישור
+  const { data: isAdmin } = await supabase.rpc("is_admin");
+  const pending = isAdmin
+    ? (await supabase.from("join_requests").select("id", { count: "exact", head: true }).eq("status", "pending")).count ?? 0
+    : 0;
   const showPassword = !hasPassword || (await searchParams).password === "1";
   return (
     <ProjectList email={user.email ?? ""} projects={projects ?? []} error={error?.message ?? null}
-      showPassword={showPassword} hasPassword={hasPassword} />
+      showPassword={showPassword} hasPassword={hasPassword} admin={isAdmin ? { pending } : null} />
   );
 }

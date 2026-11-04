@@ -10,7 +10,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [again, setAgain] = useState("");
-  const [state, setState] = useState<"idle" | "saving" | "error">("idle");
+  const [state, setState] = useState<"idle" | "saving" | "error" | "sent">("idle");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -23,17 +23,16 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
     if (password !== again) { setError("שתי הסיסמאות לא זהות"); setState("error"); return; }
     setState("saving");
     const supabase = getSupabaseBrowser();
-    const { data, error } = await supabase.rpc("redeem_invite", { p_token: token, p_email: email, p_password: password });
+    const { data, error } = await supabase.rpc("request_join", { p_token: token, p_email: email, p_password: password });
     const messages: Record<string, string> = {
       exists: "כבר יש חשבון עם המייל הזה. אפשר להיכנס בעמוד הכניסה.",
-      invalid: "ההזמנה כבר נוצלה או שפג תוקפה. אפשר לבקש קישור חדש.",
+      pending: "כבר נשלחה בקשה מהמייל הזה, והיא ממתינה לאישור.",
+      invalid: "הקישור הזה כבר לא פעיל. אפשר לבקש קישור חדש.",
       bad_email: "המייל לא נראה תקין",
       short_password: "הסיסמה צריכה להיות לפחות 8 תווים",
     };
     if (error || data !== "ok") { setError(messages[data as string] ?? "משהו השתבש, נסו שוב"); setState("error"); return; }
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    if (signInError) { location.href = "/login"; return; }
-    location.href = "/";
+    setState("sent");
   }
 
   return (
@@ -46,12 +45,19 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
         {valid === null && <p className="flex items-center gap-2 text-sm text-zinc-400"><Loader2 className="size-4 animate-spin" /> בודק את ההזמנה…</p>}
         {valid === false && (
           <p className="text-sm leading-relaxed text-zinc-300">
-            ההזמנה כבר נוצלה או שפג תוקפה. כבר נרשמת? <a href="/login" className="text-violet-300 underline">לכניסה</a>
+            הקישור הזה כבר לא פעיל. כבר יש חשבון? <a href="/login" className="text-violet-300 underline">לכניסה</a>
           </p>
         )}
-        {valid && (
+        {valid && state === "sent" && (
+          <div className="space-y-2 text-sm leading-relaxed text-zinc-300">
+            <p className="text-base font-medium text-white">הבקשה נשלחה 💜</p>
+            <p>ברגע שהבקשה תאושר, אפשר יהיה להיכנס עם המייל והסיסמה שבחרת.</p>
+            <a href="/login" className="inline-block text-violet-300 underline">לעמוד הכניסה</a>
+          </div>
+        )}
+        {valid && state !== "sent" && (
           <form onSubmit={submit} className="space-y-3 text-sm">
-            <p className="text-zinc-400">בוחרים מייל וסיסמה, ומקבלים אזור אישי עם פרויקטים משלך.</p>
+            <p className="text-zinc-400">בוחרים מייל וסיסמה ושולחים בקשה. אחרי האישור מקבלים אזור אישי עם פרויקטים משלך.</p>
             <Field label="מייל" type="email" value={email} onChange={setEmail} autoComplete="username" />
             <Field label="סיסמה (לפחות 8 תווים)" type="password" value={password} onChange={setPassword} autoComplete="new-password" />
             <Field label="שוב את הסיסמה" type="password" value={again} onChange={setAgain} autoComplete="new-password" />
@@ -59,7 +65,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
             <button disabled={state === "saving"}
               className="flex w-full items-center justify-center gap-2 rounded-md bg-violet-600 py-2.5 font-medium hover:bg-violet-500 disabled:opacity-50">
               {state === "saving" ? <Loader2 className="size-4 animate-spin" /> : <UserPlus className="size-4" />}
-              הרשמה וכניסה
+              שליחת בקשה להצטרפות
             </button>
           </form>
         )}
