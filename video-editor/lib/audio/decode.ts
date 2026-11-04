@@ -1,6 +1,7 @@
 "use client";
 import type { MediaAsset } from "@/lib/editor/types";
 import { logEvent } from "@/lib/telemetry";
+import { usePreviewProxies } from "@/lib/media/preview-proxy";
 
 /** קצב הדגימה של כל ניתוחי הסאונד (כמו ש-Whisper מצפה לקבל) */
 export const ANALYSIS_RATE = 16000;
@@ -15,15 +16,75 @@ const cache = new Map<string, Promise<Float32Array>>();
 export function decodeAssetAudio(asset: Pick<MediaAsset, "id" | "url">): Promise<Float32Array> {
   let pending = cache.get(asset.id);
   if (!pending) {
-    // שומר: בטלפון פענוח לפעמים נתקע בלי שגיאה. אחרי 40 שניות ממשיכים בלי הסאונד של הקובץ
+    // שומר: בטלפון פענוח לפעמים נתקע בלי שגיאה. אחרי 90 שניות ממשיכים בלי הסאונד של הקובץ
     pending = Promise.race([
-      decode(asset.url),
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("קריאת הסאונד לקחה יותר מדי זמן")), 40_000)),
+      decodeFast(asset),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("קריאת הסאונד לקחה יותר מדי זמן")), 90_000)),
     ]);
     pending.catch(() => cache.delete(asset.id));
     cache.set(asset.id, pending);
   }
   return pending;
+}
+
+/**
+ * קריאת הסאונד בדרך המהירה ביותר שיש: קודם מהעותק הקטן של התצוגה המקדימה (כמה MB במקום
+ * עשרות), אחר כך רק פס הקול מתוך הקובץ (בלי לטעון את כל הווידאו לזיכרון; בסרטון ארוך
+ * מהאייפון זה ההבדל בין שניות לדקה), ורק בסוף בדרך הישנה.
+ */
+async function decodeFast(asset: Pick<MediaAsset, "id" | "url">): Promise<Float32Array> {
+  const started = Date.now();
+  const proxy = usePreviewProxies.getState().urls[asset.id];
+  if (proxy) {
+    try {
+      const out = await decode(proxy);
+      logEvent("audio_decoded", { via: "proxy", ms: Date.now() - started });
+      return out;
+    } catch { /* ננסה בדרך הבאה */ }
+  }
+  try {
+    const out = await decodeAudioTrack(asset.url);
+    logEvent("audio_decoded", { via: "track", ms: Date.now() - started });
+    return out;
+  } catch (e) {
+    logEvent("audio_track_decode_failed", { error: e instanceof Error ? e.message : String(e) });
+  }
+  return decode(asset.url);
+}
+
+/** רק פס הקול, בעזרת mediabunny: נקרא חתיכה אחרי חתיכה, מומר למונו ול-16kHz */
+async function decodeAudioTrack(url: string): Promise<Float32Array> {
+  const { Input, BlobSource, UrlSource, ALL_FORMATS, AudioBufferSink } = await import("mediabunny");
+  const source = url.startsWith("blob:") ? new BlobSource(await (await fetch(url)).blob()) : new UrlSource(url);
+  const input = new Input({ source, formats: ALL_FORMATS });
+  try {
+    // באייפון יש לפעמים כמה פסי קול: לוקחים את הראשון שאפשר לפענח
+    let track = null;
+    for (const t of await input.getAudioTracks()) if (await t.canDecode()) { track = t; break; }
+    if (!track) throw new Error("אין פס קול שאפשר לפענח");
+    const duration = await input.computeDuration();
+    const rate = track.sampleRate;
+    const mono = new Float32Array(Math.ceil(duration * rate) + rate);
+    for await (const { buffer, timestamp } of new AudioBufferSink(track).buffers()) {
+      const offset = Math.max(0, Math.round(timestamp * rate));
+      const chans = buffer.numberOfChannels;
+      for (let c = 0; c < chans; c++) {
+        const data = buffer.getChannelData(c);
+        for (let i = 0; i < data.length && offset + i < mono.length; i++) mono[offset + i] += data[i] / chans;
+      }
+    }
+    if (rate === ANALYSIS_RATE) return mono;
+    const off = new OfflineAudioContext(1, Math.ceil(mono.length * ANALYSIS_RATE / rate), ANALYSIS_RATE);
+    const buf = off.createBuffer(1, mono.length, rate);
+    buf.copyToChannel(mono, 0);
+    const src = off.createBufferSource();
+    src.buffer = buf;
+    src.connect(off.destination);
+    src.start();
+    return (await off.startRendering()).getChannelData(0);
+  } finally {
+    input.dispose();
+  }
 }
 
 async function decode(url: string): Promise<Float32Array> {

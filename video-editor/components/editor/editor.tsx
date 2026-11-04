@@ -70,6 +70,16 @@ type Sheet = "edit" | "media" | Exclude<Tab, "ai"> | "ai";
  */
 function PhoneLayout({ top }: { top: React.ReactNode }) {
   const [sheet, setSheet] = useState<Sheet | null>(null);
+  // המגירות שכבר נפתחו (נשארות בנויות). "עריכה" תלויה בפריט הנבחר, ולכן נבנית מחדש בכל פתיחה
+  const [visited, setVisited] = useState<Set<Sheet>>(() => new Set());
+  useEffect(() => {
+    if (!sheet) return;
+    setVisited((v) => {
+      const next = new Set([...v].filter((x) => x !== "edit" || sheet === "edit"));
+      next.add(sheet);
+      return next.size === v.size && [...next].every((x) => v.has(x)) ? v : next;
+    });
+  }, [sheet]);
   // גובה אזור העריכה (חלק מגובה המסך). נשמר לפעם הבאה
   const [panel, setPanel] = useState(() => {
     try { const v = Number(localStorage.getItem(PANEL_KEY)); return v >= PANEL_MIN && v <= PANEL_MAX ? v : 0.42; } catch { return 0.42; }
@@ -113,15 +123,15 @@ function PhoneLayout({ top }: { top: React.ReactNode }) {
       </main>
       <ResizeHandle value={panel} onChange={setPanel} />
       <div className="flex shrink-0 flex-col overflow-hidden" style={{ height: `${panel * 100}dvh` }}>
-        {sheet ? (
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-zinc-900">
-            {sheet === "media" ? <MediaBin /> : <SidePanel tab={sheet === "edit" ? "text" : sheet} inspect={sheet === "edit"} />}
+        {/* מגירות שכבר נפתחו נשארות מוכנות ברקע (מוסתרות): מעבר ביניהן מיידי, בלי לבנות מחדש */}
+        <div className={cn("min-h-0 flex-1 flex-col", sheet ? "hidden" : "flex")}><TimelinePanel fill /></div>
+        {[...(sheet && !visited.has(sheet) ? new Set([...visited, sheet]) : visited)].map((id) => (
+          <div key={id} className={cn("min-h-0 flex-1 flex-col overflow-hidden bg-zinc-900", sheet === id ? "flex" : "hidden")}>
+            {id === "media" ? <MediaBin /> : <SidePanel tab={id === "edit" ? "text" : id} inspect={id === "edit"} />}
           </div>
-        ) : (
-          <TimelinePanel fill />
-        )}
+        ))}
       </div>
-      <nav className="flex shrink-0 gap-0.5 border-t border-zinc-800/70 bg-zinc-950/85 px-1 pt-1 pb-[max(env(safe-area-inset-bottom),4px)] backdrop-blur-xl">
+      <nav className="flex shrink-0 gap-0.5 border-t border-zinc-800/70 bg-zinc-950 px-1 pt-1 pb-[max(env(safe-area-inset-bottom),4px)]">
         {buttons.map((b) => (
           <button key={b.id ?? "timeline"} onClick={() => setSheet((v) => (v === b.id ? null : b.id))}
             className={cn("flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] transition",
@@ -198,7 +208,7 @@ function TopBar({ saveState, cloudSave, account }: {
   }
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-2 border-b border-zinc-800/70 bg-zinc-950/60 px-2 backdrop-blur-xl sm:gap-3 sm:px-4">
+    <header className="flex h-12 shrink-0 items-center gap-2 border-b border-zinc-800/70 bg-zinc-950 px-2 sm:gap-3 sm:px-4">
       {account ? (
         <Link href="/" title="הפרויקטים שלי" className="flex items-center gap-1 rounded px-1 py-0.5 text-zinc-400 hover:bg-zinc-900 hover:text-white">
           <ChevronRight className="size-4" /><Clapperboard className="size-5 text-violet-400" />

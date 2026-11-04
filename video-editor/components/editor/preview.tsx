@@ -215,7 +215,7 @@ function ActivityBar() {
       : picking ? "מחכה לסרטונים מהגלריה…" : null;
   if (!text || (!hasClips && !busy)) return null;
   return (
-    <div dir="rtl" className="pointer-events-none absolute inset-x-1.5 top-1.5 z-10 overflow-hidden rounded-xl bg-black/80 shadow-lg backdrop-blur">
+    <div dir="rtl" className="pointer-events-none absolute inset-x-1.5 top-1.5 z-10 overflow-hidden rounded-xl bg-black/80 shadow-lg">
       <div className="flex items-start gap-1.5 px-2 py-1.5 text-[11px] font-medium">
         <Loader2 className="mt-px size-3.5 shrink-0 animate-spin text-fuchsia-400" />
         <span className="min-w-0 leading-snug">{busy ? `✨ ${text}` : text}</span>
@@ -257,7 +257,7 @@ function AutoEditSuggestion() {
     void runAutoEdit(genre);
   };
   return (
-    <div dir="rtl" className="absolute inset-x-1.5 bottom-1.5 max-h-[calc(100%-12px)] overflow-y-auto rounded-xl bg-black/80 p-2 shadow-2xl backdrop-blur">
+    <div dir="rtl" className="absolute inset-x-1.5 bottom-1.5 max-h-[calc(100%-12px)] overflow-y-auto rounded-xl bg-black/80 p-2 shadow-2xl">
       <div className="mb-1 flex items-center justify-between">
         <p className="flex items-center gap-1 whitespace-nowrap text-xs font-semibold"><Sparkles className="size-3.5 text-fuchsia-400" /> מה הסרטון?</p>
         <button onClick={() => setDismissed(true)} aria-label="לא עכשיו" className="grid size-6 place-items-center rounded-full text-zinc-400 hover:bg-white/10">

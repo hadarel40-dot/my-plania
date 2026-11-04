@@ -173,7 +173,8 @@ function CaptionView({ caption }: { caption: Caption }) {
       return (
         <div style={{ ...box, fontSize: 48 * k, fontWeight: 500, color: plain, textShadow: "0 2px 8px rgba(0,0,0,.8)" }}>
           <span style={{ background: "rgba(0,0,0,.45)", padding: `${6 * k}px ${16 * k}px`, borderRadius: 8 * k }}>
-            {caption.text}
+            {/* המילה הנאמרת בצבע ההדגשה (כשבוחרים צבע הדגשה שאינו לבן) */}
+            {words.map((w, i) => <span key={i} style={{ color: i === active && caption.accent && caption.accent !== "#ffffff" ? accent : undefined }}>{w.word} </span>)}
           </span>
         </div>
       );
@@ -236,7 +237,7 @@ function CaptionView({ caption }: { caption: Caption }) {
       const p = Math.min(1, frame / (fps * 0.12));
       return (
         <div style={{ ...box, fontSize: 72 * k, fontWeight: 900, color: plain, ...stroke(4), transform: `translateY(-50%) scale(${0.85 + 0.15 * p})`, opacity: p }}>
-          {wrap(caption.text)}
+          {wrap(words.map((w, i) => <span key={i} style={{ color: i === active ? accent : plain }}>{w.word} </span>))}
         </div>
       );
     }

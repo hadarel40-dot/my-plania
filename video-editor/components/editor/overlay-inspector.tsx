@@ -150,6 +150,12 @@ function Swatches({ value, options, onChange }: { value: string | null; options:
           className={cn("size-7 rounded-full border-2", value === c ? "border-violet-400" : "border-zinc-700")}
           style={{ background: c ?? "repeating-linear-gradient(45deg,#27272a 0 4px,#3f3f46 4px 8px)" }} />
       ))}
+      {/* כל צבע אחר */}
+      <label className="relative grid size-7 cursor-pointer place-items-center rounded-full border-2 border-dashed border-zinc-500 text-xs text-zinc-400" title="צבע אחר">
+        +
+        <input type="color" value={value && value.startsWith("#") && value.length === 7 ? value : "#ffffff"} onChange={(e) => onChange(e.target.value)}
+          className="absolute inset-0 cursor-pointer opacity-0" />
+      </label>
     </div>
   );
 }

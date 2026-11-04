@@ -15,7 +15,8 @@ export async function segmentsToCaptions(
   const captions: Caption[] = [];
   for (const { clip, start } of layoutClips(timeline.clips)) {
     const asset = assets[clip.sourceAssetId];
-    if (!asset || clip.volume === 0) continue;
+    // גם קליפ שהסאונד שלו מושתק (למשל כשיש מוזיקה) מקבל כתוביות: הכתוביות הן לכל הסרטון
+    if (!asset) continue;
     const speed = clip.speed ?? 1;
     for (const seg of await segmentsFor(asset)) {
       const s = Math.max(seg.start, clip.in);

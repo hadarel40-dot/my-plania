@@ -4,7 +4,7 @@ import { ListChecks, Type } from "lucide-react";
 import { rememberStyle } from "@/lib/editor/my-style";
 import { beginGesture, useEditor } from "@/stores/editor-store";
 import type { Caption, CaptionPreset, CaptionStyle } from "@/lib/editor/types";
-import { cn } from "@/lib/utils";
+import { afterPaint, cn } from "@/lib/utils";
 import { FONTS, fontFamily } from "@/lib/editor/fonts";
 import { CAPTION_COLORS, CAPTION_TEMPLATES, type CaptionTemplate } from "@/lib/editor/caption-templates";
 import { rechunk, replaceEverywhere, singleWordChange } from "@/lib/editor/caption-edit";
@@ -21,6 +21,10 @@ const PRESETS: { id: CaptionPreset; label: string }[] = [
 
 /** כל שינוי סגנון חל על כל הכתוביות יחד, ונזכר ב"הסגנון שלי" */
 export function styleAllCaptions(patch: Partial<CaptionStyle>) {
+  afterPaint(() => styleAllNow(patch));
+}
+
+function styleAllNow(patch: Partial<CaptionStyle>) {
   const end = beginGesture();
   useEditor.getState().styleAllCaptions(patch);
   end();
@@ -64,6 +68,7 @@ export function CaptionInspector({ caption }: { caption: Caption }) {
 
         <p className="text-[11px] text-zinc-500">מכאן והלאה: השינויים חלים על כל הכתוביות יחד.</p>
         <CaptionTemplates current={caption} />
+        <CaptionColors color={caption.color} accent={caption.accent} />
 
         <Group title="אנימציה">
           <div className="grid grid-cols-3 gap-1.5">
@@ -92,12 +97,6 @@ export function CaptionInspector({ caption }: { caption: Caption }) {
             onPointerUp={() => styleAllCaptions({})} className="w-full accent-violet-500" />
         </Group>
 
-        <Group title="צבע הטקסט">
-          <Swatches value={caption.color ?? "#ffffff"} onPick={(c) => styleAllCaptions({ color: c })} />
-        </Group>
-        <Group title="צבע ההדגשה (המילה שנאמרת)">
-          <Swatches value={caption.accent ?? "#facc15"} onPick={(c) => styleAllCaptions({ accent: c })} />
-        </Group>
 
         <div className="grid grid-cols-2 gap-3">
           <Group title="קו מתאר">
@@ -139,6 +138,20 @@ export function CaptionInspector({ caption }: { caption: Caption }) {
         </div>
       </div>
     </aside>
+  );
+}
+
+/** צבע הטקסט וצבע ההדגשה (המילה שנאמרת), לכל הכתוביות */
+export function CaptionColors({ color, accent }: { color?: string; accent?: string }) {
+  return (
+    <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-900/50 p-3">
+      <Group title="🎨 צבע הטקסט">
+        <Swatches value={color ?? "#ffffff"} onPick={(c) => styleAllCaptions({ color: c })} />
+      </Group>
+      <Group title="✨ צבע ההדגשה (המילה שנאמרת)">
+        <Swatches value={accent ?? "#facc15"} onPick={(c) => styleAllCaptions({ accent: c })} />
+      </Group>
+    </div>
   );
 }
 

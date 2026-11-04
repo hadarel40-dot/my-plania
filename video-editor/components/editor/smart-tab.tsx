@@ -16,7 +16,7 @@ import { openCaptionsSheet } from "./captions-sheet";
 import { usePlayback } from "@/stores/playback-store";
 import { TEMPLATES } from "@/lib/editor/templates";
 import { Section } from "./ui";
-import { cn } from "@/lib/utils";
+import { afterPaint, cn } from "@/lib/utils";
 
 /**
  * כלים חכמים: פעולות אוטומטיות על כל הסרטון (או על הקליפ הנבחר).
@@ -418,6 +418,11 @@ function EditorNotes() {
 function AutoEditButton({ disabled }: { disabled: boolean }) {
   const { busy, report, error, before, genre, options, chosen } = useAutoEditRun();
   const choose = (o: EditOption) => {
+    // הכרטיס נבחר מיד; החלפת הסרטון בנגן רגע אחרי
+    useAutoEditRun.setState({ chosen: o.id });
+    afterPaint(() => chooseNow(o));
+  };
+  const chooseNow = (o: EditOption) => {
     useEditor.setState({ timeline: o.timeline, selection: null });
     // הסגנון שלי: איזו גרסה נבחרה, ובאיזה סגנון כתוביות
     rememberPick(o.id.replace(/-\d+$/, (m) => (o.id.startsWith("vibe") ? m : "")));
