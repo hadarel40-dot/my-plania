@@ -192,9 +192,9 @@ function AutoEditSuggestion() {
     void runAutoEdit(genre);
   };
   return (
-    <div dir="rtl" className="absolute inset-x-1.5 bottom-1.5 rounded-xl bg-black/80 p-2 shadow-2xl backdrop-blur">
+    <div dir="rtl" className="absolute inset-x-1.5 bottom-1.5 max-h-[calc(100%-12px)] overflow-y-auto rounded-xl bg-black/80 p-2 shadow-2xl backdrop-blur">
       <div className="mb-1 flex items-center justify-between">
-        <p className="flex items-center gap-1 text-xs font-semibold"><Sparkles className="size-3.5 text-fuchsia-400" /> מה הסרטון?</p>
+        <p className="flex items-center gap-1 whitespace-nowrap text-xs font-semibold"><Sparkles className="size-3.5 text-fuchsia-400" /> מה הסרטון?</p>
         <button onClick={() => setDismissed(true)} aria-label="לא עכשיו" className="grid size-6 place-items-center rounded-full text-zinc-400 hover:bg-white/10">
           <XIcon className="size-3.5" />
         </button>
@@ -202,9 +202,9 @@ function AutoEditSuggestion() {
       <div className="grid gap-1">
         {GENRES.map((g) => (
           <button key={g.id} onClick={() => go(g.id)}
-            className={cn("flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1.5 text-start text-xs font-medium",
+            className={cn("flex min-w-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-start text-[11px] font-medium leading-tight",
               last === g.id ? "bg-gradient-to-l from-violet-600 to-fuchsia-600" : "bg-white/10 hover:bg-white/20")}>
-            <span className="text-sm leading-none">{g.emoji}</span>{g.label}
+            <span className="shrink-0 text-sm leading-none">{g.emoji}</span>{g.label}
           </button>
         ))}
       </div>

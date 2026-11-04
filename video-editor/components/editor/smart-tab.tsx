@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { create } from "zustand";
-import { Captions, Crop, Loader2, Music2, Scissors, Sparkles, TrendingUp } from "lucide-react";
+import { Captions, Crop, Loader2, Music2, Scissors, Send, Sparkles, TrendingUp } from "lucide-react";
 import type { Trends, TrendsRequest } from "@/lib/ai/smart-plan";
 import { logEvent } from "@/lib/telemetry";
 import { useEditor } from "@/stores/editor-store";
@@ -308,18 +308,35 @@ function EditorNotes() {
   const notes = useEditor((s) => s.notes);
   const smart = useEditor((s) => !!s.cloud?.smartEdit);
   const brain = useEditor((s) => s.cloud?.brain ?? "הבינה המלאכותית");
+  const hasClips = useEditor((s) => s.timeline.clips.length > 0);
+  const busy = useAutoEditRun((s) => !!s.busy);
+  // שליחה: העורך עורך מחדש לפי ההוראות, בלי ללחוץ שוב על "עריכה אוטומטית"
+  const send = () => {
+    if (!hasClips || busy || !notes.trim()) return;
+    logEvent("notes_sent", { length: notes.length });
+    void runAutoEdit();
+  };
   return (
-    <label className="mb-3 block">
-      <span className="text-xs font-medium text-zinc-300">הוראות לעורך</span>
-      <textarea value={notes} onChange={(e) => useEditor.getState().setNotes(e.target.value)} rows={3} dir="auto"
-        placeholder={"למשל: לפתוח עם הכלב, מוזיקה רגועה, סרטון קצר של 10 שניות, הוק על המחיר, בלי אימוג'ים"}
-        className="mt-1 w-full resize-y rounded-lg border border-zinc-700 bg-zinc-950 p-2.5 text-sm placeholder:text-zinc-600 focus:border-violet-500 focus:outline-none" />
-      <span className="block text-[11px] text-zinc-500">
-        {smart
-          ? `${brain} קורא את ההוראות בכל עריכה אוטומטית ופועל לפיהן. ההוראות נשמרות בפרויקט.`
-          : "ההוראות נשמרות בפרויקט. כרגע העורך מבין רק דברים פשוטים (סוג מוזיקה, בלי מוזיקה, בלי כתוביות); עם Gemini מחובר הוא פועל לפי הכל."}
-      </span>
-    </label>
+    <div className="mb-3">
+      <label className="block">
+        <span className="text-xs font-medium text-zinc-300">הוראות לעורך</span>
+        <textarea value={notes} onChange={(e) => useEditor.getState().setNotes(e.target.value)} rows={3} dir="auto"
+          placeholder={"למשל: לפתוח עם הכלב, מוזיקה רגועה, סרטון קצר של 10 שניות, הוק על המחיר, בלי אימוג'ים"}
+          className="mt-1 w-full resize-y rounded-lg border border-zinc-700 bg-zinc-950 p-2.5 text-sm placeholder:text-zinc-600 focus:border-violet-500 focus:outline-none" />
+      </label>
+      <div className="flex items-start gap-2">
+        <span className="block flex-1 text-[11px] text-zinc-500">
+          {smart
+            ? `${brain} קורא את ההוראות ועורך לפיהן. ההוראות נשמרות בפרויקט.`
+            : "ההוראות נשמרות בפרויקט. כרגע העורך מבין רק דברים פשוטים (סוג מוזיקה, בלי מוזיקה, בלי כתוביות); עם Gemini מחובר הוא פועל לפי הכל."}
+        </span>
+        <button onClick={send} disabled={!hasClips || busy || !notes.trim()}
+          className="flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-l from-violet-600 to-fuchsia-600 px-4 py-1.5 text-sm font-semibold shadow disabled:opacity-40">
+          {busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4 -scale-x-100" />} שליחה
+        </button>
+      </div>
+      {!hasClips && notes.trim() && <p className="mt-1 text-[11px] text-zinc-500">קודם מעלים סרטון, ואז שולחים.</p>}
+    </div>
   );
 }
 
