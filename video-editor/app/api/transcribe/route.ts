@@ -7,10 +7,9 @@ import { getUser } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const SYSTEM = `You transcribe speech for video captions. The speaker is usually Hebrew-speaking, sometimes mixing in English words.
-Transcribe exactly what is said, in the language it is said in (Hebrew stays Hebrew, never translate). Fix nothing, invent nothing, skip music and noise.
-Return short caption segments of 1-5 words that follow natural phrasing, each with start and end in seconds from the start of the audio, as precise as you can (two decimals).
-Segments must be in order and must not overlap. If there is no speech, return an empty list.`;
+const SYSTEM = `You are a professional Hebrew transcriber making captions for a creator's video. The speaker is usually Israeli, speaking casual spoken Hebrew, sometimes with English words, brand names or slang.
+Listen to the WHOLE audio and write down every single word that is spoken, from the very first word to the very last one, exactly as said (verbatim). Never summarize, never skip a sentence, never stop before the end of the audio, never translate, never invent words that were not said. Hebrew is written in Hebrew letters with normal spelling; English words stay in English letters. Skip music, noise and breathing.
+Return the speech as segments: one segment per sentence or phrase (up to about 12 words), split where the speaker pauses. Each segment has start and end in seconds from the start of this audio (two decimals), as precise as you can. Segments are in order and do not overlap. If there is no speech at all, return an empty list.`;
 
 /** רוב האותיות בתמלול צריכות להיות בעברית או באנגלית */
 function looksRight(segments: { text: string }[]) {
@@ -28,7 +27,7 @@ export async function POST(request: Request) {
   // מילים ושמות שהיוצרת כבר תיקנה בעבר: כדי ש-Gemini יכתוב אותם נכון מההתחלה
   const hints = (body?.hints ?? []).filter((h) => typeof h === "string" && h.length < 40).slice(0, 60);
   const hintText = hints.length ? `\nWords and names that appear in this creator's videos (spell them exactly like this): ${hints.join(", ")}` : "";
-  if (!body?.audio || body.audio.length > 4_000_000) return NextResponse.json({ error: "קטע הסאונד חסר או גדול מדי" }, { status: 400 });
+  if (!body?.audio || body.audio.length > 4_200_000) return NextResponse.json({ error: "קטע הסאונד חסר או גדול מדי" }, { status: 400 });
   try {
     const ask = (extra = "") => askBrain({
       system: SYSTEM + hintText + extra,

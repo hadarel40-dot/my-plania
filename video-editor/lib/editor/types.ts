@@ -33,6 +33,11 @@ export interface MediaAsset {
    * (לבן = האדם). width/height הם של התמונה האמיתית (חצי מהקובץ)
    */
   alphaPacked?: boolean;
+  /**
+   * התמלול של הסרטון (זמנים בשניות מתחילת הקובץ), כדי לא לתמלל שוב בכל עריכה
+   * (המכסה החינמית של Gemini קטנה). v: גרסת שיטת התמלול
+   */
+  transcript?: { v: number; segments: { start: number; end: number; text: string }[] };
 }
 
 /** עיבוד ויזואלי שמוחל בזמן התצוגה. בדמו כך "מייצרים" וריאציות בלי ענן */

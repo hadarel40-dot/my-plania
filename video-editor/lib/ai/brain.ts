@@ -73,6 +73,12 @@ function withFastThinking(body: unknown, model: string) {
  * קורא ל-Gemini, ועובר לגרסה הבאה כשהנוכחית נכשלת או איטית. הזמן הכולל מוגבל, כי לשרת יש
  * דקה אחת לכל בקשה; כל ניסיון מקבל עד 25 שניות.
  */
+/**
+ * גרסה שהמכסה היומית שלה נגמרה: מדלגים עליה לזמן מה (בלי לבזבז שניות על בקשה שתיכשל).
+ * נשמר רק בזיכרון של השרת, אז זה עוזר בעיקר לבקשות רצופות (כמו תמלול בכמה חלקים).
+ */
+const exhausted = new Map<string, number>();
+
 async function geminiCall(body: unknown, budgetMs = 52_000, attemptMs = 25_000): Promise<string> {
   const deadline = Date.now() + budgetMs;
   let last: BrainError | null = null;
@@ -81,6 +87,7 @@ async function geminiCall(body: unknown, budgetMs = 52_000, attemptMs = 25_000):
   for (const { model, fast } of GEMINI_MODELS) {
     if (seen.has(model)) continue;
     seen.add(model);
+    if ((exhausted.get(model) ?? 0) > Date.now()) { tried.push(`${model}: skipped (quota)`); continue; }
     const left = deadline - Date.now();
     if (left < 4000) break;
     const timeout = Math.min(left, attemptMs);
@@ -96,11 +103,13 @@ async function geminiCall(body: unknown, budgetMs = 52_000, attemptMs = 25_000):
       }
     } catch (e) {
       if (!(e instanceof BrainError) || ![429, 404, 500, 503, 504].includes(e.status)) throw e;
+      if (e.status === 429 && /per.?day|free_tier_requests|daily/i.test(e.detail ?? "")) exhausted.set(model, Date.now() + 30 * 60_000);
       tried.push(e.detail ?? `${model}: ${e.status}`);
       last = e;
     }
   }
   if (last) last.detail = tried.join(" | ").slice(0, 600);
+  if (!last && tried.length) throw new BrainError("המכסה החינמית של Gemini נגמרה לבינתיים. אפשר לנסות שוב בעוד כמה דקות (או מחר)", 429, tried.join(" | "));
   throw last ?? new BrainError("Gemini לא ענה בזמן, נסו שוב", 504);
 }
 

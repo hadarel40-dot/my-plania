@@ -42,12 +42,39 @@ export async function removeSilences(onStatus: (s: string) => void): Promise<num
     if (!asset) continue;
     const samples = await decodeAssetAudio(asset);
     // שוליים קצת רחבים יותר סביב כל מילה, כדי שהחיתוך לא יקטע את סוף המילה או את תחילתה
-    const speech = findSpeech(samples, { from: clip.in, to: clip.out, pad: 0.17, minSilence: 0.5 });
+    let speech = findSpeech(samples, { from: clip.in, to: clip.out, pad: 0.17, minSilence: 0.5 });
+    // כשיש תמלול: לא חותכים בתוך משפט (הפסקה טבעית באמצע משפט נשארת), ומילה שקטה
+    // שהמדידה לא שמעה אבל Gemini כן, לא נחתכת
+    const said = useEditor.getState().assets[clip.sourceAssetId]?.transcript?.segments ?? [];
+    if (said.length && speech.length) speech = keepSentences(speech, said, clip.in, clip.out);
     // בלי דיבור בכלל (למשל צילום בלי קול): לא מוחקים את הקליפ
     if (speech.length) plan.set(clip.id, speech);
   }
   useEditor.getState().applyCuts(plan);
   return Math.max(0, before - timelineDuration(useEditor.getState().timeline));
+}
+
+/** מאחד קטעי דיבור לפי המשפטים שבתמלול (זמני המקור), בתוך גבולות הקליפ */
+function keepSentences(speech: SourceRange[], said: SourceRange[], from: number, to: number): SourceRange[] {
+  const ranges = [...speech];
+  for (const s of said) {
+    const a = Math.max(from, s.start - 0.05), b = Math.min(to, s.end + 0.12);
+    if (b - a < 0.15) continue;
+    // משפט שאין בו כמעט דיבור לפי עוצמת הקול (דיבור שקט): נשמר כולו
+    const heard = ranges.reduce((sum, r) => sum + Math.max(0, Math.min(r.end, b) - Math.max(r.start, a)), 0);
+    if (heard < (b - a) * 0.3) ranges.push({ start: a, end: b });
+  }
+  ranges.sort((x, y) => x.start - y.start);
+  const out: SourceRange[] = [];
+  for (const r of ranges) {
+    const prev = out[out.length - 1];
+    // הפסקה עד 0.9 שנ׳ שנמצאת בתוך משפט אחד: לא חותכים אותה
+    const gapMid = prev ? (prev.end + r.start) / 2 : 0;
+    const inside = prev && r.start - prev.end < 0.9 && said.some((s) => gapMid > s.start + 0.05 && gapMid < s.end - 0.05);
+    if (prev && (r.start <= prev.end || inside)) prev.end = Math.max(prev.end, r.end);
+    else out.push({ ...r });
+  }
+  return out;
 }
 
 /**
@@ -281,6 +308,13 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
     const { reframed, faces } = await autoReframe((s) => onStatus(`1/5 · ${s}`));
     return reframed ? `הותאם למסך עומד${faces ? " עם הפנים במרכז" : ""}` : null;
   });
+  const notesEarly = useEditor.getState().notes;
+  // קודם מקשיבים לדיבור (התמלול נשמר עם הסרטון), ורק אז חותכים שתיקות: כך החיתוך
+  // יודע איפה משפטים ולא קוטע מילים. הכתוביות עצמן נבנות שוב אחרי החיתוך (מהזיכרון, מיידי)
+  if (!/בלי כתוביות|ללא כתוביות/.test(notesEarly)) {
+    const unsubscribe = useEditor.subscribe((st) => { if (st.transcribeStatus) onStatus(`2/5 · ${st.transcribeStatus}`); });
+    try { await useEditor.getState().autoTranscribe(); } catch { /* הדוח יגיע בשלב הכתוביות */ } finally { unsubscribe(); useEditor.getState().setError(null); }
+  }
   await step("הסרת שתיקות", async () => {
     const removed = await removeSilences((s) => onStatus(`2/5 · ${s}`));
     return removed > 0.05 ? `הוסרו ${removed.toFixed(1)} שניות של שתיקה` : null;
@@ -393,8 +427,11 @@ interface SmartCuts { plan: SmartPlan; hook: string; extras: Overlay[]; moments:
 async function smartCuts(): Promise<SmartCuts> {
   const { timeline, setTitle, title } = useEditor.getState();
   const captions = [...timeline.captions].sort((a, b) => a.start - b.start);
+  // המוח מקבל משפטים שלמים (ולא שברים של 3 מילים): כך הוא מבין את הדיבור, ומה שהוא
+  // חותך הוא תמיד משפט שלם (טייק חוזר, התחלה שנכשלה), לא חצי משפט
+  const lines = sentenceLines(captions);
   const body: SmartPlanRequest = {
-    segments: captions.map((c) => ({ start: c.start, end: c.end, text: c.text })),
+    segments: lines.map((l) => ({ start: l[0].start, end: l[l.length - 1].end, text: l.map((c) => c.text).join(" ") })),
     duration: timelineDuration(timeline),
     hasMusic: timeline.audio.some((a) => a.out - a.in > 5),
     notes: brainNotes(),
@@ -411,12 +448,19 @@ async function smartCuts(): Promise<SmartCuts> {
   }
   const plan = data as SmartPlan;
 
-  // 1. חיתוך המקטעים שנבחרו (לפי זמני ציר הזמן), והכתוביות זזות איתם
-  const removeIds = new Set(plan.remove_segments.map((i) => captions[i]?.id).filter(Boolean));
+  // 1. חיתוך המשפטים שנבחרו (לפי זמני ציר הזמן), והכתוביות זזות איתם
+  const removeIds = new Set(plan.remove_segments.flatMap((i) => (lines[i] ?? []).map((c) => c.id)));
+  /** הכתובית בתוך המשפט שבה נאמרות המילים של הרגע (לתזמון האנימציה) */
+  const captionOf = (i: number, text?: string) => {
+    const line = lines[i];
+    if (!line?.length) return undefined;
+    const words = (text ?? "").replace(/[^\p{L}\p{N}\s]/gu, "").split(/\s+/).filter((w) => w.length > 1);
+    return (words.length ? line.find((c) => words.some((w) => c.text.includes(w))) : undefined)?.id ?? line[0].id;
+  };
   // כשהמוח סימן רגעים לאנימציות, האימוג'ים מגיעים משם (ולא פעמיים)
-  const emojiIds = plan.moments.length ? [] : plan.emojis.map((e) => ({ id: captions[e.segment]?.id, emoji: e.emoji })).filter((e) => e.id);
+  const emojiIds = plan.moments.length ? [] : plan.emojis.map((e) => ({ id: captionOf(e.segment), emoji: e.emoji })).filter((e) => e.id);
   const moments: Moment[] = plan.moments.flatMap((m) => {
-    const id = captions[m.segment]?.id;
+    const id = captionOf(m.segment, m.text);
     return id ? [{ captionId: id, kind: m.kind, text: m.text.trim(), importance: m.importance }] : [];
   });
   const ranges = captions.filter((c) => removeIds.has(c.id)).map((c) => ({ start: c.start, end: c.end }));
@@ -442,6 +486,24 @@ async function smartCuts(): Promise<SmartCuts> {
 
   const parts = [cut > 0.05 ? `נחתכו ${cut.toFixed(1)} שניות (טייקים חוזרים ומילוי)` : null, `הוק: "${plan.hook}"`];
   return { plan, hook: plan.hook, extras, moments, summary: [plan.summary, ...parts.filter(Boolean)].join(" · ") };
+}
+
+/**
+ * מחבר כתוביות קצרות למשפטים: משפט נגמר בסימן פיסוק, בהפסקה בדיבור (מעל 0.45 שנ׳),
+ * או אחרי כ-14 מילים
+ */
+function sentenceLines<C extends { start: number; end: number; text: string }>(captions: C[]): C[][] {
+  const lines: C[][] = [];
+  let cur: C[] = [];
+  let words = 0;
+  for (const c of captions) {
+    const prev = cur[cur.length - 1];
+    if (prev && (c.start - prev.end > 0.45 || /[.?!…]$/.test(prev.text.trim()) || words >= 14)) { lines.push(cur); cur = []; words = 0; }
+    cur.push(c);
+    words += c.text.split(/\s+/).filter(Boolean).length;
+  }
+  if (cur.length) lines.push(cur);
+  return lines;
 }
 
 /** טווחי זמן בציר הזמן שצריך להסיר, מתורגמים לקטעים שנשארים בכל קליפ (בזמן המקור) */

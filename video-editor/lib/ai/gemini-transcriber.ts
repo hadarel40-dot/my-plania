@@ -1,7 +1,7 @@
 "use client";
 import { dictionaryHints } from "@/lib/editor/dictionary";
+import { useEditor } from "@/stores/editor-store";
 import type { Transcriber } from "./transcriber";
-import { createBrowserTranscriber } from "./browser-transcriber";
 import { perAssetCache, segmentsToCaptions, type Segment } from "./segments";
 import { decodeAssetAudio } from "@/lib/audio/decode";
 import { findSpeech } from "@/lib/audio/silence";
@@ -9,86 +9,148 @@ import { wavBase64 } from "@/lib/audio/wav";
 import { logEvent } from "@/lib/telemetry";
 
 /**
- * כמה שניות סאונד בבקשה אחת. קטעים קצרים: Gemini מתמלל אותם עד הסוף (בקטע ארוך הוא
- * לפעמים עוצר באמצע), והם עולים מהר. כמה קטעים נשלחים במקביל.
+ * כמה שניות סאונד בבקשה אחת: דקה (בערך 2.5MB, מתחת למגבלת הגודל של השרת). פחות בקשות
+ * = פחות מהמכסה היומית החינמית של Gemini. Gemini מחזיר משפטים שלמים (תשובה קצרה, ולכן
+ * הוא לא נעצר באמצע), והחלוקה לכתוביות קצרות נעשית כאן לפי הדיבור עצמו.
  */
-const CHUNK_SEC = 35;
-const PARALLEL = 3;
+const CHUNK_SEC = 60;
+const PARALLEL = 2;
+/** גרסת שיטת התמלול: תמלול שנשמר בשיטה ישנה (עם החורים) מתומלל מחדש */
+const TRANSCRIPT_V = 2;
 
 type Speech = { start: number; end: number };
 
 /**
- * כתוביות עם Gemini לכל הסרטון: הסאונד נשלח בקטעים קצרים, נחתך בשקט כדי לא לקטוע מילה.
- * קטע שנכשל מנוסה שוב; אם Gemini עצר לפני סוף הדיבור בקטע, מבקשים את ההמשך. רק אם הכל
- * נכשל עוברים לתמלול בדפדפן.
+ * כתוביות עם Gemini לכל הסרטון:
+ *  1. התמלול נשמר עם הסרטון, ועריכה נוספת לא מתמללת שוב (חוסך מכסה, וזה גם מיידי).
+ *  2. הסאונד נשלח בחלקים של עד דקה, שנחתכים בשקט (לא באמצע מילה).
+ *  3. בדיקת כיסוי: כל מקום שמדברים בו ואין לו טקסט נשלח שוב, רק הוא, לתמלול.
+ *  4. אם Gemini לא זמין (המכסה היומית נגמרה): הודעה ברורה, ולא כתוביות שגויות
+ *     מתמלול חלש בדפדפן.
  */
 export function createGeminiTranscriber(): Transcriber {
-  const browser = createBrowserTranscriber();
   return {
     id: "gemini",
     async transcribe(timeline, assets, onStatus = () => {}) {
-      try {
-        const segmentsFor = perAssetCache(async (asset) => {
-          onStatus("קורא את הסאונד…");
-          const samples = await decodeAssetAudio(asset);
-          const speech = findSpeech(samples);
-          if (!speech.length) return [];
-          const chunks = chunkBySilence(speech, CHUNK_SEC);
-          let done = 0, failed = 0;
-          onStatus(`Gemini מתמלל… 0/${chunks.length}`);
-          const results = await mapLimit(chunks, PARALLEL, async (c) => {
-            const segs = await transcribeChunk(samples, c, speech).catch(() => null);
-            if (!segs) failed++;
-            onStatus(`Gemini מתמלל… ${++done}/${chunks.length}`);
-            return segs ?? [];
-          });
-          if (failed === chunks.length) throw new Error("התמלול נכשל");
-          if (failed) logEvent("transcribe_partial", { failed, chunks: chunks.length });
-          return results.flat().sort((a, b) => a.start - b.start);
+      const segmentsFor = perAssetCache(async (asset) => {
+        const saved = useEditor.getState().assets[asset.id]?.transcript;
+        if (saved?.v === TRANSCRIPT_V) { logEvent("transcribe_cached", { segments: saved.segments.length }); return saved.segments; }
+        onStatus("קורא את הסאונד…");
+        const samples = await decodeAssetAudio(asset);
+        const speech = findSpeech(samples);
+        if (!speech.length) return [];
+        const chunks = chunkBySilence(speech, CHUNK_SEC);
+        let done = 0;
+        onStatus(`Gemini מקשיב לדיבור… ${chunks.length > 1 ? `0/${chunks.length}` : ""}`);
+        const results = await mapLimit(chunks, PARALLEL, async (c) => {
+          const segs = await ask(samples, c.start, c.end);
+          onStatus(`Gemini מקשיב לדיבור… ${chunks.length > 1 ? `${++done}/${chunks.length}` : ""}`);
+          return segs;
         });
+        let segs = results.flat().sort((a, b) => a.start - b.start);
+
+        // בדיקת כיסוי: דיבור שאין לו טקסט נשלח שוב (רק הקטעים האלה)
+        const gaps = uncovered(speech, segs);
+        if (gaps.length) {
+          onStatus("משלים קטעים שחסרים…");
+          const before = segs.length;
+          for (const w of groupWindows(gaps, CHUNK_SEC).slice(0, 3)) {
+            const more = await ask(samples, w.start, w.end).catch(() => []);
+            segs.push(...more.filter((s) => { const mid = (s.start + s.end) / 2; return gaps.some((g) => mid >= g.start - 0.3 && mid <= g.end + 0.3); }));
+          }
+          segs = dedupe(segs.sort((a, b) => a.start - b.start));
+          const left = uncovered(speech, segs);
+          logEvent("transcribe_repair", { gaps: gaps.length, gapSec: +sum(gaps).toFixed(1), added: segs.length - before, leftSec: +sum(left).toFixed(1) });
+        }
+        // נשמר עם הסרטון (גם בענן), לעריכות הבאות
+        const cur = useEditor.getState().assets[asset.id];
+        if (cur) useEditor.getState().addAsset({ ...cur, transcript: { v: TRANSCRIPT_V, segments: segs } });
+        logEvent("transcribe_done", { chunks: chunks.length, segments: segs.length, speechSec: +sum(speech).toFixed(1) });
+        return segs;
+      });
+      try {
         return await segmentsToCaptions(timeline, assets, segmentsFor);
       } catch (e) {
-        // Gemini לא זמין (מכסה, עומס): תמלול בתוך הדפדפן
-        logEvent("transcribe_fallback", { error: e instanceof Error ? e.message : String(e) });
-        onStatus("Gemini לא זמין, מתמלל בדפדפן…");
-        return browser.transcribe(timeline, assets, onStatus);
+        const msg = e instanceof Error ? e.message : String(e);
+        logEvent("transcribe_failed", { error: msg });
+        throw new Error(/מכסה/.test(msg)
+          ? "המכסה היומית החינמית של Gemini נגמרה, ולכן לא נוצרו כתוביות (כדי לא לכתוב מילים לא נכונות). אפשר לנסות שוב בעוד כמה שעות או מחר. העריכה שכבר נשמרה לא תתמלל שוב."
+          : msg);
       }
     },
   };
 }
 
-/** קטע אחד: עד שני ניסיונות, ואם התמלול נגמר הרבה לפני סוף הדיבור, בקשה נוספת להמשך */
-async function transcribeChunk(samples: Float32Array, c: Speech, speech: Speech[]): Promise<Segment[]> {
-  const ask = async (from: number, to: number) => {
-    for (let attempt = 0; attempt < 2; attempt++) {
-      const res = await fetch("/api/transcribe", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ audio: wavBase64(samples, from, to), duration: to - from, hints: dictionaryHints() }),
-      }).catch(() => null);
-      const data = await res?.json().catch(() => null);
-      if (res?.ok && data?.segments) {
-        return (data.segments as Segment[]).flatMap((s) => {
-          const start = from + Math.max(0, s.start);
-          const end = from + Math.min(to - from, Math.max(s.end, s.start + 0.3));
-          return s.text.trim() && end > start ? [{ start, end, text: s.text.trim() }] : [];
-        });
-      }
-      logEvent("brain_failed", { route: "transcribe", status: res?.status ?? 0, error: data?.error, detail: data?.detail, attempt });
+/** בקשה אחת לשרת: עד שני ניסיונות. זמנים בתשובה מתחילת הקובץ */
+async function ask(samples: Float32Array, from: number, to: number): Promise<Segment[]> {
+  let error = "התמלול נכשל";
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const res = await fetch("/api/transcribe", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ audio: wavBase64(samples, from, to), duration: to - from, hints: dictionaryHints() }),
+    }).catch(() => null);
+    const data = await res?.json().catch(() => null);
+    if (res?.ok && data?.segments) {
+      return (data.segments as Segment[]).flatMap((s) => {
+        const start = from + Math.max(0, s.start);
+        const end = from + Math.min(to - from, Math.max(s.end, s.start + 0.3));
+        return s.text.trim() && end > start ? [{ start, end, text: s.text.trim() }] : [];
+      });
     }
-    throw new Error("התמלול נכשל");
-  };
-  const out = await ask(c.start, c.end);
-  // עד איפה מדברים בקטע הזה, ועד איפה הגיע התמלול
-  const lastSpeech = Math.max(...speech.filter((r) => r.start < c.end && r.end > c.start).map((r) => Math.min(r.end, c.end)));
-  const lastText = out.at(-1)?.end ?? c.start;
-  if (lastSpeech - lastText > 3) {
-    const more = await ask(Math.max(c.start, lastText - 0.3), c.end).catch(() => []);
-    out.push(...more.filter((s) => s.start >= lastText - 0.1));
-    logEvent("transcribe_continued", { gap: +(lastSpeech - lastText).toFixed(1), added: more.length });
+    error = data?.error ?? error;
+    logEvent("brain_failed", { route: "transcribe", status: res?.status ?? 0, error: data?.error, detail: data?.detail, attempt });
+    // מכסה שנגמרה: אין טעם לנסות שוב מיד
+    if (res?.status === 429) break;
+  }
+  throw new Error(error);
+}
+
+/** קטעי דיבור (מעל חצי שנייה) שאין להם שום טקסט בתמלול */
+function uncovered(speech: Speech[], segs: Segment[]): Speech[] {
+  const out: Speech[] = [];
+  for (const r of speech) {
+    if (r.end - r.start < 0.5) continue;
+    // החלקים של הקטע שלא נוגעים באף משפט (עם מרווח קטן, כי הזמנים של Gemini משוערים)
+    let pieces: Speech[] = [{ ...r }];
+    for (const s of segs) {
+      const a = s.start - 0.6, b = s.end + 0.6;
+      pieces = pieces.flatMap((p) => (b <= p.start || a >= p.end ? [p] : [
+        ...(a > p.start ? [{ start: p.start, end: a }] : []),
+        ...(b < p.end ? [{ start: b, end: p.end }] : []),
+      ]));
+    }
+    out.push(...pieces.filter((p) => p.end - p.start >= 0.8));
   }
   return out;
 }
+
+/** מאחד חורים קרובים לחלונות של עד maxSec (פחות בקשות) */
+function groupWindows(gaps: Speech[], maxSec: number): Speech[] {
+  const out: Speech[] = [];
+  for (const g of gaps) {
+    const last = out.at(-1);
+    if (last && g.end - last.start <= maxSec) last.end = g.end;
+    else out.push({ ...g });
+  }
+  return out.map((w) => ({ start: Math.max(0, w.start - 0.4), end: w.end + 0.4 }));
+}
+
+/** משפט שהגיע פעמיים (מהחלק הרגיל ומההשלמה) נשאר פעם אחת */
+function dedupe(segs: Segment[]): Segment[] {
+  const out: Segment[] = [];
+  for (const s of segs) {
+    const prev = out.at(-1);
+    if (prev && s.start < prev.end - 0.2 && (s.text === prev.text || prev.text.includes(s.text) || s.text.includes(prev.text))) {
+      if (s.text.length > prev.text.length) out[out.length - 1] = { start: Math.min(prev.start, s.start), end: Math.max(prev.end, s.end), text: s.text };
+      continue;
+    }
+    out.push(s);
+  }
+  return out;
+}
+
+const sum = (rs: Speech[]) => rs.reduce((a, r) => a + r.end - r.start, 0);
 
 /** מריץ עד limit משימות במקביל, ושומר על הסדר של התוצאות */
 async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
@@ -114,7 +176,6 @@ function chunkBySilence(speech: { start: number; end: number }[], maxSec: number
     }
   }
   if (cur) chunks.push(cur);
-  // שוליים קטנים, כדי לא לקטוע את תחילת המילה הראשונה
-  return chunks.map((c) => ({ start: Math.max(0, c.start - 0.15), end: c.end + 0.15 }));
+  // שוליים, כדי לא לקטוע את תחילת המילה הראשונה ואת סוף האחרונה
+  return chunks.map((c) => ({ start: Math.max(0, c.start - 0.3), end: c.end + 0.3 }));
 }
-
