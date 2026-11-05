@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Bellefair&family=Assistant:wght@400;500;600;700&family=Karantina:wght@400;700&display=block" rel="stylesheet">
+<style>
+  :root{--bg:#2B1A12;--bg2:#3A241A;--cream:#F5EBDC;--gold:#D9A85B;--terra:#C8693B;--soft:#CDB9A4}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1080px;height:1350px;background:var(--bg)}
+  body{font-family:'Assistant',sans-serif;color:var(--cream);position:relative;overflow:hidden}
+  .grain{position:absolute;inset:0;pointer-events:none;opacity:.5;mix-blend-mode:overlay;z-index:20;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .4 0 0 0 0 .3 0 0 0 .35 0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  .hero{position:absolute;top:0;left:0;right:0;height:820px;overflow:hidden}
+  .hero img{width:100%;height:100%;object-fit:cover;object-position:50% 64%;filter:saturate(1.05) contrast(1.03)}
+  .hero:after{content:"";position:absolute;inset:0;
+    background:linear-gradient(180deg,rgba(43,26,18,.55) 0%,rgba(43,26,18,0) 22%,rgba(43,26,18,0) 45%,rgba(43,26,18,.75) 78%,var(--bg) 100%)}
+
+  .top{position:absolute;top:52px;right:60px;left:60px;display:flex;justify-content:space-between;align-items:center;z-index:5}
+  .brand{display:flex;align-items:center;gap:16px}
+  .mono{width:68px;height:68px;border:1.5px solid var(--cream);border-radius:50%;display:grid;place-items:center;
+    font-family:'Bellefair',serif;font-size:30px;direction:ltr;letter-spacing:1px}
+  .brand .t1{font-weight:700;font-size:21px}
+  .brand .t2{font-size:17px;opacity:.85}
+  .pill{font-size:17px;font-weight:600;letter-spacing:2px;border:1.5px solid rgba(245,235,220,.8);border-radius:40px;padding:8px 20px}
+
+  .title{position:absolute;top:560px;right:60px;left:60px;z-index:5}
+  .kicker{font-family:'Karantina';font-weight:700;font-size:44px;color:var(--gold);letter-spacing:1px;line-height:1}
+  h1{font-family:'Bellefair',serif;font-weight:400;font-size:236px;line-height:.82;letter-spacing:-2px;margin-top:8px;text-shadow:0 6px 30px rgba(0,0,0,.35)}
+
+  .rule{position:absolute;top:878px;right:60px;left:60px;height:1px;background:rgba(217,168,91,.55);z-index:5}
+
+  .body{position:absolute;top:910px;right:60px;width:560px;z-index:5}
+  .body p{font-size:25px;line-height:1.45;color:var(--cream)}
+  .body p b{color:var(--gold);font-weight:600}
+  .list{list-style:none;margin-top:26px;display:grid;grid-template-columns:1fr 1fr;gap:12px 24px}
+  .list li{font-size:21px;font-weight:500;color:var(--soft);display:flex;align-items:center;gap:12px}
+  .list li span{font-family:'Bellefair';font-size:24px;color:var(--gold);direction:ltr}
+
+  .thumbs{position:absolute;top:906px;left:60px;display:flex;gap:16px;z-index:5}
+  .thumbs div{width:170px;height:226px;border-radius:90px 90px 8px 8px;overflow:hidden;border:1.5px solid rgba(217,168,91,.6)}
+  .thumbs img{width:100%;height:100%;object-fit:cover}
+
+  .cta{position:absolute;bottom:56px;right:60px;left:60px;display:flex;justify-content:space-between;align-items:center;z-index:5}
+  .cta .hand{font-family:'Karantina';font-size:46px;color:var(--cream);line-height:1}
+  .cta .hand small{display:block;font-family:'Assistant';font-size:19px;color:var(--soft);margin-top:6px;letter-spacing:.5px}
+  .phone{background:var(--gold);color:var(--bg);border-radius:60px;padding:14px 34px 14px 30px;display:flex;align-items:center;gap:18px}
+  .phone .n{font-family:'Bellefair';font-size:46px;direction:ltr;line-height:1;letter-spacing:1px}
+  .phone .w{font-size:19px;font-weight:700;border-left:1.5px solid rgba(43,26,18,.4);padding-left:18px}
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<div class="hero"><img src="fried.jpg"></div>
+
+<div class="top">
+  <div class="brand">
+    <div class="mono">BE</div>
+    <div><div class="t1">בתאל טייב</div><div class="t2">סדנאות אפייה ובישול לנשים</div></div>
+  </div>
+  <div class="pill">סדנה לנשים</div>
+</div>
+
+<div class="title">
+  <div class="kicker">מבשלות יחד לקראת שבת המלכה</div>
+  <h1>עונג שבת</h1>
+</div>
+
+<div class="rule"></div>
+
+<div class="body">
+  <p>מפגש חווייתי במטבח, שבו נכין יחד <b>את כל הטוב של שבת</b>: קציצות, סלטים ומטבלים, ונצא עם מתכונים, השראה ולב מלא.</p>
+  <ul class="list">
+    <li><span>01</span>בישול ואפייה</li>
+    <li><span>02</span>מתכונים לקבלת שבת</li>
+    <li><span>03</span>אווירה נעימה ומחברת</li>
+    <li><span>04</span>השראה ושמחה</li>
+  </ul>
+</div>
+
+<div class="thumbs">
+  <div><img src="dishes.jpg" style="object-position:50% 30%"></div>
+  <div><img src="hands.jpg" style="object-position:55% 25%"></div>
+</div>
+
+<div class="cta">
+  <div class="hand">בואי לחוות, לבשל, להתחבר<small>לפרטים והרשמה, שלחי הודעה</small></div>
+  <div class="phone"><span class="w">בתאל טייב</span><span class="n">052-5741471</span></div>
+</div>
+</body>
+</html>
