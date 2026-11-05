@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Suez+One&family=Assistant:wght@400;500;600;700;800&display=block" rel="stylesheet">
+<style>
+  :root{--bg:#EEE6D3;--olive:#545127;--olive2:#7C7840;--mustard:#D29B3E;--ink:#2F2A16;--cream:#FAF4E8}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1080px;height:1920px;background:var(--bg)}
+  body{font-family:'Assistant',sans-serif;color:var(--ink);position:relative;overflow:hidden}
+  .grain{position:absolute;inset:0;pointer-events:none;opacity:.35;mix-blend-mode:multiply;z-index:20;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .4 0 0 0 0 .38 0 0 0 0 .2 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  /* olive block behind photo */
+  .block{position:absolute;top:760px;left:0;right:0;bottom:0;background:var(--olive)}
+
+  .top{position:absolute;top:150px;right:80px;left:80px;display:flex;justify-content:space-between;align-items:center}
+  .brand{display:flex;align-items:center;gap:16px}
+  .mono{width:70px;height:70px;background:var(--olive);color:var(--cream);border-radius:50%;display:grid;place-items:center;
+    font-family:'Suez One',serif;font-size:28px;direction:ltr;letter-spacing:1px}
+  .brand .t1{font-weight:800;font-size:22px;color:var(--olive)}
+  .brand .t2{font-size:18px;color:var(--olive2)}
+  .date{font-size:18px;font-weight:700;letter-spacing:3px;color:var(--mustard)}
+
+  .head{position:absolute;top:280px;right:80px;left:80px;text-align:center}
+  .kicker{display:inline-block;font-size:24px;font-weight:700;letter-spacing:4px;color:var(--olive2);padding:0 18px;position:relative}
+  .kicker:before,.kicker:after{content:"";position:absolute;top:50%;width:60px;height:1.5px;background:var(--olive2)}
+  .kicker:before{right:-64px}.kicker:after{left:-64px}
+  h1{font-family:'Suez One',serif;font-weight:400;font-size:230px;line-height:.95;color:var(--olive);margin-top:18px;letter-spacing:-2px}
+  h1 em{font-style:normal;color:var(--mustard)}
+  .sub{font-size:28px;line-height:1.45;color:var(--ink);margin:18px auto 0;max-width:800px}
+
+  .photo{position:absolute;top:700px;right:110px;left:110px;height:700px;border-radius:24px;overflow:hidden;
+    box-shadow:0 40px 60px -30px rgba(0,0,0,.55);border:10px solid var(--cream)}
+  .photo img{width:100%;height:100%;object-fit:cover;object-position:52% 28%}
+  .circle{position:absolute;top:1255px;left:70px;width:250px;height:250px;border-radius:50%;overflow:hidden;border:8px solid var(--cream);
+    box-shadow:0 24px 40px -18px rgba(0,0,0,.6)}
+  .circle img{width:100%;height:100%;object-fit:cover;object-position:50% 62%}
+  .badge{position:absolute;top:660px;right:80px;background:var(--mustard);color:var(--ink);font-weight:800;font-size:22px;
+    padding:12px 24px;border-radius:40px;transform:rotate(4deg);letter-spacing:1px;box-shadow:0 10px 20px -10px rgba(0,0,0,.4)}
+
+  .feats{position:absolute;top:1440px;right:110px;left:360px;color:var(--cream)}
+  .feats div{font-size:27px;font-weight:600;padding:9px 0;border-bottom:1px solid rgba(250,244,232,.22);display:flex;gap:14px;align-items:center}
+  .feats div:before{content:"";width:9px;height:9px;border-radius:50%;background:var(--mustard)}
+
+  .cta{position:absolute;top:1660px;right:80px;left:80px;background:var(--cream);border-radius:22px;padding:22px 34px;
+    display:flex;justify-content:space-between;align-items:center}
+  .cta .l{font-size:22px;font-weight:600;color:var(--olive2)}
+  .cta .l b{display:block;font-size:30px;color:var(--olive);font-weight:800}
+  .cta .n{font-family:'Suez One',serif;font-size:50px;color:var(--olive);direction:ltr}
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<div class="block"></div>
+
+<div class="top">
+  <div class="brand">
+    <div class="mono">BE</div>
+    <div><div class="t1">בתאל טייב</div><div class="t2">סדנאות אפייה ובישול לנשים</div></div>
+  </div>
+  <div class="date">סדנה לנשים</div>
+</div>
+
+<div class="head">
+  <div class="kicker">לקראת שבת המלכה</div>
+  <h1>עונג <em>שבת</em></h1>
+  <p class="sub">מבשלות יחד את כל הטוב של שבת, מהקציצות ועד הסלטים, ויוצאות עם מתכונים, השראה ולב מלא</p>
+</div>
+
+<div class="photo"><img src="hands.jpg"></div>
+<div class="badge">בואי לבשל איתי!</div>
+<div class="circle"><img src="fried.jpg"></div>
+
+<div class="feats">
+  <div>בישול ואפייה</div>
+  <div>מתכונים לקבלת שבת</div>
+  <div>אווירה נעימה ומחברת</div>
+</div>
+
+<div class="cta">
+  <div class="l"><b>לפרטים והרשמה</b>בתאל טייב</div>
+  <div class="n">052-5741471</div>
+</div>
+</body>
+</html>

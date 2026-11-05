@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&family=Assistant:wght@400;600;700;800&family=Frank+Ruhl+Libre:wght@500;700&display=block" rel="stylesheet">
+<style>
+  :root{--terra:#B4532C;--terra2:#9A4423;--cream:#F8EEDF;--paper:#FFF9F0;--brown:#3A2014;--sun:#F2C26B}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1080px;height:1920px;background:var(--terra);overflow:hidden}
+  body{font-family:'Assistant',sans-serif;color:var(--cream);position:relative;overflow:hidden}
+  .grain{position:absolute;inset:0;pointer-events:none;opacity:.55;mix-blend-mode:overlay;z-index:20;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .35 0 0 0 0 .25 0 0 0 .4 0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .sunburst{position:absolute;top:-300px;left:-300px;width:760px;height:760px;border-radius:50%;background:var(--terra2);opacity:.7}
+
+  .brand{position:absolute;top:150px;right:80px;display:flex;align-items:center;gap:16px}
+  .mono{width:70px;height:70px;border:2px solid var(--cream);border-radius:50%;display:grid;place-items:center;
+    font-family:'Frank Ruhl Libre',serif;font-weight:500;font-size:28px;direction:ltr}
+  .brand .t1{font-weight:800;font-size:22px}
+  .brand .t2{font-size:18px;opacity:.85}
+
+  .head{position:absolute;top:260px;right:80px;left:80px}
+  .kicker{font-size:26px;font-weight:700;letter-spacing:3px;color:var(--sun)}
+  h1{font-family:'Amatic SC',cursive;font-weight:700;font-size:300px;line-height:.85;color:var(--cream);margin-top:4px}
+  .sub{font-size:28px;line-height:1.45;max-width:720px;margin-top:10px}
+
+  /* polaroid collage */
+  .pol{position:absolute;background:var(--paper);padding:16px 16px 70px;box-shadow:0 30px 50px -20px rgba(40,15,5,.6)}
+  .pol img{display:block;width:100%;height:100%;object-fit:cover}
+  .pol .cap{position:absolute;bottom:14px;right:0;left:0;text-align:center;font-family:'Amatic SC';font-weight:700;font-size:40px;color:var(--brown)}
+  .tape{position:absolute;top:-22px;left:50%;width:150px;height:44px;margin-left:-75px;background:rgba(242,194,107,.85);transform:rotate(-3deg)}
+  .p1{top:760px;right:90px;width:520px;height:640px;transform:rotate(3deg)}
+  .p1 .in{height:554px}
+  .p2{top:820px;left:70px;width:400px;height:470px;transform:rotate(-5deg)}
+  .p2 .in{height:384px}
+  .p3{top:1230px;left:120px;width:420px;height:400px;transform:rotate(2.5deg);z-index:3}
+  .p3 .in{height:314px}
+  .in{overflow:hidden}
+
+  .feats{position:absolute;top:1450px;right:90px;width:420px;font-size:27px;font-weight:600;line-height:1.75}
+  .feats span{color:var(--sun);margin-left:10px}
+
+  .cta{position:absolute;top:1672px;right:80px;left:80px;display:flex;align-items:center;justify-content:space-between;
+    border-top:2px dashed rgba(248,238,223,.6);padding-top:26px}
+  .cta .l{font-family:'Amatic SC';font-weight:700;font-size:54px;line-height:1}
+  .cta .n{background:var(--cream);color:var(--terra2);border-radius:50px;padding:10px 30px;font-family:'Frank Ruhl Libre';font-weight:700;font-size:44px;direction:ltr}
+</style>
+</head>
+<body>
+<div class="sunburst"></div>
+<div class="grain"></div>
+
+<div class="brand">
+  <div class="mono">BE</div>
+  <div><div class="t1">בתאל טייב</div><div class="t2">סדנאות אפייה ובישול לנשים</div></div>
+</div>
+
+<div class="head">
+  <div class="kicker">סדנה חווייתית לנשים</div>
+  <h1>עונג שבת</h1>
+  <p class="sub">מכינות יחד את כל הטוב של שבת, בשמחה, באהבה ובאווירה של בית</p>
+</div>
+
+<div class="pol p2"><div class="tape"></div><div class="in"><img src="dishes.jpg" style="object-position:50% 35%"></div><div class="cap">סלטים ומטבלים</div></div>
+<div class="pol p1"><div class="tape"></div><div class="in"><img src="hands.jpg" style="object-position:52% 30%"></div><div class="cap">מגלגלות יחד</div></div>
+<div class="pol p3"><div class="tape" style="transform:rotate(4deg)"></div><div class="in"><img src="fried.jpg" style="object-position:50% 60%"></div><div class="cap">ויוצאות עם מתכונים</div></div>
+
+<div class="feats">
+  <div><span>✦</span>בישול ואפייה</div>
+  <div><span>✦</span>מתכונים לקבלת שבת</div>
+  <div><span>✦</span>השראה ושמחה</div>
+</div>
+
+<div class="cta">
+  <div class="l">בואי לחוות, לבשל, להתחבר</div>
+  <div class="n">052-5741471</div>
+</div>
+</body>
+</html>
