@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700;900&family=Assistant:wght@400;500;600;700;800&family=Amatic+SC:wght@700&display=block" rel="stylesheet">
+<style>
+  :root{
+    --cream:#F4EADB; --paper:#FBF5EC; --brown:#3A2216; --terra:#B4532A; --olive:#6E6B3B; --gold:#C69A4E; --muted:#7A5E4C;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1080px;height:1350px;background:var(--cream)}
+  body{font-family:'Assistant',sans-serif;color:var(--brown);position:relative;overflow:hidden}
+  .grain{position:absolute;inset:0;pointer-events:none;opacity:.35;mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .32 0 0 0 0 .2 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");z-index:20}
+
+  /* header */
+  .top{position:absolute;top:56px;right:64px;left:64px;display:flex;justify-content:space-between;align-items:center}
+  .brand{display:flex;align-items:center;gap:18px}
+  .mono{width:74px;height:74px;border:1.5px solid var(--brown);border-radius:50%;display:grid;place-items:center;
+    font-family:'Frank Ruhl Libre',serif;font-weight:500;font-size:30px;letter-spacing:1px;direction:ltr}
+  .brand .t1{font-weight:700;font-size:21px;letter-spacing:.5px}
+  .brand .t2{font-size:18px;color:var(--muted);margin-top:2px}
+  .tag{font-size:17px;font-weight:600;letter-spacing:3px;color:var(--terra);border-top:1.5px solid var(--terra);border-bottom:1.5px solid var(--terra);padding:8px 2px}
+
+  /* headline */
+  .head{position:absolute;top:154px;right:64px;left:64px}
+  .kicker{font-size:24px;font-weight:600;color:var(--olive);letter-spacing:1px}
+  h1{font-family:'Frank Ruhl Libre',serif;font-weight:900;font-size:200px;line-height:.95;letter-spacing:-3px;margin-top:0;color:var(--brown);white-space:nowrap}
+  h1 span{color:var(--terra)}
+  .sub{position:absolute;top:250px;right:4px;width:640px;font-size:25px;line-height:1.42;color:var(--brown);text-align:right}
+  .sub b{font-weight:700}
+  
+
+  /* photos */
+  .photos{position:absolute;top:508px;right:64px;left:64px;height:572px}
+  .arch{position:absolute;right:0;top:0;width:560px;height:572px;border-radius:280px 280px 14px 14px;overflow:hidden;
+    box-shadow:0 30px 50px -30px rgba(58,34,22,.55)}
+  .arch img{width:100%;height:100%;object-fit:cover;object-position:50% 30%}
+  .p2,.p3{position:absolute;left:0;width:372px;border-radius:12px;overflow:hidden;box-shadow:0 24px 40px -26px rgba(58,34,22,.6)}
+  .p2{top:0;height:272px} .p3{top:292px;height:280px}
+  .p2 img,.p3 img{width:100%;height:100%;object-fit:cover}
+  .p2 img{object-position:50% 62%} .p3 img{object-position:50% 34%}
+
+  /* stamp */
+  .stamp{position:absolute;right:476px;top:400px;width:176px;height:176px;border-radius:50%;background:var(--terra);color:var(--paper);
+    display:grid;place-items:center;z-index:5;box-shadow:0 14px 30px -12px rgba(58,34,22,.6);transform:rotate(-8deg)}
+  .stamp svg{position:absolute;inset:0}
+  .stamp .c{font-family:'Frank Ruhl Libre',serif;font-weight:700;font-size:30px;line-height:1;text-align:center}
+  .stamp .c small{display:block;font-family:'Assistant';font-weight:600;font-size:15px;letter-spacing:1px;margin-top:4px;opacity:.9}
+
+  /* features */
+  .feats{position:absolute;top:1112px;right:64px;left:64px;display:flex;justify-content:space-between;align-items:center;
+    font-size:22px;font-weight:600;color:var(--brown)}
+  .feats i{width:7px;height:7px;background:var(--gold);border-radius:50%;display:inline-block}
+
+  /* footer */
+  .foot{position:absolute;bottom:0;right:0;left:0;height:168px;background:var(--brown);color:var(--paper);
+    display:flex;align-items:center;justify-content:space-between;padding:0 64px}
+  .foot .l1{font-family:'Amatic SC',cursive;font-size:46px;color:#E9C48A;line-height:1}
+  .foot .l2{font-size:22px;font-weight:500;opacity:.85;margin-top:6px;letter-spacing:.5px}
+  .foot .ph{text-align:left}
+  .foot .ph .who{font-size:20px;font-weight:600;letter-spacing:2px;color:#E9C48A}
+  .foot .ph .num{font-family:'Frank Ruhl Libre',serif;font-weight:700;font-size:52px;direction:ltr;letter-spacing:1px;line-height:1.05}
+</style>
+</head>
+<body>
+<div class="grain"></div>
+
+<div class="top">
+  <div class="brand">
+    <div class="mono">BE</div>
+    <div><div class="t1">בתאל טייב</div><div class="t2">סדנאות אפייה ובישול לנשים</div></div>
+  </div>
+  <div class="tag">בישול · אפייה · השראה</div>
+</div>
+
+<div class="head">
+  <div class="kicker">מבשלות יחד לקראת שבת המלכה</div>
+  <p class="sub">סדנה חווייתית שבה נכין יחד <b>את כל הטוב של שבת</b>, מהקציצות ועד הסלטים, ונצא עם מתכונים, השראה ולב מלא.</p>
+  <h1>עונג <span>שבת</span></h1>
+  
+</div>
+
+<div class="photos">
+  <div class="arch"><img src="hands.jpg"></div>
+  <div class="p2"><img src="fried.jpg"></div>
+  <div class="p3"><img src="dishes.jpg"></div>
+</div>
+<div class="stamp" style="top:880px;right:470px">
+  <svg viewBox="0 0 176 176"><circle cx="88" cy="88" r="76" fill="none" stroke="#FBF5EC" stroke-width="1.2" stroke-dasharray="3 5" opacity=".8"/></svg>
+  <div class="c"><small style="margin:0 0 2px">בואי, את</small>מוזמנת!</div>
+</div>
+
+<div class="feats">
+  <span>בישול ואפייה</span><i></i><span>מתכונים לקבלת שבת</span><i></i><span>אווירה נעימה ומחברת</span><i></i><span>השראה ושמחה</span>
+</div>
+
+<div class="foot">
+  <div>
+    <div class="l1">בואי לחוות, לבשל, להתחבר</div>
+    <div class="l2">לפרטים והרשמה, שלחי הודעה</div>
+  </div>
+  <div class="ph">
+    <div class="who">בתאל טייב</div>
+    <div class="num">052-5741471</div>
+  </div>
+</div>
+</body>
+</html>
