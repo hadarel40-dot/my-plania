@@ -71,7 +71,8 @@ export function createBrowserTranscriber(): Transcriber {
     async transcribe(timeline, assets, onStatus = () => {}) {
       const segmentsFor = perAssetCache(async (asset) => {
         onStatus("קורא את הסאונד…");
-        return runWhisper(await decodeAssetAudio(asset), onStatus);
+        const samples = await decodeAssetAudio(asset).catch(() => null);
+        return samples ? runWhisper(samples, onStatus) : [];
       });
       return segmentsToCaptions(timeline, assets, segmentsFor);
     },

@@ -40,8 +40,10 @@ export async function removeSilences(onStatus: (s: string) => void): Promise<num
   for (const [i, clip] of clips.entries()) {
     onStatus(`מנתח סאונד ${i + 1}/${clips.length}…`);
     const asset = useEditor.getState().assets[clip.assetId];
-    if (!asset) continue;
-    const samples = await decodeAssetAudio(asset);
+    if (!asset || asset.still) continue;
+    // בלי פס קול: אין שתיקות לחתוך בקליפ הזה
+    const samples = await decodeAssetAudio(asset).catch(() => null);
+    if (!samples) continue;
     // שוליים קצת רחבים יותר סביב כל מילה, כדי שהחיתוך לא יקטע את סוף המילה או את תחילתה
     let speech = findSpeech(samples, { from: clip.in, to: clip.out, pad: 0.17, minSilence: 0.5 });
     // כשיש תמלול: לא חותכים בתוך משפט (הפסקה טבעית באמצע משפט נשארת), ומילה שקטה

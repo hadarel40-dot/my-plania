@@ -71,7 +71,7 @@ export function TimelinePanel({ fill = false }: { fill?: boolean } = {}) {
 
   return (
     <section dir="ltr" className={cn("flex shrink-0 flex-col border-t border-zinc-800 bg-zinc-950", fill ? "h-full" : "h-56 md:h-72")}>
-      <div className="flex items-center gap-1 overflow-x-auto whitespace-nowrap border-b border-zinc-800 px-3 py-1.5 text-xs">
+      <div data-hscroll className="flex items-center gap-1 overflow-x-auto whitespace-nowrap border-b border-zinc-800 px-3 py-1.5 text-xs">
         <ToolBtn label="ביטול (Ctrl+Z)" onClick={undo} disabled={!canUndo}><Undo2 className="size-4" /></ToolBtn>
         <ToolBtn label="חזרה (Ctrl+Shift+Z)" onClick={redo} disabled={!canRedo}><Redo2 className="size-4" /></ToolBtn>
         <Sep />

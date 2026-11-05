@@ -37,7 +37,9 @@ export function createGeminiTranscriber(): Transcriber {
         const saved = useEditor.getState().assets[asset.id]?.transcript;
         if (saved?.v === TRANSCRIPT_V) { logEvent("transcribe_cached", { segments: saved.segments.length }); return saved.segments; }
         onStatus("קורא את הסאונד…");
-        const samples = await decodeAssetAudio(asset);
+        // סרטון בלי פס קול (למשל הקלטת מסך): אין מה לתמלל בו, וזה לא מפיל את השאר
+        const samples = await decodeAssetAudio(asset).catch(() => null);
+        if (!samples) return [];
         const speech = findSpeech(samples);
         if (!speech.length) return [];
         const chunks = chunkBySilence(speech, CHUNK_SEC);

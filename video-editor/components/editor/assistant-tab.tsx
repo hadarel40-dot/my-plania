@@ -85,7 +85,7 @@ export function AssistantTab() {
         {busy && <div className="me-auto flex items-center gap-1.5 rounded-2xl bg-zinc-800 px-3 py-2 text-sm text-zinc-300"><Loader2 className="size-3.5 animate-spin" /> עובד על זה…</div>}
       </div>
 
-      <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-3 pb-2">
+      <div data-hscroll className="no-scrollbar flex gap-1.5 overflow-x-auto px-3 pb-2 md:flex-wrap md:overflow-visible">
         {SUGGESTIONS.map((s) => (
           <button key={s} onClick={() => send(s)} disabled={busy}
             className="flex-none whitespace-nowrap rounded-full border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-violet-400 disabled:opacity-40">{s}</button>

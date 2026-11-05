@@ -86,3 +86,10 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
 /* פס גלילה מוסתר (סרגלים שנגללים לצד) */
 .no-scrollbar { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* במחשב (עכבר): פס גלילה דק ונראה בשורות שנגללות לצד, כדי שיהיה ברור שאפשר לגלול */
+@media (pointer: fine) {
+  .no-scrollbar { scrollbar-width: thin; scrollbar-color: #52525b transparent; }
+  .no-scrollbar::-webkit-scrollbar { display: block; height: 6px; }
+  .no-scrollbar::-webkit-scrollbar-thumb { background: #52525b; border-radius: 3px; }
+}

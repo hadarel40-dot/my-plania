@@ -228,7 +228,7 @@ export function CaptionTemplates({ current }: { current?: Pick<Caption, "preset"
   const isOn = (t: CaptionTemplate) => !!current && current.preset === t.style.preset && current.font === t.style.font && current.accent === t.style.accent && (current.box ?? "none") === (t.style.box ?? "none");
   return (
     <Group title="סגנון מוכן">
-      <div className="mb-2 flex gap-1 overflow-x-auto pb-1">
+      <div data-hscroll className="mb-2 flex gap-1 overflow-x-auto pb-1">
         {TEMPLATE_GROUPS.map((g) => (
           <button key={g.id} onClick={() => setGroup(g.id)}
             className={cn("shrink-0 rounded-full border px-3 py-1 text-xs", group === g.id ? "border-violet-500 bg-violet-500/15 text-white" : "border-zinc-700 text-zinc-400")}>

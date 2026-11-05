@@ -33,7 +33,8 @@ export async function segmentsToCaptions(
   for (const { clip, start } of layoutClips(timeline.clips)) {
     // גם קליפ שהסאונד שלו מושתק (למשל כשיש מוזיקה) מקבל כתוביות: הכתוביות הן לכל הסרטון
     const asset = assets[clip.sourceAssetId];
-    if (!asset) continue;
+    // תמונה / צילום מסך: אין בהם דיבור
+    if (!asset || asset.still) continue;
     const speed = clip.speed ?? 1;
     const at = (t: number) => +(start + (Math.min(Math.max(t, clip.in), clip.out) - clip.in) / speed).toFixed(2);
     for (const seg of await alignedFor(asset)) {

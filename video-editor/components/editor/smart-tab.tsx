@@ -439,7 +439,7 @@ function GoalField({ disabled }: { disabled: boolean }) {
       <input value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={() => save(draft)} disabled={disabled} dir="auto"
         placeholder="למשל: שיירשמו לסדנה ביום שישי"
         className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-base focus:border-fuchsia-400 focus:outline-none md:text-sm" />
-      <div className="no-scrollbar flex gap-1.5 overflow-x-auto">
+      <div data-hscroll className="no-scrollbar flex gap-1.5 overflow-x-auto md:flex-wrap md:overflow-visible">
         {GOALS.map((g) => (
           <button key={g} onClick={() => { setDraft(g); save(g); }} disabled={disabled}
             className={cn("flex-none whitespace-nowrap rounded-full border px-2.5 py-1 text-xs", goal === g ? "border-fuchsia-400 bg-fuchsia-500/15 text-white" : "border-zinc-700 text-zinc-400")}>{g}</button>

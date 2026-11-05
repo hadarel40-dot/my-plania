@@ -26,6 +26,7 @@ export interface EditorProps {
 
 export function Editor({ backend, account }: EditorProps) {
   useShortcuts();
+  useWheelScrollsSideways();
   const { ready, loadError, saveState } = useProjectBootstrap(backend);
 
   if (loadError) {
@@ -168,7 +169,7 @@ function PhoneLayout({ top }: { top: React.ReactNode }) {
       </div>
       {/* הסרגל נגלל לצדדים: כל הכלים זמינים, וכל כפתור בגודל נוח ללחיצה */}
       <nav className="relative shrink-0 border-t border-zinc-800/70 bg-zinc-950 pb-[max(env(safe-area-inset-bottom),4px)]">
-        <div className="no-scrollbar flex snap-x gap-0.5 overflow-x-auto px-1 pt-1">
+        <div data-hscroll className="no-scrollbar flex snap-x gap-0.5 overflow-x-auto px-1 pt-1">
         {buttons.map((b) => {
           const on = b.sheet !== undefined && sheet === b.sheet && (b.sheet !== "style" || b.id === "style");
           return (
@@ -200,6 +201,26 @@ interface ToolButton {
   /** פעולה מיידית (פיצול, שכפול, מחיקה...) */
   action?: () => void;
   tone?: "danger" | "active" | "brand";
+}
+
+/**
+ * במחשב: גלגלת העכבר מעל שורה שנגללת לצד (סרגלים, שבבים) גוללת אותה לצד.
+ * בלי זה אי אפשר להגיע לכפתורים שמחוץ למסך בלי משטח מגע.
+ */
+function useWheelScrollsSideways() {
+  useEffect(() => {
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX) || e.ctrlKey) return;
+      const el = (e.target as Element | null)?.closest?.("[data-hscroll]") as HTMLElement | null;
+      if (!el || el.scrollWidth <= el.clientWidth + 1) return;
+      const before = el.scrollLeft;
+      // בעברית (RTL) הגלילה לצד "קדימה" היא לשמאל
+      el.scrollLeft += getComputedStyle(el).direction === "rtl" ? -e.deltaY : e.deltaY;
+      if (el.scrollLeft !== before) e.preventDefault();
+    };
+    window.addEventListener("wheel", onWheel, { passive: false });
+    return () => window.removeEventListener("wheel", onWheel);
+  }, []);
 }
 
 const PANEL_KEY = "ai-video-editor:panel-height";

@@ -116,10 +116,10 @@ function Shell({ children }: { children: React.ReactNode }) {
 
 function TabBar({ tabs, tab, onTab }: { tabs: { id: Tab; label: string; icon: React.ReactNode }[]; tab: Tab; onTab: (t: Tab) => void }) {
   return (
-    <div className="no-scrollbar flex w-full overflow-x-auto border-b border-zinc-800 bg-zinc-900/40 md:w-[22rem] md:border-s">
+    <div className="grid w-full grid-cols-4 border-b border-zinc-800 bg-zinc-900/40 md:w-[22rem] md:border-s">
       {tabs.map((t) => (
         <button key={t.id} onClick={() => onTab(t.id)}
-          className={cn("flex min-w-[3.4rem] flex-1 flex-col items-center justify-center gap-0.5 border-b-2 px-1 py-2 text-[11.5px] transition",
+          className={cn("flex flex-col items-center justify-center gap-0.5 border-b-2 px-1 py-2 text-[11.5px] transition",
             t.id === tab ? "border-violet-500 text-white" : "border-transparent text-zinc-500 hover:text-zinc-300")}>
           {t.icon}{t.label}
         </button>
