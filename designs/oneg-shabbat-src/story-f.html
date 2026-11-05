@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Hebrew:wght@300;400;600;700&family=Assistant:wght@300;400;600;700&family=Frank+Ruhl+Libre:wght@300;500&display=block" rel="stylesheet">
+<style>
+  :root{--peach:#FBE9DD;--mauve:#8A5267;--plum:#5B2E40;--rose:#E7A9A0;--apricot:#F2C3A0;--cream:#FFF7F1}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1080px;height:1920px;overflow:hidden;background:var(--peach)}
+  body{font-family:'Assistant',sans-serif;color:var(--plum);position:relative}
+  .wash{position:absolute;inset:0;
+    background:
+      radial-gradient(520px 420px at 85% 12%, rgba(231,169,160,.55), transparent 70%),
+      radial-gradient(600px 500px at 8% 40%, rgba(242,195,160,.6), transparent 70%),
+      radial-gradient(560px 520px at 90% 78%, rgba(214,160,182,.45), transparent 70%),
+      radial-gradient(500px 400px at 15% 95%, rgba(242,195,160,.5), transparent 70%)}
+  .grain{position:absolute;inset:0;pointer-events:none;opacity:.3;mix-blend-mode:multiply;z-index:20;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .35 0 0 0 0 .38 0 0 0 .2 0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  .brand{position:absolute;top:150px;right:90px;left:90px;display:flex;justify-content:space-between;align-items:center}
+  .brand .l{display:flex;align-items:center;gap:14px}
+  .mono{width:66px;height:66px;border-radius:50%;background:var(--cream);display:grid;place-items:center;font-family:'Frank Ruhl Libre';font-weight:500;font-size:26px;direction:ltr;color:var(--mauve);box-shadow:0 6px 16px -8px rgba(91,46,64,.4)}
+  .brand .t1{font-weight:700;font-size:21px}
+  .brand .t2{font-size:18px;color:var(--mauve)}
+  .tag{font-family:'Playpen Sans Hebrew';font-size:20px;color:var(--mauve);background:rgba(255,247,241,.7);padding:8px 20px;border-radius:30px}
+
+  .bow{position:absolute;top:276px;left:50%;margin-left:-55px}
+  .head{position:absolute;top:340px;left:0;right:0;text-align:center}
+  h1{font-family:'Playpen Sans Hebrew';font-weight:600;font-size:170px;line-height:1.05;color:var(--plum);letter-spacing:-2px}
+  .kicker{font-family:'Frank Ruhl Libre';font-weight:300;font-size:38px;color:var(--mauve);margin-top:4px}
+
+  .arches{position:absolute;top:650px;left:70px;right:70px;height:760px}
+  .arch{position:absolute;overflow:hidden;border:8px solid var(--cream);box-shadow:0 30px 50px -26px rgba(91,46,64,.55)}
+  .arch img{width:100%;height:100%;object-fit:cover}
+  .a1{right:0;top:0;width:520px;height:720px;border-radius:260px 260px 30px 30px}
+  .a2{left:0;top:110px;width:400px;height:330px;border-radius:200px 200px 24px 24px}
+  .a3{left:0;top:460px;width:400px;height:300px;border-radius:24px 24px 200px 200px}
+
+  .heart{position:absolute;top:660px;right:520px;width:150px;height:150px;border-radius:50%;background:var(--mauve);color:var(--cream);
+    display:grid;place-items:center;text-align:center;font-family:'Playpen Sans Hebrew';font-size:24px;line-height:1.2;transform:rotate(-8deg);
+    box-shadow:0 14px 30px -12px rgba(91,46,64,.6);z-index:4}
+
+  .sub{position:absolute;top:1490px;right:90px;left:90px;text-align:center;font-size:28px;line-height:1.5}
+  .sub b{font-weight:700;color:var(--mauve)}
+  .chips{position:absolute;top:1590px;left:0;right:0;display:flex;justify-content:center;gap:12px}
+  .chips span{background:rgba(255,247,241,.85);border-radius:30px;padding:8px 20px;font-size:21px;font-weight:600;color:var(--mauve)}
+
+  .cta{position:absolute;top:1668px;left:90px;right:90px;display:flex;justify-content:space-between;align-items:center;
+    background:var(--plum);color:var(--cream);border-radius:28px;padding:20px 34px}
+  .cta .w{font-family:'Playpen Sans Hebrew';font-size:26px;line-height:1.2}
+  .cta .w small{display:block;font-family:'Assistant';font-size:18px;opacity:.8}
+  .cta .n{font-family:'Frank Ruhl Libre';font-weight:500;font-size:48px;direction:ltr}
+</style>
+</head>
+<body>
+<div class="wash"></div>
+<div class="grain"></div>
+
+<div class="brand">
+  <div class="l"><div class="mono">BE</div><div><div class="t1">בתאל טייב</div><div class="t2">סדנאות אפייה ובישול לנשים</div></div></div>
+  <div class="tag">רק לנשים</div>
+</div>
+
+<svg class="bow" width="110" height="70" viewBox="0 0 110 70" fill="none" stroke="#8A5267" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M55 30 C40 10 14 6 10 18 C6 32 30 40 55 30Z" fill="#E7A9A0" fill-opacity=".55"/>
+  <path d="M55 30 C70 10 96 6 100 18 C104 32 80 40 55 30Z" fill="#E7A9A0" fill-opacity=".55"/>
+  <path d="M52 32 C46 44 38 56 30 66"/><path d="M58 32 C64 44 72 56 80 66"/>
+  <ellipse cx="55" cy="31" rx="6" ry="7" fill="#8A5267"/>
+</svg>
+
+<div class="head">
+  <h1>עונג שבת</h1>
+  <div class="kicker">סדנה חווייתית לקראת שבת המלכה</div>
+</div>
+
+<div class="arches">
+  <div class="arch a1"><img src="hands.jpg" style="object-position:52% 28%"></div>
+  <div class="arch a2"><img src="dishes.jpg" style="object-position:60% 28%"></div>
+  <div class="arch a3"><img src="fried.jpg" style="object-position:50% 62%"></div>
+</div>
+<div class="heart">בואי,<br>את מוזמנת!</div>
+
+<p class="sub">מבשלות יחד את <b>כל הטוב של שבת</b>,<br>עם הרבה אהבה, שמחה והשראה</p>
+<div class="chips"><span>בישול ואפייה</span><span>מתכונים לשבת</span><span>אווירה מחברת</span></div>
+
+<div class="cta">
+  <div class="w">לפרטים והרשמה<small>בואי לחוות, לבשל, להתחבר</small></div>
+  <div class="n">052-5741471</div>
+</div>
+</body>
+</html>
