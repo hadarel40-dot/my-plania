@@ -6,123 +6,115 @@
 <link rel="stylesheet" href="fonts.css">
 <style>
   :root{
-    --bg1:#1d1418; --bg2:#2e1d25;
-    --pink:#f7b3cc; --pink-deep:#e98bb0;
-    --white:#fff8f4; --muted:rgba(255,248,244,.55);
+    --wine:#5d1519; --wine-d:#3f0d10; --wine-l:#f3e4e2;
+    --cream:#e5d9cf; --cream-l:#f4ede6; --paper:#fffaf6;
+    --ink:#2b1214; --mute:#8b7472;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:#111;font-family:'Rubik',sans-serif}
-  .slide{
-    width:1080px;height:1350px;position:relative;overflow:hidden;
-    background:
-      radial-gradient(900px 700px at 85% 10%, rgba(247,179,204,.16), transparent 60%),
-      radial-gradient(800px 700px at 10% 95%, rgba(233,139,176,.12), transparent 60%),
-      linear-gradient(160deg,var(--bg2),var(--bg1));
-    color:var(--white);
-    display:flex;flex-direction:column;justify-content:center;
-    padding:160px 130px;
-    page-break-after:always;
-  }
-  .slide::after{ /* paper grain */
-    content:"";position:absolute;inset:0;pointer-events:none;opacity:.07;
-    background-image:radial-gradient(#fff 1px,transparent 1px);background-size:6px 6px;
-  }
-  .num{position:absolute;top:70px;left:80px;font-size:32px;font-weight:500;color:var(--muted);letter-spacing:2px;direction:ltr}
-  .handle{position:absolute;bottom:64px;left:80px;font-size:32px;font-weight:500;color:var(--muted);direction:ltr}
-  .swipe{position:absolute;bottom:58px;right:80px;font-size:34px;font-weight:500;color:var(--pink)}
-  h1,h2{font-weight:900;color:var(--pink);line-height:1.08;letter-spacing:-1px}
-  h1{font-size:132px}
-  h2{font-size:96px}
-  .hand{font-family:'Amatic SC',cursive;font-weight:700;color:var(--white);font-size:78px;line-height:1.12;margin-top:44px}
-  .hand.sm{font-size:66px}
-  .tag{display:inline-block;align-self:flex-start;font-size:34px;font-weight:800;color:var(--bg1);background:var(--pink);padding:10px 26px;border-radius:999px;margin-bottom:46px}
+  .slide{width:1080px;height:1350px;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center;padding:150px 120px}
+  .cream{background:var(--cream);color:var(--wine)}
+  .wine{background:var(--wine);color:var(--cream)}
+  .photo{color:var(--cream);background-size:cover;background-position:center}
+  .photo::before{content:"";position:absolute;inset:0;z-index:0}
+  .photo>*{position:relative;z-index:1}
+  .slide>.num,.slide>.handle,.slide>.swipe,.slide>.logo{position:absolute;z-index:2}
+  .num{top:66px;left:76px;font-size:30px;font-weight:600;opacity:.6;direction:ltr}
+  .handle{bottom:60px;left:76px;font-size:30px;font-weight:600;opacity:.6;direction:ltr}
+  .swipe{bottom:56px;right:76px;font-size:32px;font-weight:700}
+  .logo{top:56px;right:76px;width:200px}
 
-  /* mock browser for the generic-site slide */
-  .browser{margin-top:56px;border-radius:26px;overflow:hidden;background:#fff;box-shadow:0 30px 80px rgba(0,0,0,.5);transform:rotate(-2deg)}
-  .bar{height:56px;background:#e9e9ee;display:flex;align-items:center;gap:12px;padding:0 22px;direction:ltr}
-  .bar i{width:16px;height:16px;border-radius:50%;background:#c9c9d1;display:block}
-  .bar .url{flex:1;height:30px;border-radius:15px;background:#fff;margin-left:16px}
-  .gen{direction:rtl;font-family:'Rubik';color:#222}
-  .gen .nav{display:flex;justify-content:space-between;align-items:center;padding:22px 36px;font-size:24px;color:#555}
-  .gen .nav b{font-size:28px;color:#4b3fd1}
-  .gen .hero{background:linear-gradient(120deg,#6a5cff,#a855f7);color:#fff;text-align:center;padding:64px 40px}
-  .gen .hero .t{font-size:48px;font-weight:800}
-  .gen .hero .s{font-size:26px;opacity:.85;margin-top:12px}
-  .gen .hero .btn{display:inline-block;margin-top:30px;background:#fff;color:#6a5cff;font-weight:800;font-size:24px;padding:14px 40px;border-radius:999px}
-  .gen .cards{display:flex;gap:20px;padding:34px 36px 40px}
-  .gen .card{flex:1;background:#f4f4fa;border-radius:16px;padding:24px 16px;text-align:center;font-size:24px;font-weight:700;color:#444}
-  .gen .card span{display:block;font-size:40px;margin-bottom:8px}
+  h1,h2{font-weight:900;line-height:1.06;letter-spacing:-1px}
+  h1{font-size:128px} h2{font-size:94px}
+  .hand{font-family:'Amatic SC',cursive;font-weight:700;font-size:76px;line-height:1.1;margin-top:34px}
+  .sub{font-size:38px;font-weight:500;line-height:1.35;margin-top:30px;opacity:.85}
+  .tag{display:inline-block;align-self:flex-start;font-size:32px;font-weight:800;padding:10px 26px;border-radius:999px;margin-bottom:36px}
+  .cream .tag{background:var(--wine);color:var(--cream)}
+  .photo .tag,.wine .tag{background:var(--cream);color:var(--wine)}
+  .underline{display:block;width:300px;height:22px;margin-top:22px}
 
-  /* UI cards for feature slides */
-  .ui{margin-top:64px;background:rgba(255,248,244,.07);border:2px solid rgba(247,179,204,.35);border-radius:30px;padding:40px 44px}
-  .field{background:rgba(255,248,244,.1);border-radius:16px;padding:22px 26px;font-size:34px;color:var(--muted);margin-bottom:20px}
-  .cta{background:var(--pink);color:var(--bg1);font-weight:800;font-size:36px;text-align:center;padding:22px;border-radius:16px}
-  .row{display:flex;align-items:center;gap:22px;padding:20px 0;border-bottom:2px solid rgba(255,248,244,.1);font-size:34px}
-  .row:last-child{border-bottom:0}
-  .dot{width:60px;height:60px;border-radius:50%;background:var(--pink);color:var(--bg1);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:30px;flex:none}
-  .row .who{font-weight:800}
-  .row .what{color:var(--muted);font-size:30px}
-  .row .new{margin-right:auto;font-size:26px;font-weight:800;color:var(--bg1);background:var(--pink);padding:6px 18px;border-radius:999px}
+  /* generic site mock */
+  .browser{margin-top:60px;border-radius:24px;overflow:hidden;background:#fff;box-shadow:0 30px 70px rgba(63,13,16,.35);transform:rotate(-2deg)}
+  .bar{height:52px;background:#ececf0;display:flex;align-items:center;gap:10px;padding:0 22px;direction:ltr}
+  .bar i{width:15px;height:15px;border-radius:50%;background:#c9c9d1;display:block}
+  .bar .url{flex:1;height:28px;border-radius:14px;background:#fff;margin-left:14px}
+  .gen{direction:rtl;color:#222}
+  .gen .nav{display:flex;justify-content:space-between;align-items:center;padding:20px 34px;font-size:23px;color:#555}
+  .gen .nav b{font-size:27px;color:#4b3fd1}
+  .gen .hero{background:linear-gradient(120deg,#6a5cff,#a855f7);color:#fff;text-align:center;padding:58px 40px}
+  .gen .hero .t{font-size:46px;font-weight:800}
+  .gen .hero .s{font-size:25px;opacity:.85;margin-top:10px}
+  .gen .hero .btn{display:inline-block;margin-top:26px;background:#fff;color:#6a5cff;font-weight:800;font-size:23px;padding:13px 38px;border-radius:999px}
+  .gen .cards{display:flex;gap:18px;padding:30px 34px 36px}
+  .gen .card{flex:1;background:#f4f4fa;border-radius:16px;padding:22px 14px;text-align:center;font-size:23px;font-weight:700;color:#444}
+  .gen .card span{display:block;font-size:38px;margin-bottom:6px}
 
-  .list{margin-top:56px;list-style:none}
-  .list li{font-size:46px;font-weight:500;padding:22px 0;display:flex;gap:24px;align-items:center;border-bottom:2px solid rgba(255,248,244,.12)}
-  .list li:last-child{border-bottom:0}
-  .list li::before{content:"✓";color:var(--bg1);background:var(--pink);width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:34px;flex:none}
+  /* "same as everyone" thumbnails */
+  .clones{display:flex;gap:26px;margin-top:64px}
+  .clone{flex:1;text-align:center}
+  .mini{background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 18px 40px rgba(0,0,0,.3)}
+  .mini .h{height:110px;background:linear-gradient(120deg,#6a5cff,#a855f7);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+  .mini .h i{display:block;height:12px;width:70%;background:rgba(255,255,255,.85);border-radius:6px}
+  .mini .h i+i{width:40%;height:16px;border-radius:8px}
+  .mini .c{display:flex;gap:8px;padding:14px}
+  .mini .c i{flex:1;height:52px;background:#f0f0f6;border-radius:8px;display:block}
+  .clone p{font-size:30px;font-weight:700;margin-top:18px}
+  .clone.you p{color:var(--cream)}
+  .clone.you .mini{outline:5px dashed var(--cream);outline-offset:8px}
 
-  .kw{display:inline-block;margin-top:60px;align-self:flex-start;background:var(--pink);color:var(--bg1);font-weight:900;font-size:64px;padding:26px 60px;border-radius:28px}
-  .center{text-align:center;align-items:center}
-  .center .tag,.center .kw{align-self:center}
-
-  /* ---- polished product UI (slides 5-9) ---- */
-  .stage{position:relative;margin-top:64px}
-  .pane{background:#fffaf7;color:#2a1c22;border-radius:32px;box-shadow:0 40px 90px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.08);overflow:hidden}
-  .pane-top{display:flex;align-items:center;justify-content:space-between;padding:26px 36px;border-bottom:1.5px solid #f0e3e8}
-  .pane-top .ttl{font-size:32px;font-weight:800}
-  .pane-top .dots{display:flex;gap:10px;direction:ltr}.pane-top .dots i{width:14px;height:14px;border-radius:50%;background:#ecdde3;display:block}
-  .pane-body{padding:32px 36px 36px}
-  .lbl{font-size:24px;font-weight:700;color:#8a7680;margin:0 4px 10px}
-  .inp{height:72px;border:2px solid #eedfe5;border-radius:16px;background:#fff;margin-bottom:22px;display:flex;align-items:center;padding:0 22px;font-size:28px;color:#2a1c22;font-weight:500}
-  .inp.ph{color:#c2b2b9}
-  .btn2{height:80px;border-radius:18px;background:#2a1c22;color:#fff;font-weight:800;font-size:30px;display:flex;align-items:center;justify-content:center;gap:14px}
+  /* product UI */
+  .stage{position:relative;margin-top:62px}
+  .pane{background:var(--paper);color:var(--ink);border-radius:30px;box-shadow:0 36px 80px rgba(43,18,20,.35);overflow:hidden}
+  .pane-top{display:flex;align-items:center;justify-content:space-between;padding:24px 36px;border-bottom:1.5px solid #efe2dc}
+  .pane-top .ttl{font-size:31px;font-weight:800}
+  .pane-top .dots{display:flex;gap:10px;direction:ltr}.pane-top .dots i{width:14px;height:14px;border-radius:50%;background:#e8d8d2;display:block}
+  .pane-body{padding:30px 36px 36px}
+  .lbl{font-size:24px;font-weight:700;color:var(--mute);margin:0 4px 10px}
+  .inp{height:70px;border:2px solid #eadbd4;border-radius:16px;background:#fff;margin-bottom:22px;display:flex;align-items:center;padding:0 22px;font-size:28px;font-weight:500}
+  .inp.ph{color:#c3b2ad}
+  .btn2{height:78px;border-radius:18px;background:var(--wine);color:var(--cream);font-weight:800;font-size:30px;display:flex;align-items:center;justify-content:center}
   .chips{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:24px}
-  .chip{font-size:26px;font-weight:600;padding:14px 26px;border-radius:999px;border:2px solid #eedfe5;color:#5b4851}
-  .chip.on{background:#fbe1eb;border-color:var(--pink-deep);color:#2a1c22}
-  .toast{position:absolute;left:-40px;top:-46px;background:#fff;color:#2a1c22;border-radius:24px;padding:22px 28px;display:flex;gap:18px;align-items:center;box-shadow:0 24px 60px rgba(0,0,0,.4);min-width:430px;z-index:2}
-  .toast .ic{width:64px;height:64px;border-radius:18px;background:var(--pink);display:flex;align-items:center;justify-content:center;flex:none}
-  .toast b{display:block;font-size:28px}.toast span{font-size:23px;color:#8a7680}
-  .tabs{display:flex;gap:12px;margin-bottom:10px}
-  .tab{font-size:24px;font-weight:700;padding:10px 22px;border-radius:999px;background:#f5ebef;color:#6b5862}
-  .tab.on{background:#2a1c22;color:#fff}
-  .lead{display:flex;align-items:center;gap:20px;padding:22px 0;border-bottom:1.5px solid #f2e7eb}
+  .chip{font-size:26px;font-weight:600;padding:13px 26px;border-radius:999px;border:2px solid #eadbd4;color:#6a5352}
+  .chip.on{background:var(--wine-l);border-color:var(--wine);color:var(--wine)}
+  .toast{position:absolute;left:-36px;top:-46px;background:#fff;color:var(--ink);border-radius:24px;padding:20px 28px;display:flex;gap:18px;align-items:center;box-shadow:0 24px 56px rgba(43,18,20,.35);min-width:430px;z-index:2}
+  .toast .ic{width:62px;height:62px;border-radius:18px;background:var(--wine);display:flex;align-items:center;justify-content:center;flex:none}
+  .toast b{display:block;font-size:28px}.toast span{font-size:23px;color:var(--mute)}
+  .tabs{display:flex;gap:12px}
+  .tab{font-size:23px;font-weight:700;padding:9px 22px;border-radius:999px;background:#f3e9e4;color:#6a5352}
+  .tab.on{background:var(--wine);color:var(--cream)}
+  .lead{display:flex;align-items:center;gap:20px;padding:21px 0;border-bottom:1.5px solid #f1e6e1}
   .lead:last-child{border-bottom:0;padding-bottom:0}
-  .av{width:66px;height:66px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:28px;flex:none;background:#fbe1eb;color:#b04f78}
-  .lead .n{font-size:29px;font-weight:800}.lead .d{font-size:23px;color:#8a7680;margin-top:4px}
-  .src{font-size:20px;font-weight:700;color:#8a7680;background:#f5ebef;border-radius:8px;padding:4px 10px;margin-right:8px}
+  .av{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:28px;flex:none;background:var(--wine-l);color:var(--wine)}
+  .lead .n{font-size:29px;font-weight:800}.lead .d{font-size:23px;color:var(--mute);margin-top:4px}
+  .src{font-size:20px;font-weight:700;color:#6a5352;background:#f3e9e4;border-radius:8px;padding:4px 10px;margin-left:8px}
   .st{margin-right:auto;font-size:22px;font-weight:800;padding:8px 18px;border-radius:999px;white-space:nowrap}
-  .st.new{background:var(--pink);color:#2a1c22}.st.wip{background:#fff1d6;color:#8a5a00}.st.done{background:#e3f3e8;color:#2d7a47}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:64px}
-  .tile{background:rgba(255,248,244,.06);border:1.5px solid rgba(247,179,204,.28);border-radius:30px;padding:40px 34px}
-  .tile .ic{width:82px;height:82px;border-radius:22px;background:var(--pink);display:flex;align-items:center;justify-content:center;margin-bottom:28px}
-  .tile b{display:block;font-size:40px;font-weight:800;line-height:1.15}
-  .tile span{display:block;font-size:26px;color:var(--muted);margin-top:10px;line-height:1.35}
-  .sub{font-size:40px;font-weight:500;color:var(--white);opacity:.85;margin-top:36px;line-height:1.35}
-  .biolink{margin-top:64px;align-self:center;display:flex;align-items:center;gap:20px;background:var(--pink);color:var(--bg1);font-weight:900;font-size:58px;padding:28px 56px;border-radius:999px}
+  .st.new{background:var(--wine);color:var(--cream)}.st.wip{background:#fbefd6;color:#8a5a00}.st.done{background:#e4f1e7;color:#2d7a47}
+
+  /* recap */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:58px}
+  .tile{background:rgba(229,217,207,.08);border:1.5px solid rgba(229,217,207,.3);border-radius:28px;padding:36px 32px}
+  .tile .ic{width:80px;height:80px;border-radius:22px;background:var(--cream);display:flex;align-items:center;justify-content:center;margin-bottom:26px}
+  .tile b{display:block;font-size:38px;font-weight:800;line-height:1.15}
+  .tile span{display:block;font-size:26px;opacity:.7;margin-top:10px;line-height:1.35}
+
+  .biolink{margin-top:46px;align-self:flex-start;display:flex;align-items:center;gap:16px;background:var(--cream);color:var(--wine);font-weight:900;font-size:54px;padding:24px 50px;border-radius:999px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
 </style>
 </head>
 <body>
 
-<!-- 1 COVER -->
-<section class="slide" id="s1">
-  <span class="num">1/9</span>
+<!-- 1 COVER: photo -->
+<section class="slide photo" id="s1" style="background-image:url(img/face.jpg);justify-content:flex-end;padding-bottom:170px">
+  <style>#s1::before{background:linear-gradient(180deg,rgba(63,13,16,0) 30%,rgba(63,13,16,.55) 55%,rgba(63,13,16,.93) 82%)}</style>
+  <span class="num" style="color:#fff">1/9</span>
   <span class="tag">בעלת עסק?</span>
-  <h1>ניסית לבנות אתר בקלוד?</h1>
-  <p class="hand">אם את יודעת לבנות אתר מצוין לבד,<br>אני לא מדברת אלייך.</p>
-  <span class="handle">@plania.il</span>
-  <span class="swipe">החליקי ←</span>
+  <h1>ניסית לבנות<br>אתר בקלוד?</h1>
+  <p class="hand" style="color:#fff">אם את יודעת לבנות אתר מצוין לבד,<br>אני לא מדברת אלייך.</p>
+  <span class="handle" style="color:#fff">@plania.il</span>
+  <span class="swipe" style="color:var(--cream)">החליקי ←</span>
 </section>
 
-<!-- 2 THE GENERIC SITE -->
-<section class="slide" id="s2">
+<!-- 2 generic site: cream -->
+<section class="slide cream" id="s2">
   <span class="num">2/9</span>
   <h2>ויצא לך...<br>טוב, משהו כזה.</h2>
   <div class="browser">
@@ -144,29 +136,35 @@
   <span class="handle">@plania.il</span>
 </section>
 
-<!-- 3 -->
-<section class="slide" id="s3">
+<!-- 3 same as everyone: wine -->
+<section class="slide wine" id="s3">
   <span class="num">3/9</span>
   <h2>אתר שנראה<br>כמו של כולם</h2>
-  <p class="hand">שלא באמת מייצג אותך,<br>את העסק שלך,<br>או את מה שמיוחד במה שאת עושה.</p>
+  <p class="hand">שלא באמת מייצג אותך, את העסק שלך,<br>או את מה שמיוחד במה שאת עושה.</p>
+  <div class="clones">
+    <div class="clone"><div class="mini"><div class="h"><i></i><i></i></div><div class="c"><i></i><i></i><i></i></div></div><p>הקוסמטיקאית</p></div>
+    <div class="clone"><div class="mini"><div class="h"><i></i><i></i></div><div class="c"><i></i><i></i><i></i></div></div><p>הצלמת</p></div>
+    <div class="clone you"><div class="mini"><div class="h"><i></i><i></i></div><div class="c"><i></i><i></i><i></i></div></div><p>את?</p></div>
+  </div>
   <span class="handle">@plania.il</span>
 </section>
 
-<!-- 4 -->
-<section class="slide" id="s4">
-  <span class="num">4/9</span>
+<!-- 4 more than a business card: photo -->
+<section class="slide photo" id="s4" style="background-image:url(img/mirror.jpg);justify-content:flex-start;padding-top:170px">
+  <style>#s4::before{background:linear-gradient(180deg,rgba(63,13,16,.88) 0%,rgba(63,13,16,.6) 38%,rgba(63,13,16,0) 62%)}</style>
+  <span class="num" style="color:#fff">4/9</span>
   <h2>יותר מכרטיס ביקור באינטרנט</h2>
-  <p class="hand">אני מדברת אלייך אם את רוצה<br>שהאתר שלך יעשה קצת יותר.</p>
-  <span class="handle">@plania.il</span>
+  <p class="hand" style="color:#fff">אני מדברת אלייך אם את רוצה<br>שהאתר שלך יעשה קצת יותר.</p>
+  <span class="handle" style="color:#fff">@plania.il</span>
 </section>
 
-<!-- 5 -->
-<section class="slide" id="s5">
+<!-- 5 leads: cream -->
+<section class="slide cream" id="s5">
   <span class="num">5/9</span>
   <h2>אתר שאוסף<br>לך לידים</h2>
   <p class="sub">מי שמתעניינת משאירה פרטים,<br>וזה לא הולך לאיבוד.</p>
   <div class="stage">
-    <div class="toast"><div class="ic"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#2a1c22" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div><div><b>ליד חדש מהאתר</b><span>רונית · לפני דקה</span></div></div>
+    <div class="toast"><div class="ic"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#e5d9cf" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div><div><b>ליד חדש מהאתר</b><span>רונית · לפני דקה</span></div></div>
     <div class="pane">
       <div class="pane-top"><span class="ttl">רוצה לשמוע עוד?</span><span class="dots"><i></i><i></i><i></i></span></div>
       <div class="pane-body">
@@ -179,13 +177,13 @@
   <span class="handle">@plania.il</span>
 </section>
 
-<!-- 6 -->
-<section class="slide" id="s6">
+<!-- 6 quotes: wine -->
+<section class="slide wine" id="s6">
   <span class="num">6/9</span>
   <h2>בקשות להצעת מחיר, ישר מהאתר</h2>
   <p class="sub">הלקוחות כותבים מה הם צריכים,<br>ואת מקבלת הכול מסודר.</p>
   <div class="stage">
-    <div class="toast"><div class="ic"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#2a1c22" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg></div><div><b>בקשה חדשה להצעת מחיר</b><span>מיכל · אירוע ל-40 איש</span></div></div>
+    <div class="toast"><div class="ic"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#e5d9cf" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg></div><div><b>בקשה חדשה להצעת מחיר</b><span>מיכל · אירוע ל-40 איש</span></div></div>
     <div class="pane">
       <div class="pane-top"><span class="ttl">בקשה להצעת מחיר</span><span class="dots"><i></i><i></i><i></i></span></div>
       <div class="pane-body">
@@ -199,16 +197,15 @@
   <span class="handle">@plania.il</span>
 </section>
 
-<!-- 7 -->
-<section class="slide" id="s7">
+<!-- 7 inbox: cream -->
+<section class="slide cream" id="s7">
   <span class="num">7/9</span>
   <h2>כל הפניות<br>במקום אחד</h2>
   <p class="sub">בלי לפשפש בין המיילים והוואטסאפים<br>כדי להבין מי ביקש ממך מה.</p>
   <div class="stage">
     <div class="pane">
-      <div class="pane-top"><span class="ttl">הפניות שלי</span>
-        <div class="tabs" style="margin:0"><span class="tab on">הכול 12</span><span class="tab">חדשות 2</span></div></div>
-      <div class="pane-body" style="padding-top:12px">
+      <div class="pane-top"><span class="ttl">הפניות שלי</span><div class="tabs"><span class="tab on">הכול 12</span><span class="tab">חדשות 2</span></div></div>
+      <div class="pane-body" style="padding-top:10px">
         <div class="lead"><div class="av">ר</div><div><div class="n">רונית</div><div class="d"><span class="src">טופס</span>רוצה לשמוע פרטים</div></div><span class="st new">חדש</span></div>
         <div class="lead"><div class="av">מ</div><div><div class="n">מיכל</div><div class="d"><span class="src">הצעת מחיר</span>אירוע ל-40 איש</div></div><span class="st new">חדש</span></div>
         <div class="lead"><div class="av">ש</div><div><div class="n">שירה</div><div class="d"><span class="src">טופס</span>שאלה על המחירים</div></div><span class="st wip">בטיפול</span></div>
@@ -219,27 +216,29 @@
   <span class="handle">@plania.il</span>
 </section>
 
-<!-- 8 RECAP -->
-<section class="slide" id="s8">
+<!-- 8 recap: wine -->
+<section class="slide wine" id="s8">
   <span class="num">8/9</span>
   <h2 style="font-size:84px">אתר טוב לא אמור רק להיראות טוב.</h2>
-  <p class="hand" style="margin-top:24px;color:var(--white)">הוא אמור לעבוד בשבילך.</p>
+  <p class="hand">הוא אמור לעבוד בשבילך.</p>
   <div class="grid">
-    <div class="tile"><div class="ic"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#2a1c22" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg></div><b>נראה כמו העסק שלך</b><span>ולא כמו של כולם</span></div>
-    <div class="tile"><div class="ic"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#2a1c22" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M19 8v6M16 11h6"/></svg></div><b>אוסף לידים</b><span>כל מתעניינת נשמרת</span></div>
-    <div class="tile"><div class="ic"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#2a1c22" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg></div><b>בקשות להצעת מחיר</b><span>ישר מהאתר, מסודרות</span></div>
-    <div class="tile"><div class="ic"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#2a1c22" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg></div><b>כל הפניות במקום אחד</b><span>בלי לחפש במיילים ובוואטסאפ</span></div>
+    <div class="tile"><div class="ic"><svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#5d1519" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg></div><b>נראה כמו העסק שלך</b><span>ולא כמו של כולם</span></div>
+    <div class="tile"><div class="ic"><svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#5d1519" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M19 8v6M16 11h6"/></svg></div><b>אוסף לידים</b><span>כל מתעניינת נשמרת</span></div>
+    <div class="tile"><div class="ic"><svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#5d1519" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg></div><b>בקשות להצעת מחיר</b><span>ישר מהאתר, מסודרות</span></div>
+    <div class="tile"><div class="ic"><svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#5d1519" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg></div><b>כל הפניות במקום אחד</b><span>בלי לחפש במיילים ובוואטסאפ</span></div>
   </div>
   <span class="handle">@plania.il</span>
 </section>
 
-<!-- 9 CTA -->
-<section class="slide center" id="s9">
-  <span class="num">9/9</span>
+<!-- 9 CTA: photo -->
+<section class="slide photo" id="s9" style="background-image:url(img/coffee.jpg);justify-content:flex-start;padding-top:190px">
+  <style>#s9::before{background:linear-gradient(180deg,rgba(63,13,16,.9) 0%,rgba(63,13,16,.7) 40%,rgba(63,13,16,0) 66%)}</style>
+  <img class="logo" src="img/logo-cream.png" alt="Plania's">
+  <span class="num" style="color:#fff;top:auto;bottom:60px;left:auto;right:76px">9/9</span>
   <h2>אם זה מה שאת מחפשת,<br>דברי איתי</h2>
-  <p class="hand">כל הפרטים מחכים לך בקישור בביו</p>
+  <p class="hand" style="color:#fff">כל הפרטים מחכים לך בקישור בביו</p>
   <span class="biolink">לקישור בביו ↑</span>
-  <span class="handle">@plania.il</span>
+  <span class="handle" style="color:#fff">@plania.il</span>
 </section>
 
 </body>
