@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@300;400;500&family=Playpen+Sans+Hebrew:wght@300;400&family=Assistant:wght@300;400;600;700&display=block" rel="stylesheet">
+<style>
+  :root{--sand:#E8D8C3;--caramel:#A8673A;--espresso:#4A3226;--ivory:#FBF6EE;--latte:#C9A98A}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1080px;height:1920px;overflow:hidden;background:var(--sand)}
+  body{font-family:'Assistant',sans-serif;color:var(--espresso);position:relative}
+  .grain{position:absolute;inset:0;pointer-events:none;opacity:.35;mix-blend-mode:multiply;z-index:20;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .33 0 0 0 0 .24 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  .hero{position:absolute;top:0;left:0;right:0;height:800px;overflow:hidden}
+  .hero img{width:100%;height:100%;object-fit:cover;object-position:50% 34%}
+  .hero:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(60,38,28,.85) 0%,rgba(60,38,28,.55) 15%,rgba(60,38,28,0) 34%)}
+
+  .brand{position:absolute;top:150px;left:0;right:0;text-align:center;color:var(--ivory);z-index:3;text-shadow:0 2px 12px rgba(30,18,12,.9),0 0 4px rgba(30,18,12,.7)}
+  .mono{font-family:'Frank Ruhl Libre';font-size:40px;letter-spacing:10px;direction:ltr;line-height:1}
+  .brand .t{font-size:19px;letter-spacing:3px;font-weight:600;margin-top:6px;opacity:.95}
+
+  .card{position:absolute;top:640px;left:50px;right:50px;bottom:150px;background:var(--ivory);border-radius:44px;
+    box-shadow:0 -10px 50px -20px rgba(74,50,38,.45);text-align:center;padding:62px 40px 0}
+  .script{font-family:'Playpen Sans Hebrew';font-weight:300;font-size:38px;color:var(--caramel)}
+  h1{font-family:'Frank Ruhl Libre';font-weight:300;font-size:176px;line-height:.93;letter-spacing:-1px;margin-top:2px}
+  .card p{font-size:26px;line-height:1.45;margin-top:14px}
+  .card p b{font-weight:700;color:var(--caramel)}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:28px}
+  .ph{position:relative;overflow:hidden;border-radius:22px;box-shadow:0 16px 30px -20px rgba(74,50,38,.55)}
+  .ph img{width:100%;height:100%;object-fit:cover;display:block}
+  .wide{grid-column:1 / -1;height:330px}
+  .half{height:290px}
+  .chip{position:absolute;bottom:16px;right:16px;background:rgba(251,246,238,.92);color:var(--espresso);font-size:20px;font-weight:700;
+    padding:6px 16px;border-radius:30px}
+
+  .cta{position:absolute;bottom:180px;left:90px;right:90px;display:flex;justify-content:space-between;align-items:center}
+  .cta .w{font-family:'Playpen Sans Hebrew';font-size:27px;color:var(--caramel);text-align:right;line-height:1.25}
+  .cta .w small{display:block;font-family:'Assistant';font-size:19px;color:var(--espresso);opacity:.8}
+  .cta .n{background:var(--espresso);color:var(--ivory);border-radius:50px;padding:10px 30px;font-family:'Frank Ruhl Libre';font-weight:500;font-size:44px;direction:ltr}
+</style>
+</head>
+<body>
+<div class="hero"><img src="challah.jpg"></div>
+<div class="grain"></div>
+
+<div class="brand"><div class="mono">BE</div><div class="t">בתאל טייב · סדנאות אפייה ובישול לנשים</div></div>
+
+<div class="card">
+  <div class="script">סדנה לנשים לקראת שבת המלכה</div>
+  <h1>עונג שבת</h1>
+  <p>מפגש חווייתי שבו נכין יחד <b>את כל הטוב של שבת</b></p>
+  <div class="grid">
+    <div class="ph wide"><img src="hands.jpg" style="object-position:55% 13%"><span class="chip">בישול ביחד</span></div>
+    <div class="ph half"><img src="fried.jpg" style="object-position:50% 58%"><span class="chip">מתכונים לשבת</span></div>
+    <div class="ph half"><img src="dishes.jpg" style="object-position:55% 32%"><span class="chip">סלטים ומטבלים</span></div>
+  </div>
+</div>
+
+<div class="cta">
+  <div class="w">לפרטים והרשמה<small>בואי לחוות, לבשל, להתחבר</small></div>
+  <div class="n">052-5741471</div>
+</div>
+</body>
+</html>
