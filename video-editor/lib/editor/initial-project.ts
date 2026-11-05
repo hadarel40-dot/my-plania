@@ -34,7 +34,7 @@ export function normalizeProject(project: SavedProject): SavedProject {
   };
 }
 
-export function makeClip(asset: MediaAsset, length = asset.duration): Clip {
+export function makeClip(asset: MediaAsset, length = asset.still ? 3 : asset.duration): Clip {
   return {
     id: uid("clip"),
     sourceAssetId: asset.id,

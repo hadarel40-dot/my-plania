@@ -168,6 +168,8 @@ function LayerHandles({ layerRef }: { layerRef: React.RefObject<HTMLDivElement |
           style = { left: `${l.x * 100 - wPct / 2}%`, top: `${l.y * 100 - hPct / 2}%`, width: `${wPct}%`, height: `${hPct}%` };
         } else if (l.layout === "clone-left") style = { left: 0, top: 0, width: "50%", height: "100%" };
         else if (l.layout === "clone-right" || l.layout === "split-right") style = { left: "50%", top: 0, width: "50%", height: "100%" };
+        else if (l.layout === "full") style = { left: 0, top: 0, width: "100%", height: "100%" };
+        else if (l.layout === "split-top") style = { left: 0, top: 0, width: "100%", height: "50%" };
         else style = { left: 0, top: "50%", width: "100%", height: "50%" };
         return (
           <div key={l.id} onPointerDown={(e) => onDown(e, l.id)} title={l.layout === "pip" ? "גרירה להזזה" : "לחיצה לעריכה"}

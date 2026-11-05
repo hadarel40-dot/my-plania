@@ -6,10 +6,11 @@ import { ASPECT_SIZE, type Aspect } from "@/lib/editor/types";
  * תמונה מהגלריה כסרטון קצר (10 שניות, תמונה קבועה), כדי שתשמש רקע בדיוק כמו סרטון:
  * נשמרת בענן, מתנגנת בלולאה, ונראית אותו דבר בנגן ובייצוא.
  */
-export async function imageToVideo(file: File, aspect: Aspect, seconds = 10): Promise<File> {
+export async function imageToVideo(file: File, aspect: Aspect | "own", seconds = 10): Promise<File> {
   const { Output, BufferTarget, Mp4OutputFormat, CanvasSource } = await import("mediabunny");
   const bitmap = await createImageBitmap(file);
-  const { width: AW, height: AH } = ASPECT_SIZE[aspect];
+  // "own": במידות של התמונה עצמה (צילום מסך נשאר שלם, בלי חיתוך)
+  const { width: AW, height: AH } = aspect === "own" ? { width: bitmap.width, height: bitmap.height } : ASPECT_SIZE[aspect];
   const k = 1080 / Math.max(AW, AH);
   const W = Math.round((AW * k) / 2) * 2, H = Math.round((AH * k) / 2) * 2;
   const canvas = new OffscreenCanvas(W, H);

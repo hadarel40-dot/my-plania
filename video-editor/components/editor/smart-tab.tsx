@@ -1,7 +1,7 @@
 "use client";
 import { MyKeyCard } from "./my-key-card";
 import { brainHeaders } from "@/lib/ai/my-key";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { Captions, Crop, Loader2, Music2, Scissors, Send, Sparkles, TrendingUp } from "lucide-react";
 import type { Trends, TrendsRequest } from "@/lib/ai/smart-plan";
@@ -418,6 +418,38 @@ function EditorNotes() {
   );
 }
 
+const GOALS = ["למכור מוצר או שירות", "ללמד או להסביר משהו", "לספר סיפור אישי", "שיעקבו אחריי", "להראות תוצאות או המלצות", "להזמין לאירוע"];
+
+/**
+ * המטרה של הסרטון: העורך מחליט לפיה מה לחתוך, במה לפתוח, איפה להכניס צילומי מסך ומה
+ * הקריאה לפעולה. נשמרת בפרויקט, כשורה ראשונה בהוראות לעורך ("מטרה: ...")
+ */
+function GoalField({ disabled }: { disabled: boolean }) {
+  const notes = useEditor((s) => s.notes);
+  const goal = notes.match(/^מטרה: (.*)$/m)?.[1] ?? "";
+  const [draft, setDraft] = useState(goal);
+  useEffect(() => { setDraft(goal); }, [goal]);
+  const save = (g: string) => {
+    const rest = notes.replace(/^מטרה: .*\n?/m, "").trim();
+    useEditor.getState().setNotes([g.trim() ? `מטרה: ${g.trim()}` : "", rest].filter(Boolean).join("\n"));
+  };
+  return (
+    <div className="mb-3 space-y-1.5 rounded-xl border border-fuchsia-500/30 bg-fuchsia-500/5 p-3">
+      <p className="text-sm font-medium">🎯 מה המטרה של הסרטון?</p>
+      <input value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={() => save(draft)} disabled={disabled} dir="auto"
+        placeholder="למשל: שיירשמו לסדנה ביום שישי"
+        className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-base focus:border-fuchsia-400 focus:outline-none md:text-sm" />
+      <div className="no-scrollbar flex gap-1.5 overflow-x-auto">
+        {GOALS.map((g) => (
+          <button key={g} onClick={() => { setDraft(g); save(g); }} disabled={disabled}
+            className={cn("flex-none whitespace-nowrap rounded-full border px-2.5 py-1 text-xs", goal === g ? "border-fuchsia-400 bg-fuchsia-500/15 text-white" : "border-zinc-700 text-zinc-400")}>{g}</button>
+        ))}
+      </div>
+      <p className="text-[11px] leading-relaxed text-zinc-500">אפשר להעלות יחד עם סרטון הדיבור גם צילומי מסך, תמונות וקטעים נוספים: העורך מבין מה יש בהם ומכניס כל אחד בדיוק כשמדברים עליו.</p>
+    </div>
+  );
+}
+
 function AutoEditButton({ disabled }: { disabled: boolean }) {
   const { busy, report, error, before, genre, options, chosen } = useAutoEditRun();
   const choose = (o: EditOption) => {
@@ -448,6 +480,7 @@ function AutoEditButton({ disabled }: { disabled: boolean }) {
   // אחרי עריכה: הגרסאות והתיקונים למעלה, וההגדרות לעריכה חוזרת מתחתיהם
   const settingsBlock = (
     <>
+      <GoalField disabled={!!busy} />
       <EditorNotes />
       <MyStyleLine />
       <TransitionStylePicker />

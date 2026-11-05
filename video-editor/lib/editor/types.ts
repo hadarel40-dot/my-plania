@@ -33,6 +33,8 @@ export interface MediaAsset {
    * (לבן = האדם). width/height הם של התמונה האמיתית (חצי מהקובץ)
    */
   alphaPacked?: boolean;
+  /** תמונה או צילום מסך (נשמר כסרטון קצר של תמונה קבועה). thumbnailUrl בגודל קריא, כדי שהמוח יראה אותה */
+  still?: boolean;
   /**
    * התמלול של הסרטון (זמנים בשניות מתחילת הקובץ), כדי לא לתמלל שוב בכל עריכה
    * (המכסה החינמית של Gemini קטנה). v: גרסת שיטת התמלול
@@ -92,7 +94,7 @@ export interface Clip {
  * pip = חלון קטן שאפשר להזיז ולשנות גודל; clone-* = אפקט תאומים (חצי מסך מצילום אחר
  * מאותה נקודה, כך שאותו אדם מופיע פעמיים); split-* = מסך מפוצל (צד/למטה).
  */
-export type LayerLayout = "pip" | "clone-left" | "clone-right" | "split-right" | "split-bottom";
+export type LayerLayout = "pip" | "clone-left" | "clone-right" | "split-right" | "split-bottom" | "split-top" | "full";
 export interface VideoLayer {
   id: string;
   assetId: string;
@@ -113,6 +115,8 @@ export interface VideoLayer {
   opacity: number;
   volume: number;
   flip?: boolean;
+  /** נוסף בעריכה האוטומטית (מתחיל מחדש בכל עריכה אוטומטית) */
+  auto?: boolean;
 }
 
 export type TransitionType = "fade" | "slide" | "zoom" | "blur" | "flash" | "punch" | "glitch" | "whip";

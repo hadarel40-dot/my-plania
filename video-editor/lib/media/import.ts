@@ -16,7 +16,16 @@ export async function importFile(
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
   const isAudio = file.type.startsWith("audio/") || (!file.type && AUDIO_EXT.includes(ext));
   const isVideo = file.type.startsWith("video/") || (!file.type && VIDEO_EXT.includes(ext));
-  if (!isAudio && !isVideo) throw new Error("אפשר להעלות קבצי וידאו או שמע (MP4, MOV, MP3, WAV, M4A)");
+  const isImage = file.type.startsWith("image/") || IMAGE_EXT.includes(ext);
+  // תמונה או צילום מסך: נשמרים כסרטון קצר של תמונה קבועה (עובד בנגן ובייצוא כמו כל סרטון)
+  if (isImage && !isVideo) {
+    const { imageToVideo } = await import("@/lib/video/still-video");
+    const preview = await imagePreview(file);
+    const video = await imageToVideo(file, "own", 8);
+    const asset = await importFile(video, onProgress);
+    return { ...asset, name: file.name, still: true, thumbnailUrl: preview ?? asset.thumbnailUrl };
+  }
+  if (!isAudio && !isVideo) throw new Error("אפשר להעלות סרטונים, תמונות וצילומי מסך, או קבצי שמע");
   // בענן יש מגבלת גודל לקובץ: וידאו מכווצים קודם (חצי ראשון של ההתקדמות), ואז מעלים
   const cloud = getBackend().kind === "cloud";
   const original = file;
@@ -49,6 +58,21 @@ async function probeUploadedVideo(file: File, url: string): Promise<MediaAsset> 
     logEvent("probe_file_failed", { size: file.size, type: file.type, error: errorText(e) });
     return probeVideo(url, { name: file.name, origin: "upload" });
   }
+}
+
+const IMAGE_EXT = ["jpg", "jpeg", "png", "heic", "heif", "webp", "gif"];
+
+/** תמונה ממוזערת בגודל קריא (עד 768 פיקסלים), כדי שהבינה המלאכותית תוכל לקרוא צילום מסך */
+async function imagePreview(file: File): Promise<string | null> {
+  try {
+    const bmp = await createImageBitmap(file);
+    const k = Math.min(1, 768 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
+    bmp.close();
+    return c.toDataURL("image/jpeg", 0.8);
+  } catch { return null; }
 }
 
 const VIDEO_EXT = ["mp4", "mov", "m4v", "webm", "3gp"];

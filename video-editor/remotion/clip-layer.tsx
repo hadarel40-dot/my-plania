@@ -184,6 +184,7 @@ export function VideoLayerView({ layer, asset, Video, mode, fps }: {
   Video: React.ComponentType<Record<string, unknown>>; mode: "html5" | "media"; fps: number;
 }) {
   const { width: W, height: H } = useVideoConfig();
+  const frame = useCurrentFrame();
   const common = {
     src: asset.url,
     trimBefore: Math.round(layer.in * fps),
@@ -210,6 +211,30 @@ export function VideoLayerView({ layer, asset, Video, mode, fps }: {
       <div style={{ position: "absolute", top: 0, height: H, width: W / 2, left: left ? 0 : W / 2, overflow: "hidden", opacity: layer.opacity }}>
         <div style={{ position: "absolute", top: 0, left: left ? 0 : -W / 2, width: W, height: H, transform: flip }}>
           <Video {...common} style={full} />
+        </div>
+      </div>
+    );
+  }
+  if (layer.layout === "full" || layer.layout === "split-top") {
+    // צילום מסך / תמונה / סרטון נוסף: על כל המסך או בחצי העליון. תמונה נשארת שלמה (בלי
+    // חיתוך), על רקע מטושטש של עצמה, עם זום איטי עדין כדי שלא תרגיש "תקועה"
+    const top = layer.layout === "split-top";
+    const bw = W, bh = top ? H / 2 : H;
+    const frames = Math.max(1, (layer.out - layer.in) * fps);
+    const zoom = asset.still ? 1 + 0.05 * Math.min(1, frame / frames) : 1;
+    const enter = Math.min(1, frame / Math.max(1, fps * 0.2));
+    const fitBox = asset.still ? coverBoxFor(asset, bw * 0.94, bh * 0.94, 0.5, 0.5, "contain") : coverBoxFor(asset, bw, bh, 0.5, 0.5, "cover");
+    return (
+      <div style={{ position: "absolute", left: 0, top: 0, width: bw, height: bh, overflow: "hidden", opacity: layer.opacity * enter,
+        borderBottom: top ? `${Math.round(W / 270)}px solid white` : undefined, backgroundColor: "#111" }}>
+        {asset.still && (
+          <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
+            <Video {...common} volume={0} muted style={{ ...coverBoxFor(asset, bw, bh, 0.5, 0.5, "cover"), filter: `blur(${Math.round(W / 40)}px) brightness(0.55)` }} />
+          </div>
+        )}
+        <div style={{ position: "absolute", left: asset.still ? bw * 0.03 : 0, top: asset.still ? bh * 0.03 : 0, width: asset.still ? bw * 0.94 : bw, height: asset.still ? bh * 0.94 : bh,
+          transform: `${flip ?? ""} scale(${zoom * (0.92 + 0.08 * enter)})` }}>
+          <Video {...common} style={{ ...fitBox, borderRadius: asset.still ? W / 60 : 0, boxShadow: asset.still ? `0 ${W / 80}px ${W / 25}px rgba(0,0,0,.5)` : undefined }} />
         </div>
       </div>
     );

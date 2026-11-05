@@ -27,7 +27,9 @@ How to decide:
 - template, caption_style, accent, color_style: pick what fits the content and mood (a calm explanation, a list of tips, a before/after, a high-energy rant).
 - cta: a short call to action for the end that fits the content (for example to follow or comment), or an empty string when it would feel forced.
 - title: a short project name.
-- summary: one or two plain Hebrew sentences for the creator saying what you changed and why. Neutral gender forms.`;
+- inserts: when the creator also uploaded extra files (screenshots, photos, short clips without speech), you get each one as an image. Look at every image carefully and read any text in it (a customer message, a price, a result, an app screen, a product). Like a human editor, place each one exactly where the speech talks about it or where it proves or illustrates what is being said, and in a way that serves the goal of the video. Use each file at most once, do not overlap them, and skip a file only if it has nothing to do with the video. seconds: long enough to read it (a screenshot with text 3-5s, a photo 2-3s, a clip up to its length). layout: "full" for screenshots and anything that must be read or seen big, "top" when her face and reaction matter while showing it, "pip" for a small side reference.
+- If the creator states a goal (to sell, to teach, to tell a story, to get follows, to invite), every decision serves it: what to cut, the hook, which moment to open with, the cta.
+- summary: one or two plain Hebrew sentences for the creator saying what you changed and why (including where you put the extra files). Neutral gender forms.`;
 
 /** בונה תוכנית עריכה מהתמלול בעזרת המוח (Gemini או Claude). המפתח נשאר בשרת */
 export const POST = withUserKey(async (request: Request) => {
@@ -37,6 +39,10 @@ export const POST = withUserKey(async (request: Request) => {
   const body = (await request.json().catch(() => null)) as SmartPlanRequest | null;
   const segments = body?.segments?.slice(0, 600) ?? [];
   if (!segments.length) return NextResponse.json({ error: "אין תמלול" }, { status: 400 });
+  // קבצים נוספים: רק תמונות JPEG/PNG קטנות (data URL), עד 12
+  const inserts = (body?.inserts ?? []).slice(0, 12).map((f) => ({
+    ...f, image: typeof f.image === "string" && /^data:image\/(jpeg|png|webp);base64,/.test(f.image) && f.image.length < 600_000 ? f.image : null,
+  }));
   const transcript = segments
     .map((s, i) => `[${i}] ${s.start.toFixed(1)}-${s.end.toFixed(1)}s: ${String(s.text).slice(0, 300)}`)
     .join("\n");
@@ -44,12 +50,20 @@ export const POST = withUserKey(async (request: Request) => {
     const plan = await askBrain({
       system: SYSTEM,
       schema: SmartPlanSchema,
-      parts: [{ text: `Video length: ${body!.duration.toFixed(1)}s. Background music: ${body!.hasMusic ? "yes" : "no"}.\n\nTranscript segments:\n${transcript}${notesBlock(body!.notes)}` }],
+      parts: [
+        { text: `Video length: ${body!.duration.toFixed(1)}s. Background music: ${body!.hasMusic ? "yes" : "no"}.\n\nTranscript segments:\n${transcript}${notesBlock(body!.notes)}` },
+        ...inserts.flatMap((f, i) => [
+          { text: `Extra file ${i}: ${f.kind === "image" ? "image / screenshot" : `video clip without speech, ${f.seconds.toFixed(1)}s`} ("${String(f.name).slice(0, 60)}")${f.image ? "" : " (no preview)"}` },
+          ...(f.image ? [{ image: f.image }] : []),
+        ]),
+      ],
     });
     // מקטעים שלא קיימים מסוננים, כדי שתשובה שגויה לא תמחק משהו אחר
     plan.remove_segments = plan.remove_segments.filter((i) => i >= 0 && i < segments.length);
     plan.emojis = plan.emojis.filter((e) => e.segment >= 0 && e.segment < segments.length).slice(0, 6);
     const removed = new Set(plan.remove_segments);
+    const usedInserts = new Set<number>();
+    plan.inserts = (plan.inserts ?? []).filter((x) => x.insert >= 0 && x.insert < inserts.length && x.segment >= 0 && x.segment < segments.length && !usedInserts.has(x.insert) && usedInserts.add(x.insert));
     plan.moments = plan.moments.filter((m) => m.segment >= 0 && m.segment < segments.length && !removed.has(m.segment) && m.text.trim()).slice(0, 60);
     return NextResponse.json(plan);
   } catch (e) {

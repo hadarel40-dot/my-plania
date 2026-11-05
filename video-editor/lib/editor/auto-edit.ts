@@ -14,7 +14,7 @@ import type { AnimationLevel, CaptionPreset, ClipEffect, Moment, Overlay, Timeli
 import { applyMoments, guessMoments } from "./moments";
 import { MUSIC_MOODS, type MusicMood } from "@/lib/music/moods";
 import type { SmartPlan, SmartPlanRequest, VibePlan, VibePlanRequest } from "@/lib/ai/smart-plan";
-import { pickShots, rankShots, sampleClip, type FrameSample, type Shot } from "@/lib/video/analyze";
+import { loadVideo, pickShots, rankShots, sampleClip, seekVideo, type FrameSample, type Shot } from "@/lib/video/analyze";
 import { addBuiltinTrack, addLibraryTrack, markLastAudioAuto, searchLibrary } from "@/lib/music/add";
 import { builtinForMood } from "@/lib/music/builtin";
 import { errorText, logEvent } from "@/lib/telemetry";
@@ -188,7 +188,15 @@ export async function autoEditAll(onStatus: (s: string) => void, genre: VideoGen
   };
   let mode: AutoEditMode = activeGenre?.mode ?? "auto";
   const auto = mode === "auto";
-  if (auto) {
+  // צילומי מסך, תמונות וקטעים בלי דיבור לצד סרטון דיבור: יוצאים מהמסלול הראשי, והבמאי
+  // (המוח) מחליט איפה כל אחד נכנס, כמו עורך אנושי
+  pendingInserts = [];
+  if (mode !== "vibe") {
+    onStatus("בודק את החומרים…");
+    pendingInserts = await takeInserts();
+    if (pendingInserts.length) mode = "talking";
+  }
+  if (mode === "auto") {
     onStatus("בודק אם מדברים בסרטון…");
     mode = (await looksLikeTalking()) ? "talking" : "vibe";
   }
@@ -229,6 +237,7 @@ function startFromRawFootage() {
         clips,
         captions: [],
         overlays: timeline.overlays.filter((o) => !o.fromTemplate),
+        layers: (timeline.layers ?? []).filter((l) => !l.auto),
         audio: timeline.audio.filter((a) => !a.auto && !a.fromTemplate),
       },
       selection: null,
@@ -236,6 +245,102 @@ function startFromRawFootage() {
     logEvent("auto_edit_from_raw", { clips: clips.length, added: added.size });
   }
   useEditor.setState((s) => ({ timeline: { ...s.timeline, raw: s.timeline.clips } }));
+}
+
+/** קובץ נוסף ששולבב בסרטון הדיבור (צילום מסך, תמונה, קטע בלי דיבור) */
+interface Insert { assetId: string; in: number; out: number; kind: "image" | "video"; name: string; image: string | null }
+let pendingInserts: Insert[] = [];
+
+/**
+ * מפריד מהמסלול הראשי את מה שאינו דיבור, כשיש לפחות סרטון דיבור אחד: תמונות וצילומי
+ * מסך, וסרטונים בלי דיבור. הם ישולבו מעל הדיבור כשכבות, במקום שהמוח יבחר.
+ */
+async function takeInserts(): Promise<Insert[]> {
+  const { timeline, assets } = useEditor.getState();
+  if (timeline.clips.length < 2) return [];
+  const kinds = await Promise.all(timeline.clips.map(async (c) => {
+    const a = assets[c.assetId];
+    if (!a) return "talk" as const;
+    if (a.still) return "image" as const;
+    try {
+      const len = c.out - c.in;
+      const ranges = findSpeech(await decodeAssetAudio(a), { from: c.in, to: c.out });
+      const covered = ranges.reduce((sum, r) => sum + r.end - r.start, 0);
+      // צליל רציף (מוזיקה, רעש) או כמעט בלי קול: לא דיבור
+      const talk = !(ranges.length === 1 && covered >= len * 0.95) && covered / Math.max(0.1, len) > 0.3 && ranges.length >= 2;
+      return talk ? "talk" as const : "video" as const;
+    } catch {
+      return "video" as const;
+    }
+  }));
+  if (!kinds.includes("talk") || kinds.every((k) => k === "talk")) return [];
+  const inserts: Insert[] = [];
+  for (const [i, c] of timeline.clips.entries()) {
+    const kind = kinds[i];
+    if (kind === "talk") continue;
+    const a = assets[c.assetId];
+    inserts.push({ assetId: c.assetId, in: c.in, out: c.out, kind, name: a?.name ?? "", image: a?.still ? a.thumbnailUrl : await frameOf(a?.url, (c.in + c.out) / 2) });
+  }
+  useEditor.setState((s) => ({ timeline: { ...s.timeline, clips: s.timeline.clips.filter((_, i) => kinds[i] === "talk") } }));
+  logEvent("auto_edit_inserts", { images: inserts.filter((x) => x.kind === "image").length, videos: inserts.filter((x) => x.kind === "video").length });
+  return inserts;
+}
+
+/** פריים מתוך סרטון כתמונה קטנה (בשביל המוח) */
+async function frameOf(url: string | undefined, t: number): Promise<string | null> {
+  if (!url) return null;
+  try {
+    const v = await loadVideo(url);
+    await seekVideo(v, t);
+    const k = Math.min(1, 512 / Math.max(v.videoWidth, v.videoHeight));
+    const c = document.createElement("canvas");
+    c.width = Math.round(v.videoWidth * k); c.height = Math.round(v.videoHeight * k);
+    c.getContext("2d")!.drawImage(v, 0, 0, c.width, c.height);
+    v.removeAttribute("src"); v.load();
+    return c.toDataURL("image/jpeg", 0.7);
+  } catch { return null; }
+}
+
+/**
+ * מכניס את הקבצים הנוספים כשכבות, לפי התוכנית: בתחילת המשפט שבו מדברים עליהם.
+ * בלי תוכנית (בלי מוח): מפוזרים לאורך הסרטון, במסך מלא.
+ */
+function placeInserts(plan: SmartPlan["inserts"] | null, lines: { id: string }[][]) {
+  if (!pendingInserts.length) return 0;
+  const { timeline } = useEditor.getState();
+  const caps = timeline.captions;
+  const end = videoEnd(timeline.clips);
+  const steps = plan?.length ? plan : pendingInserts.map((_, k) => ({
+    insert: k, segment: lines.length ? Math.min(lines.length - 1, Math.round(((k + 1) * lines.length) / (pendingInserts.length + 1))) : k, seconds: 3.5, layout: "full" as const,
+  }));
+  // זמן ההתחלה: הכתובית הראשונה של המשפט ששרדה את החיתוך (או של המשפט הבא).
+  // בלי תמלול בכלל: מפוזרים שווה לאורך הסרטון
+  const startOf = (seg: number) => {
+    if (!lines.length) return (end * (seg + 1)) / (pendingInserts.length + 1);
+    for (let i = Math.max(0, seg); i < lines.length; i++) {
+      const cap = lines[i].map((c) => caps.find((x) => x.id === c.id)).find(Boolean);
+      if (cap) return Math.max(0, cap.start - 0.1);
+    }
+    return null;
+  };
+  const placed = steps
+    .map((st) => ({ st, at: startOf(st.segment), ins: pendingInserts[st.insert] }))
+    .filter((x): x is { st: typeof x.st; at: number; ins: Insert } => x.at !== null && !!x.ins && x.at < end - 0.8)
+    .sort((a, b) => a.at - b.at);
+  let count = 0;
+  for (const [k, { st, at, ins }] of placed.entries()) {
+    const next = placed[k + 1]?.at ?? end;
+    const avail = ins.kind === "image" ? 8 : ins.out - ins.in;
+    const len = Math.min(Math.max(1.5, Math.min(6, st.seconds || 3.5)), avail, next - at - 0.05, end - at);
+    if (len < 1) continue;
+    const layout = st.layout === "top" ? "split-top" : st.layout === "pip" ? "pip" : "full";
+    useEditor.getState().addLayer(ins.assetId, at, layout, len);
+    const id = useEditor.getState().timeline.layers?.at(-1)?.id;
+    if (id) useEditor.getState().updateLayer(id, { auto: true, in: ins.kind === "image" ? 0 : ins.in, out: (ins.kind === "image" ? 0 : ins.in) + len, volume: 0, ...(layout === "pip" ? { x: 0.72, y: 0.26, scale: 0.45 } : {}) });
+    count++;
+  }
+  useEditor.setState({ selection: null });
+  return count;
 }
 
 /** סוג הסרטון שנבחר בשאלה "מה הסרטון?" (לריצה הנוכחית) */
@@ -345,6 +450,11 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
       return smart.summary;
     });
   }
+  // הקבצים הנוספים נכנסים גם כשאין מוח או תמלול (מפוזרים לאורך הסרטון)
+  if (pendingInserts.length && !useEditor.getState().timeline.layers?.some((l) => l.auto)) {
+    const n = placeInserts(null, sentenceLines([...useEditor.getState().timeline.captions].sort((a, b) => a.start - b.start)));
+    if (n) report.done.push(`שולבו ${n} צילומי מסך/תמונות בסרטון`);
+  }
   const s0 = smart as SmartCuts | null;
   const captions = useEditor.getState().timeline.captions;
   const hook = s0?.hook ?? (captions.length ? captions.map((c) => c.text).join(" ").split(/\s+/).slice(0, 6).join(" ") : undefined);
@@ -436,6 +546,7 @@ async function smartCuts(): Promise<SmartCuts> {
     duration: timelineDuration(timeline),
     hasMusic: timeline.audio.some((a) => a.out - a.in > 5),
     notes: brainNotes(),
+    inserts: pendingInserts.map((x) => ({ kind: x.kind, name: x.name, seconds: x.out - x.in, image: x.image })),
   };
   const response = await fetch("/api/smart-edit", {
     method: "POST",
@@ -444,6 +555,8 @@ async function smartCuts(): Promise<SmartCuts> {
   });
   const data = await response.json().catch(() => null);
   if (!response.ok || !data) {
+    // בלי תוכנית מהמוח: הקבצים הנוספים בכל זאת נכנסים (מפוזרים לאורך הסרטון)
+    if (pendingInserts.length) placeInserts(null, lines);
     logEvent("brain_failed", { route: "smart-edit", status: response.status, error: data?.error, detail: data?.detail });
     throw new Error(data?.error ?? "השרת לא החזיר תוכנית");
   }
@@ -469,6 +582,9 @@ async function smartCuts(): Promise<SmartCuts> {
   if (ranges.length) useEditor.getState().applyCuts(timelineRangesToPlan(ranges));
   const cut = Math.max(0, before - timelineDuration(useEditor.getState().timeline));
 
+  // 1.5 הקבצים הנוספים (צילומי מסך, תמונות): בדיוק כשמדברים עליהם
+  const insertsPlaced = placeInserts(plan.inserts ?? [], lines);
+
   // 2. אימוג'ים לפי הכתוביות ששרדו (המזהים נשמרים בחיתוך)
   const after = useEditor.getState().timeline;
   const base = presetById("emoji-fire").fields;
@@ -485,7 +601,7 @@ async function smartCuts(): Promise<SmartCuts> {
   }
   if (!title || title === "פרויקט חדש") setTitle(plan.title);
 
-  const parts = [cut > 0.05 ? `נחתכו ${cut.toFixed(1)} שניות (טייקים חוזרים ומילוי)` : null, `הוק: "${plan.hook}"`];
+  const parts = [cut > 0.05 ? `נחתכו ${cut.toFixed(1)} שניות (טייקים חוזרים ומילוי)` : null, insertsPlaced ? `שולבו ${insertsPlaced} צילומי מסך/תמונות בסרטון` : null, `הוק: "${plan.hook}"`];
   return { plan, hook: plan.hook, extras, moments, summary: [plan.summary, ...parts.filter(Boolean)].join(" · ") };
 }
 

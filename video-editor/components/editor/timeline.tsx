@@ -269,6 +269,7 @@ function Handle({ side, onPointerDown }: { side: "left" | "right"; onPointerDown
 
 export const LAYER_NAMES: Record<import("@/lib/editor/types").LayerLayout, string> = {
   pip: "חלון", "clone-left": "תאומים", "clone-right": "תאומים", "split-right": "מסך מפוצל", "split-bottom": "מסך מפוצל",
+  "split-top": "חצי עליון", full: "מסך מלא",
 };
 
 const BLOCK_COLORS = {

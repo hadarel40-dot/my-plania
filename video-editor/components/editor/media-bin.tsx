@@ -113,7 +113,7 @@ export function FileInput({ onFiles }: { onFiles: (files: FileList | null) => vo
     return () => el?.removeEventListener("cancel", cancel);
   }, []);
   return (
-    <input ref={ref} type="file" accept="video/*,audio/*" multiple className="sr-only"
+    <input ref={ref} type="file" accept="video/*,image/*,audio/*" multiple className="sr-only"
       // מיד בלחיצה מראים שמשהו קורה: באייפון עוברות כמה שניות בין הבחירה לבין הגעת הקבצים
       onClick={() => useUploads.getState().setPicking(true)}
       onChange={(e) => {

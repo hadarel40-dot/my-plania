@@ -23,6 +23,12 @@ export const SmartPlanSchema = z.object({
   color_style: z.enum(["none", "cinematic", "vivid", "warm", "cold", "vintage", "matte", "bw", "noir"]),
   cta: z.string().describe("קריאה לפעולה קצרה לסוף הסרטון, או מחרוזת ריקה אם לא מתאים"),
   summary: z.string().describe("משפט או שניים בעברית: מה נעשה בעריכה ולמה"),
+  inserts: z.array(z.object({
+    insert: z.number().int().describe("מספר הקובץ הנוסף (צילום מסך / תמונה / קטע)"),
+    segment: z.number().int().describe("המקטע בדיבור שבו הוא נכנס (כשמדברים עליו)"),
+    seconds: z.number().describe("כמה זמן על המסך"),
+    layout: z.enum(["full", "top", "pip"]).describe("full: כל המסך; top: חצי עליון והמדברת למטה; pip: חלון קטן"),
+  })).default([]).describe("איפה כל קובץ נוסף נכנס בסרטון"),
 });
 
 export type SmartPlan = z.infer<typeof SmartPlanSchema>;
@@ -34,6 +40,8 @@ export interface SmartPlanRequest {
   hasMusic: boolean;
   /** ההוראות שנכתבו לעורך */
   notes?: string;
+  /** קבצים נוספים (צילומי מסך, תמונות, קטעים בלי דיבור) שצריך לשלב בסרטון */
+  inserts?: { kind: "image" | "video"; name: string; seconds: number; image: string | null }[];
 }
 
 /** תוכנית לסרטון אווירה: אילו קטעים, באיזה סדר, ואיזו מוזיקה */
