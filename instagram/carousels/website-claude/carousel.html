@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>אתר שעובד בשבילך</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+  :root{
+    --bg1:#1d1418; --bg2:#2e1d25;
+    --pink:#f7b3cc; --pink-deep:#e98bb0;
+    --white:#fff8f4; --muted:rgba(255,248,244,.55);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#111;font-family:'Rubik',sans-serif}
+  .slide{
+    width:1080px;height:1350px;position:relative;overflow:hidden;
+    background:
+      radial-gradient(900px 700px at 85% 10%, rgba(247,179,204,.16), transparent 60%),
+      radial-gradient(800px 700px at 10% 95%, rgba(233,139,176,.12), transparent 60%),
+      linear-gradient(160deg,var(--bg2),var(--bg1));
+    color:var(--white);
+    display:flex;flex-direction:column;justify-content:center;
+    padding:160px 130px;
+    page-break-after:always;
+  }
+  .slide::after{ /* paper grain */
+    content:"";position:absolute;inset:0;pointer-events:none;opacity:.07;
+    background-image:radial-gradient(#fff 1px,transparent 1px);background-size:6px 6px;
+  }
+  .num{position:absolute;top:70px;left:80px;font-size:32px;font-weight:500;color:var(--muted);letter-spacing:2px;direction:ltr}
+  .handle{position:absolute;bottom:64px;left:80px;font-size:32px;font-weight:500;color:var(--muted);direction:ltr}
+  .swipe{position:absolute;bottom:58px;right:80px;font-size:34px;font-weight:500;color:var(--pink)}
+  h1,h2{font-weight:900;color:var(--pink);line-height:1.08;letter-spacing:-1px}
+  h1{font-size:132px}
+  h2{font-size:96px}
+  .hand{font-family:'Amatic SC',cursive;font-weight:700;color:var(--white);font-size:78px;line-height:1.12;margin-top:44px}
+  .hand.sm{font-size:66px}
+  .tag{display:inline-block;align-self:flex-start;font-size:34px;font-weight:800;color:var(--bg1);background:var(--pink);padding:10px 26px;border-radius:999px;margin-bottom:46px}
+
+  /* mock browser for the generic-site slide */
+  .browser{margin-top:56px;border-radius:26px;overflow:hidden;background:#fff;box-shadow:0 30px 80px rgba(0,0,0,.5);transform:rotate(-2deg)}
+  .bar{height:56px;background:#e9e9ee;display:flex;align-items:center;gap:12px;padding:0 22px;direction:ltr}
+  .bar i{width:16px;height:16px;border-radius:50%;background:#c9c9d1;display:block}
+  .bar .url{flex:1;height:30px;border-radius:15px;background:#fff;margin-left:16px}
+  .gen{direction:rtl;font-family:'Rubik';color:#222}
+  .gen .nav{display:flex;justify-content:space-between;align-items:center;padding:22px 36px;font-size:24px;color:#555}
+  .gen .nav b{font-size:28px;color:#4b3fd1}
+  .gen .hero{background:linear-gradient(120deg,#6a5cff,#a855f7);color:#fff;text-align:center;padding:64px 40px}
+  .gen .hero .t{font-size:48px;font-weight:800}
+  .gen .hero .s{font-size:26px;opacity:.85;margin-top:12px}
+  .gen .hero .btn{display:inline-block;margin-top:30px;background:#fff;color:#6a5cff;font-weight:800;font-size:24px;padding:14px 40px;border-radius:999px}
+  .gen .cards{display:flex;gap:20px;padding:34px 36px 40px}
+  .gen .card{flex:1;background:#f4f4fa;border-radius:16px;padding:24px 16px;text-align:center;font-size:24px;font-weight:700;color:#444}
+  .gen .card span{display:block;font-size:40px;margin-bottom:8px}
+
+  /* UI cards for feature slides */
+  .ui{margin-top:64px;background:rgba(255,248,244,.07);border:2px solid rgba(247,179,204,.35);border-radius:30px;padding:40px 44px}
+  .field{background:rgba(255,248,244,.1);border-radius:16px;padding:22px 26px;font-size:34px;color:var(--muted);margin-bottom:20px}
+  .cta{background:var(--pink);color:var(--bg1);font-weight:800;font-size:36px;text-align:center;padding:22px;border-radius:16px}
+  .row{display:flex;align-items:center;gap:22px;padding:20px 0;border-bottom:2px solid rgba(255,248,244,.1);font-size:34px}
+  .row:last-child{border-bottom:0}
+  .dot{width:60px;height:60px;border-radius:50%;background:var(--pink);color:var(--bg1);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:30px;flex:none}
+  .row .who{font-weight:800}
+  .row .what{color:var(--muted);font-size:30px}
+  .row .new{margin-right:auto;font-size:26px;font-weight:800;color:var(--bg1);background:var(--pink);padding:6px 18px;border-radius:999px}
+
+  .list{margin-top:56px;list-style:none}
+  .list li{font-size:46px;font-weight:500;padding:22px 0;display:flex;gap:24px;align-items:center;border-bottom:2px solid rgba(255,248,244,.12)}
+  .list li:last-child{border-bottom:0}
+  .list li::before{content:"✓";color:var(--bg1);background:var(--pink);width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:34px;flex:none}
+
+  .kw{display:inline-block;margin-top:60px;align-self:flex-start;background:var(--pink);color:var(--bg1);font-weight:900;font-size:64px;padding:26px 60px;border-radius:28px}
+  .center{text-align:center;align-items:center}
+  .center .tag,.center .kw{align-self:center}
+</style>
+</head>
+<body>
+
+<!-- 1 COVER -->
+<section class="slide" id="s1">
+  <span class="num">1/9</span>
+  <span class="tag">בעלת עסק?</span>
+  <h1>ניסית לבנות אתר בקלוד?</h1>
+  <p class="hand">אם את יודעת לבנות אתר מצוין לבד,<br>אני לא מדברת אלייך.</p>
+  <span class="handle">@plania.il</span>
+  <span class="swipe">החליקי ←</span>
+</section>
+
+<!-- 2 THE GENERIC SITE -->
+<section class="slide" id="s2">
+  <span class="num">2/9</span>
+  <h2>ויצא לך...<br>טוב, משהו כזה.</h2>
+  <div class="browser">
+    <div class="bar"><i></i><i></i><i></i><div class="url"></div></div>
+    <div class="gen">
+      <div class="nav"><b>העסק שלי</b><span>בית · אודות · שירותים · צור קשר</span></div>
+      <div class="hero">
+        <div class="t">ברוכים הבאים לעסק שלנו</div>
+        <div class="s">פתרונות מקצועיים ואיכותיים לכל צורך</div>
+        <div class="btn">התחילו עכשיו</div>
+      </div>
+      <div class="cards">
+        <div class="card"><span>⭐</span>איכות</div>
+        <div class="card"><span>💼</span>מקצועיות</div>
+        <div class="card"><span>🤝</span>שירות</div>
+      </div>
+    </div>
+  </div>
+  <span class="handle">@plania.il</span>
+</section>
+
+<!-- 3 -->
+<section class="slide" id="s3">
+  <span class="num">3/9</span>
+  <h2>אתר שנראה<br>כמו של כולם</h2>
+  <p class="hand">שלא באמת מייצג אותך,<br>את העסק שלך,<br>או את מה שמיוחד במה שאת עושה.</p>
+  <span class="handle">@plania.il</span>
+</section>
+
+<!-- 4 -->
+<section class="slide" id="s4">
+  <span class="num">4/9</span>
+  <h2>יותר מכרטיס ביקור באינטרנט</h2>
+  <p class="hand">אני מדברת אלייך אם את רוצה<br>שהאתר שלך יעשה קצת יותר.</p>
+  <span class="handle">@plania.il</span>
+</section>
+
+<!-- 5 -->
+<section class="slide" id="s5">
+  <span class="num">5/9</span>
+  <h2>אתר שאוסף<br>לך לידים</h2>
+  <p class="hand sm">מי שמתעניינת משאירה פרטים, וזה לא הולך לאיבוד.</p>
+  <div class="ui">
+    <div class="field">שם</div>
+    <div class="field">טלפון</div>
+    <div class="cta">דברו איתי</div>
+  </div>
+  <span class="handle">@plania.il</span>
+</section>
+
+<!-- 6 -->
+<section class="slide" id="s6">
+  <span class="num">6/9</span>
+  <h2>בקשות להצעת מחיר, ישר מהאתר</h2>
+  <p class="hand sm">הלקוחות כותבים מה הם צריכים,<br>ואת מקבלת הכול מסודר.</p>
+  <div class="ui">
+    <div class="field">מה צריך?</div>
+    <div class="field">מתי?</div>
+    <div class="cta">שליחת בקשה להצעת מחיר</div>
+  </div>
+  <span class="handle">@plania.il</span>
+</section>
+
+<!-- 7 -->
+<section class="slide" id="s7">
+  <span class="num">7/9</span>
+  <h2>כל הפניות<br>במקום אחד</h2>
+  <p class="hand sm">בלי לפשפש בין המיילים והוואטסאפים<br>כדי להבין מי ביקש ממך מה.</p>
+  <div class="ui">
+    <div class="row"><div class="dot">ר</div><div><div class="who">רונית</div><div class="what">הצעת מחיר לאירוע</div></div><span class="new">חדש</span></div>
+    <div class="row"><div class="dot">מ</div><div><div class="who">מיכל</div><div class="what">רוצה לקבוע שיחה</div></div><span class="new">חדש</span></div>
+    <div class="row"><div class="dot">ש</div><div><div class="who">שירה</div><div class="what">שאלה על המחירים</div></div></div>
+  </div>
+  <span class="handle">@plania.il</span>
+</section>
+
+<!-- 8 RECAP -->
+<section class="slide" id="s8">
+  <span class="num">8/9</span>
+  <h2 style="font-size:82px">אתר טוב לא אמור רק להיראות טוב.<br>הוא אמור לעבוד בשבילך.</h2>
+  <ul class="list">
+    <li>נראה כמו העסק שלך</li>
+    <li>אוסף לידים</li>
+    <li>מקבל בקשות להצעת מחיר</li>
+    <li>מרכז את כל הפניות</li>
+  </ul>
+  <span class="handle">@plania.il</span>
+</section>
+
+<!-- 9 CTA -->
+<section class="slide center" id="s9">
+  <span class="num">9/9</span>
+  <h2>אם זה מה שאת מחפשת,<br>דברי איתי</h2>
+  <p class="hand">שלחי לי בהודעה את המילה</p>
+  <span class="kw">אתר</span>
+  <span class="handle">@plania.il</span>
+</section>
+
+</body>
+</html>
