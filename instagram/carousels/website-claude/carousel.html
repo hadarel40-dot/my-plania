@@ -72,6 +72,41 @@
   .kw{display:inline-block;margin-top:60px;align-self:flex-start;background:var(--pink);color:var(--bg1);font-weight:900;font-size:64px;padding:26px 60px;border-radius:28px}
   .center{text-align:center;align-items:center}
   .center .tag,.center .kw{align-self:center}
+
+  /* ---- polished product UI (slides 5-9) ---- */
+  .stage{position:relative;margin-top:64px}
+  .pane{background:#fffaf7;color:#2a1c22;border-radius:32px;box-shadow:0 40px 90px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.08);overflow:hidden}
+  .pane-top{display:flex;align-items:center;justify-content:space-between;padding:26px 36px;border-bottom:1.5px solid #f0e3e8}
+  .pane-top .ttl{font-size:32px;font-weight:800}
+  .pane-top .dots{display:flex;gap:10px;direction:ltr}.pane-top .dots i{width:14px;height:14px;border-radius:50%;background:#ecdde3;display:block}
+  .pane-body{padding:32px 36px 36px}
+  .lbl{font-size:24px;font-weight:700;color:#8a7680;margin:0 4px 10px}
+  .inp{height:72px;border:2px solid #eedfe5;border-radius:16px;background:#fff;margin-bottom:22px;display:flex;align-items:center;padding:0 22px;font-size:28px;color:#2a1c22;font-weight:500}
+  .inp.ph{color:#c2b2b9}
+  .btn2{height:80px;border-radius:18px;background:#2a1c22;color:#fff;font-weight:800;font-size:30px;display:flex;align-items:center;justify-content:center;gap:14px}
+  .chips{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:24px}
+  .chip{font-size:26px;font-weight:600;padding:14px 26px;border-radius:999px;border:2px solid #eedfe5;color:#5b4851}
+  .chip.on{background:#fbe1eb;border-color:var(--pink-deep);color:#2a1c22}
+  .toast{position:absolute;left:-40px;top:-46px;background:#fff;color:#2a1c22;border-radius:24px;padding:22px 28px;display:flex;gap:18px;align-items:center;box-shadow:0 24px 60px rgba(0,0,0,.4);min-width:430px;z-index:2}
+  .toast .ic{width:64px;height:64px;border-radius:18px;background:var(--pink);display:flex;align-items:center;justify-content:center;flex:none}
+  .toast b{display:block;font-size:28px}.toast span{font-size:23px;color:#8a7680}
+  .tabs{display:flex;gap:12px;margin-bottom:10px}
+  .tab{font-size:24px;font-weight:700;padding:10px 22px;border-radius:999px;background:#f5ebef;color:#6b5862}
+  .tab.on{background:#2a1c22;color:#fff}
+  .lead{display:flex;align-items:center;gap:20px;padding:22px 0;border-bottom:1.5px solid #f2e7eb}
+  .lead:last-child{border-bottom:0;padding-bottom:0}
+  .av{width:66px;height:66px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:28px;flex:none;background:#fbe1eb;color:#b04f78}
+  .lead .n{font-size:29px;font-weight:800}.lead .d{font-size:23px;color:#8a7680;margin-top:4px}
+  .src{font-size:20px;font-weight:700;color:#8a7680;background:#f5ebef;border-radius:8px;padding:4px 10px;margin-right:8px}
+  .st{margin-right:auto;font-size:22px;font-weight:800;padding:8px 18px;border-radius:999px;white-space:nowrap}
+  .st.new{background:var(--pink);color:#2a1c22}.st.wip{background:#fff1d6;color:#8a5a00}.st.done{background:#e3f3e8;color:#2d7a47}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:64px}
+  .tile{background:rgba(255,248,244,.06);border:1.5px solid rgba(247,179,204,.28);border-radius:30px;padding:40px 34px}
+  .tile .ic{width:82px;height:82px;border-radius:22px;background:var(--pink);display:flex;align-items:center;justify-content:center;margin-bottom:28px}
+  .tile b{display:block;font-size:40px;font-weight:800;line-height:1.15}
+  .tile span{display:block;font-size:26px;color:var(--muted);margin-top:10px;line-height:1.35}
+  .sub{font-size:40px;font-weight:500;color:var(--white);opacity:.85;margin-top:36px;line-height:1.35}
+  .biolink{margin-top:64px;align-self:center;display:flex;align-items:center;gap:20px;background:var(--pink);color:var(--bg1);font-weight:900;font-size:58px;padding:28px 56px;border-radius:999px}
 </style>
 </head>
 <body>
@@ -129,11 +164,17 @@
 <section class="slide" id="s5">
   <span class="num">5/9</span>
   <h2>אתר שאוסף<br>לך לידים</h2>
-  <p class="hand sm">מי שמתעניינת משאירה פרטים, וזה לא הולך לאיבוד.</p>
-  <div class="ui">
-    <div class="field">שם</div>
-    <div class="field">טלפון</div>
-    <div class="cta">דברו איתי</div>
+  <p class="sub">מי שמתעניינת משאירה פרטים,<br>וזה לא הולך לאיבוד.</p>
+  <div class="stage">
+    <div class="toast"><div class="ic"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#2a1c22" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div><div><b>ליד חדש מהאתר</b><span>רונית · לפני דקה</span></div></div>
+    <div class="pane">
+      <div class="pane-top"><span class="ttl">רוצה לשמוע עוד?</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <div class="pane-body">
+        <div class="lbl">שם מלא</div><div class="inp">רונית</div>
+        <div class="lbl">טלפון</div><div class="inp ph">050-0000000</div>
+        <div class="btn2">שליחה</div>
+      </div>
+    </div>
   </div>
   <span class="handle">@plania.il</span>
 </section>
@@ -142,11 +183,18 @@
 <section class="slide" id="s6">
   <span class="num">6/9</span>
   <h2>בקשות להצעת מחיר, ישר מהאתר</h2>
-  <p class="hand sm">הלקוחות כותבים מה הם צריכים,<br>ואת מקבלת הכול מסודר.</p>
-  <div class="ui">
-    <div class="field">מה צריך?</div>
-    <div class="field">מתי?</div>
-    <div class="cta">שליחת בקשה להצעת מחיר</div>
+  <p class="sub">הלקוחות כותבים מה הם צריכים,<br>ואת מקבלת הכול מסודר.</p>
+  <div class="stage">
+    <div class="toast"><div class="ic"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#2a1c22" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg></div><div><b>בקשה חדשה להצעת מחיר</b><span>מיכל · אירוע ל-40 איש</span></div></div>
+    <div class="pane">
+      <div class="pane-top"><span class="ttl">בקשה להצעת מחיר</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <div class="pane-body">
+        <div class="lbl">מה צריך?</div>
+        <div class="chips"><span class="chip on">אירוע</span><span class="chip">סדנה</span><span class="chip">הזמנה קבועה</span></div>
+        <div class="lbl">כמה אנשים?</div><div class="inp">40</div>
+        <div class="btn2">שליחת בקשה</div>
+      </div>
+    </div>
   </div>
   <span class="handle">@plania.il</span>
 </section>
@@ -155,11 +203,18 @@
 <section class="slide" id="s7">
   <span class="num">7/9</span>
   <h2>כל הפניות<br>במקום אחד</h2>
-  <p class="hand sm">בלי לפשפש בין המיילים והוואטסאפים<br>כדי להבין מי ביקש ממך מה.</p>
-  <div class="ui">
-    <div class="row"><div class="dot">ר</div><div><div class="who">רונית</div><div class="what">הצעת מחיר לאירוע</div></div><span class="new">חדש</span></div>
-    <div class="row"><div class="dot">מ</div><div><div class="who">מיכל</div><div class="what">רוצה לקבוע שיחה</div></div><span class="new">חדש</span></div>
-    <div class="row"><div class="dot">ש</div><div><div class="who">שירה</div><div class="what">שאלה על המחירים</div></div></div>
+  <p class="sub">בלי לפשפש בין המיילים והוואטסאפים<br>כדי להבין מי ביקש ממך מה.</p>
+  <div class="stage">
+    <div class="pane">
+      <div class="pane-top"><span class="ttl">הפניות שלי</span>
+        <div class="tabs" style="margin:0"><span class="tab on">הכול 12</span><span class="tab">חדשות 2</span></div></div>
+      <div class="pane-body" style="padding-top:12px">
+        <div class="lead"><div class="av">ר</div><div><div class="n">רונית</div><div class="d"><span class="src">טופס</span>רוצה לשמוע פרטים</div></div><span class="st new">חדש</span></div>
+        <div class="lead"><div class="av">מ</div><div><div class="n">מיכל</div><div class="d"><span class="src">הצעת מחיר</span>אירוע ל-40 איש</div></div><span class="st new">חדש</span></div>
+        <div class="lead"><div class="av">ש</div><div><div class="n">שירה</div><div class="d"><span class="src">טופס</span>שאלה על המחירים</div></div><span class="st wip">בטיפול</span></div>
+        <div class="lead"><div class="av">נ</div><div><div class="n">נועה</div><div class="d"><span class="src">הצעת מחיר</span>סדנה לצוות</div></div><span class="st done">נסגר</span></div>
+      </div>
+    </div>
   </div>
   <span class="handle">@plania.il</span>
 </section>
@@ -167,13 +222,14 @@
 <!-- 8 RECAP -->
 <section class="slide" id="s8">
   <span class="num">8/9</span>
-  <h2 style="font-size:82px">אתר טוב לא אמור רק להיראות טוב.<br>הוא אמור לעבוד בשבילך.</h2>
-  <ul class="list">
-    <li>נראה כמו העסק שלך</li>
-    <li>אוסף לידים</li>
-    <li>מקבל בקשות להצעת מחיר</li>
-    <li>מרכז את כל הפניות</li>
-  </ul>
+  <h2 style="font-size:84px">אתר טוב לא אמור רק להיראות טוב.</h2>
+  <p class="hand" style="margin-top:24px;color:var(--white)">הוא אמור לעבוד בשבילך.</p>
+  <div class="grid">
+    <div class="tile"><div class="ic"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#2a1c22" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg></div><b>נראה כמו העסק שלך</b><span>ולא כמו של כולם</span></div>
+    <div class="tile"><div class="ic"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#2a1c22" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M19 8v6M16 11h6"/></svg></div><b>אוסף לידים</b><span>כל מתעניינת נשמרת</span></div>
+    <div class="tile"><div class="ic"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#2a1c22" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg></div><b>בקשות להצעת מחיר</b><span>ישר מהאתר, מסודרות</span></div>
+    <div class="tile"><div class="ic"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#2a1c22" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg></div><b>כל הפניות במקום אחד</b><span>בלי לחפש במיילים ובוואטסאפ</span></div>
+  </div>
   <span class="handle">@plania.il</span>
 </section>
 
@@ -181,8 +237,8 @@
 <section class="slide center" id="s9">
   <span class="num">9/9</span>
   <h2>אם זה מה שאת מחפשת,<br>דברי איתי</h2>
-  <p class="hand">שלחי לי בהודעה את המילה</p>
-  <span class="kw">אתר</span>
+  <p class="hand">כל הפרטים מחכים לך בקישור בביו</p>
+  <span class="biolink">לקישור בביו ↑</span>
   <span class="handle">@plania.il</span>
 </section>
 
