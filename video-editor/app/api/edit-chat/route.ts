@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { askBrain, brainProvider, BrainError } from "@/lib/ai/brain";
+import { askBrain, brainProvider, BrainError, withUserKey } from "@/lib/ai/brain";
 import { CHAT_SYSTEM, ChatReplySchema, type ChatRequest } from "@/lib/ai/edit-chat";
 import { supabaseEnabled } from "@/lib/supabase/env";
 import { getUser } from "@/lib/supabase/server";
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /** עוזר העריכה: בקשה בעברית חופשית → פעולות בעורך + תשובה קצרה */
-export async function POST(request: Request) {
+export const POST = withUserKey(async (request: Request) => {
   if (!brainProvider()) return NextResponse.json({ error: "צריך לחבר את העריכה החכמה" }, { status: 404 });
   if (supabaseEnabled && !(await getUser()).user) return NextResponse.json({ error: "צריך להתחבר" }, { status: 401 });
   const body = (await request.json().catch(() => null)) as ChatRequest | null;
@@ -27,4 +27,4 @@ export async function POST(request: Request) {
     if (e instanceof BrainError) return NextResponse.json({ error: e.message, detail: e.detail }, { status: e.status });
     throw e;
   }
-}
+});

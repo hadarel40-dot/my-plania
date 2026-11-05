@@ -1,4 +1,5 @@
 "use client";
+import { brainHeaders } from "@/lib/ai/my-key";
 import type { Clip, MediaAsset } from "@/lib/editor/types";
 import type { DirectorPlan, DirectorRequest } from "./smart-plan";
 import { transcode } from "@/lib/media/compress";
@@ -60,7 +61,7 @@ export async function watchFootage(
 
   onStatus("Gemini צופה בסרטונים…");
   const body: DirectorRequest = { ...req, clips: clips.map((c, i) => ({ duration: c.out - c.in, video: videos[i] })) };
-  const res = await fetch("/api/director", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const res = await fetch("/api/director", { method: "POST", headers: brainHeaders(), body: JSON.stringify(body) });
   const data = await res.json().catch(() => null);
   if (!res.ok || !data) {
     logEvent("brain_failed", { route: "director", status: res.status, error: data?.error, detail: data?.detail, size });

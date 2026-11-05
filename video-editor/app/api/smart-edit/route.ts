@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { SmartPlanSchema, type SmartPlanRequest } from "@/lib/ai/smart-plan";
-import { askBrain, brainProvider, BrainError } from "@/lib/ai/brain";
+import { askBrain, brainProvider, BrainError, withUserKey } from "@/lib/ai/brain";
 import { supabaseEnabled } from "@/lib/supabase/env";
 import { getUser } from "@/lib/supabase/server";
 
@@ -30,7 +30,7 @@ How to decide:
 - summary: one or two plain Hebrew sentences for the creator saying what you changed and why. Neutral gender forms.`;
 
 /** בונה תוכנית עריכה מהתמלול בעזרת המוח (Gemini או Claude). המפתח נשאר בשרת */
-export async function POST(request: Request) {
+export const POST = withUserKey(async (request: Request) => {
   if (!brainProvider()) return NextResponse.json({ error: "העריכה החכמה לא מחוברת" }, { status: 404 });
   if (supabaseEnabled && !(await getUser()).user) return NextResponse.json({ error: "צריך להתחבר" }, { status: 401 });
 
@@ -56,4 +56,4 @@ export async function POST(request: Request) {
     if (e instanceof BrainError) return NextResponse.json({ error: e.message, detail: e.detail }, { status: e.status });
     throw e;
   }
-}
+});

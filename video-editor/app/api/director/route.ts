@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { DirectorPlanSchema, type DirectorRequest } from "@/lib/ai/smart-plan";
-import { askBrain, brainProvider, BrainError, type BrainPart } from "@/lib/ai/brain";
+import { askBrain, brainProvider, BrainError, type BrainPart, withUserKey } from "@/lib/ai/brain";
 import { supabaseEnabled } from "@/lib/supabase/env";
 import { getUser } from "@/lib/supabase/server";
 
@@ -27,7 +27,7 @@ const notesBlock = (notes?: string) =>
   notes?.trim() ? `\n\nThe creator's instructions (follow them; they override the defaults):\n${notes.trim().slice(0, 2000)}` : "";
 
 /** המוח צופה בכל הסרטונים ומחזיר רשימת עריכה (רק Gemini יודע לצפות בווידאו) */
-export async function POST(request: Request) {
+export const POST = withUserKey(async (request: Request) => {
   if (brainProvider() !== "gemini") return NextResponse.json({ error: "צפייה בסרטונים זמינה רק עם Gemini" }, { status: 404 });
   if (supabaseEnabled && !(await getUser()).user) return NextResponse.json({ error: "צריך להתחבר" }, { status: 401 });
   const body = (await request.json().catch(() => null)) as DirectorRequest | null;
@@ -56,4 +56,4 @@ export async function POST(request: Request) {
     if (e instanceof BrainError) return NextResponse.json({ error: e.message, detail: e.detail }, { status: e.status });
     throw e;
   }
-}
+});

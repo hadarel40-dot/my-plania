@@ -1,5 +1,6 @@
 "use client";
 import { setMyStyleUser } from "@/lib/editor/my-style";
+import { setMyKeyUser } from "@/lib/ai/my-key";
 import { useMemo } from "react";
 import dynamic from "next/dynamic";
 import { createCloudBackend } from "@/lib/backend/cloud";
@@ -13,6 +14,7 @@ const Editor = dynamic(() => import("./editor").then((m) => m.Editor), {
 export function CloudEditor({ projectId, userId, email }: { projectId: string; userId: string; email: string }) {
   const backend = useMemo(() => {
     setMyStyleUser(userId);
+    setMyKeyUser(userId);
     return createCloudBackend(projectId, userId);
   }, [projectId, userId]);
   const account = useMemo(() => ({ email }), [email]);

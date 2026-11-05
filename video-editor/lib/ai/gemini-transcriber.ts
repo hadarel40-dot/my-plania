@@ -1,4 +1,5 @@
 "use client";
+import { brainHeaders } from "@/lib/ai/my-key";
 import { dictionaryHints } from "@/lib/editor/dictionary";
 import { useEditor } from "@/stores/editor-store";
 import type { Transcriber } from "./transcriber";
@@ -74,7 +75,7 @@ export function createGeminiTranscriber(): Transcriber {
         const msg = e instanceof Error ? e.message : String(e);
         logEvent("transcribe_failed", { error: msg });
         throw new Error(/מכסה/.test(msg)
-          ? "המכסה היומית החינמית של Gemini נגמרה, ולכן לא נוצרו כתוביות (כדי לא לכתוב מילים לא נכונות). אפשר לנסות שוב בעוד כמה שעות או מחר. העריכה שכבר נשמרה לא תתמלל שוב."
+          ? "המכסה היומית החינמית של Gemini נגמרה, ולכן לא נוצרו כתוביות (כדי לא לכתוב מילים לא נכונות). כדי שזה לא יקרה: לחברי מכסה אישית בחינם בלשונית ״חכם״ (דקה אחת), או לנסות שוב מאוחר יותר."
           : msg);
       }
     },
@@ -87,7 +88,7 @@ async function ask(samples: Float32Array, from: number, to: number): Promise<Seg
   for (let attempt = 0; attempt < 2; attempt++) {
     const res = await fetch("/api/transcribe", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: brainHeaders(),
       body: JSON.stringify({ audio: wavBase64(samples, from, to), duration: to - from, hints: dictionaryHints() }),
     }).catch(() => null);
     const data = await res?.json().catch(() => null);

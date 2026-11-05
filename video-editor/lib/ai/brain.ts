@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+import { createHash } from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
@@ -9,8 +11,30 @@ import { z } from "zod";
  */
 export type BrainProvider = "gemini" | "claude";
 
+/**
+ * מפתח Gemini אישי של המשתמשת (נשלח מהדפדפן שלה בכותרת x-gemini-key): לכל משתמשת
+ * מכסה חינמית משלה, כך שכמה משתמשות לא גומרות זו לזו את המכסה. בלי מפתח אישי, או
+ * כשהמכסה שלו נגמרה, משתמשים במפתח של האתר.
+ */
+const userKey = new AsyncLocalStorage<string | null>();
+
+export function withUserKey<R>(handler: (request: Request) => Promise<R>) {
+  return (request: Request) => {
+    const raw = request.headers.get("x-gemini-key")?.trim() ?? "";
+    const key = raw.length >= 20 && raw.length <= 200 && /^[A-Za-z0-9_\-.]+$/.test(raw) ? raw : null;
+    return userKey.run(key, () => handler(request));
+  };
+}
+
+/** המפתחות לפי הסדר: האישי קודם, ואז של האתר */
+function geminiKeys(): string[] {
+  return [userKey.getStore() ?? "", process.env.GEMINI_API_KEY?.trim() ?? ""].filter((k, i, a) => k && a.indexOf(k) === i);
+}
+
+const keyTag = (key: string) => createHash("sha256").update(key).digest("hex").slice(0, 8);
+
 export function brainProvider(): BrainProvider | null {
-  if (process.env.GEMINI_API_KEY) return "gemini";
+  if (geminiKeys().length) return "gemini";
   if (process.env.ANTHROPIC_API_KEY) return "claude";
   return null;
 }
@@ -83,38 +107,67 @@ async function geminiCall(body: unknown, budgetMs = 52_000, attemptMs = 25_000):
   const deadline = Date.now() + budgetMs;
   let last: BrainError | null = null;
   const tried: string[] = [];
-  const seen = new Set<string>();
-  for (const { model, fast } of GEMINI_MODELS) {
-    if (seen.has(model)) continue;
-    seen.add(model);
-    if ((exhausted.get(model) ?? 0) > Date.now()) { tried.push(`${model}: skipped (quota)`); continue; }
-    const left = deadline - Date.now();
-    if (left < 4000) break;
-    const timeout = Math.min(left, attemptMs);
-    try {
+  const keys = geminiKeys();
+  for (const [k, key] of keys.entries()) {
+    const who = keys.length > 1 && k === 0 ? "personal " : "";
+    const seen = new Set<string>();
+    for (const { model, fast } of GEMINI_MODELS) {
+      if (seen.has(model)) continue;
+      seen.add(model);
+      const tag = `${keyTag(key)}:${model}`;
+      if ((exhausted.get(tag) ?? 0) > Date.now()) { tried.push(`${who}${model}: skipped (quota)`); continue; }
+      const left = deadline - Date.now();
+      if (left < 4000) break;
+      const timeout = Math.min(left, attemptMs);
       try {
-        return await geminiModelCall(model, fast ? withFastThinking(body, model) : body, timeout);
-      } catch (e) {
-        // גרסה שלא מכירה את הגדרת החשיבה: אותה גרסה בלי ההגדרה
-        if (fast && e instanceof BrainError && [400, 502].includes(e.status) && /thinking/i.test(e.detail ?? "")) {
-          return await geminiModelCall(model, body, Math.min(deadline - Date.now(), attemptMs));
+        try {
+          return await geminiModelCall(key, model, fast ? withFastThinking(body, model) : body, timeout);
+        } catch (e) {
+          // גרסה שלא מכירה את הגדרת החשיבה: אותה גרסה בלי ההגדרה
+          if (fast && e instanceof BrainError && [400, 502].includes(e.status) && /thinking/i.test(e.detail ?? "")) {
+            return await geminiModelCall(key, model, body, Math.min(deadline - Date.now(), attemptMs));
+          }
+          throw e;
         }
-        throw e;
+      } catch (e) {
+        if (!(e instanceof BrainError)) throw e;
+        // מפתח אישי לא תקין: ממשיכים עם המפתח של האתר
+        if (who && e.status === 500) { tried.push(`personal key: ${e.message}`); last = e; break; }
+        if (![429, 404, 500, 503, 504].includes(e.status)) throw e;
+        if (e.status === 429 && /per.?day|free_tier_requests|daily/i.test(e.detail ?? "")) exhausted.set(tag, Date.now() + 30 * 60_000);
+        tried.push(`${who}${e.detail ?? `${model}: ${e.status}`}`);
+        last = e;
       }
-    } catch (e) {
-      if (!(e instanceof BrainError) || ![429, 404, 500, 503, 504].includes(e.status)) throw e;
-      if (e.status === 429 && /per.?day|free_tier_requests|daily/i.test(e.detail ?? "")) exhausted.set(model, Date.now() + 30 * 60_000);
-      tried.push(e.detail ?? `${model}: ${e.status}`);
-      last = e;
     }
   }
   if (last) last.detail = tried.join(" | ").slice(0, 600);
-  if (!last && tried.length) throw new BrainError("המכסה החינמית של Gemini נגמרה לבינתיים. אפשר לנסות שוב בעוד כמה דקות (או מחר)", 429, tried.join(" | "));
+  if (!last && tried.length) throw new BrainError("המכסה החינמית של Gemini נגמרה לבינתיים. אפשר לחבר מכסה אישית בחינם (בלשונית חכם), או לנסות שוב מאוחר יותר", 429, tried.join(" | "));
   throw last ?? new BrainError("Gemini לא ענה בזמן, נסו שוב", 504);
 }
 
-async function geminiModelCall(model: string, body: unknown, timeoutMs: number): Promise<string> {
-  const key = process.env.GEMINI_API_KEY!.trim();
+/**
+ * בדיקה שמפתח אישי עובד (בקשה קטנה אחת). מכסה שנגמרה (429) = המפתח תקין.
+ * מחזיר null אם תקין, או הודעה בעברית
+ */
+export async function checkGeminiKey(key: string): Promise<string | null> {
+  const body = { contents: [{ role: "user", parts: [{ text: "ok" }] }], generationConfig: { maxOutputTokens: 32 } };
+  let lastError = "המפתח לא עבד";
+  for (const { model } of GEMINI_MODELS) {
+    try {
+      await geminiModelCall(key, model, body, 15_000);
+      return null;
+    } catch (e) {
+      if (!(e instanceof BrainError)) return "המפתח לא עבד";
+      // מכסה שנגמרה או תשובה ריקה: Google קיבל את המפתח, כלומר הוא תקין
+      if (e.status === 429 || /empty/.test(e.detail ?? "")) return null;
+      if (e.status === 500) return e.message;
+      lastError = e.message;
+    }
+  }
+  return lastError;
+}
+
+async function geminiModelCall(key: string, model: string, body: unknown, timeoutMs: number): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   const send = (auth: Record<string, string>) => fetch(`${GEMINI_API}/${model}:generateContent`, {
@@ -142,7 +195,7 @@ async function geminiModelCall(model: string, body: unknown, timeoutMs: number):
   if (!res.ok) {
     const detail = `${model}: ${res.status} ${data?.error?.message ?? ""}`.slice(0, 400);
     console.warn("gemini error", detail);
-    if (res.status === 429) throw new BrainError("המכסה החינמית של Gemini נגמרה לבינתיים. אפשר לנסות שוב בעוד כמה דקות (או מחר)", 429, detail);
+    if (res.status === 429) throw new BrainError("המכסה החינמית של Gemini נגמרה לבינתיים. אפשר לחבר מכסה אישית בחינם (בלשונית חכם), או לנסות שוב מאוחר יותר", 429, detail);
     if (res.status === 404) throw new BrainError("הגרסה הזאת של Gemini לא זמינה", 404, detail);
     if (res.status === 503 || res.status === 500) throw new BrainError("Gemini עמוס כרגע, נסו שוב בעוד רגע", res.status, detail);
     if (res.status === 400 && /API key/i.test(data?.error?.message ?? "")) throw new BrainError("המפתח של Gemini לא תקין", 500, detail);

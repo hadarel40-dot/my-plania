@@ -1,4 +1,5 @@
 "use client";
+import { brainHeaders } from "@/lib/ai/my-key";
 import { genreInfo, type GenreInfo, type VideoGenre } from "./genres";
 import { watchFootage } from "@/lib/ai/director";
 import { favoritePick, hasMyCaptionStyle, loadMyStyle } from "./my-style";
@@ -438,7 +439,7 @@ async function smartCuts(): Promise<SmartCuts> {
   };
   const response = await fetch("/api/smart-edit", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: brainHeaders(),
     body: JSON.stringify(body),
   });
   const data = await response.json().catch(() => null);
@@ -663,7 +664,7 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditResu
         hasMusic: !!userMusic,
         notes: brainNotes(),
       };
-      const res = await fetch("/api/smart-vibe", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      const res = await fetch("/api/smart-vibe", { method: "POST", headers: brainHeaders(), body: JSON.stringify(body) });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data) {
         logEvent("brain_failed", { route: "smart-vibe", status: res.status, error: data?.error, detail: data?.detail });

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { VibePlanSchema, type VibePlanRequest } from "@/lib/ai/smart-plan";
-import { askBrain, brainProvider, BrainError, type BrainPart } from "@/lib/ai/brain";
+import { askBrain, brainProvider, BrainError, type BrainPart, withUserKey } from "@/lib/ai/brain";
 import { supabaseEnabled } from "@/lib/supabase/env";
 import { getUser } from "@/lib/supabase/server";
 
@@ -25,7 +25,7 @@ Pick and order the shots for the final reel:
 The creator's instructions, when given, come first: follow them over these defaults (which shots to include or open with, length, mood, pace, text).`;
 
 /** בוחר ומסדר את הקטעים לסרטון אווירה לפי תמונות מהם, בעזרת המוח (Gemini או Claude) */
-export async function POST(request: Request) {
+export const POST = withUserKey(async (request: Request) => {
   if (!brainProvider()) return NextResponse.json({ error: "העריכה החכמה לא מחוברת" }, { status: 404 });
   if (supabaseEnabled && !(await getUser()).user) return NextResponse.json({ error: "צריך להתחבר" }, { status: 401 });
   const body = (await request.json().catch(() => null)) as VibePlanRequest | null;
@@ -48,4 +48,4 @@ export async function POST(request: Request) {
     if (e instanceof BrainError) return NextResponse.json({ error: e.message, detail: e.detail }, { status: e.status });
     throw e;
   }
-}
+});

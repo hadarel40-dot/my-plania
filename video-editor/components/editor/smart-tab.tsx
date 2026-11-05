@@ -1,4 +1,6 @@
 "use client";
+import { MyKeyCard } from "./my-key-card";
+import { brainHeaders } from "@/lib/ai/my-key";
 import { useState } from "react";
 import { create } from "zustand";
 import { Captions, Crop, Loader2, Music2, Scissors, Send, Sparkles, TrendingUp } from "lucide-react";
@@ -31,6 +33,7 @@ export function SmartTab() {
     <div className="space-y-5 p-4">
       {!hasClips && <p className="rounded-lg bg-zinc-900 p-3 text-sm text-zinc-400">קודם מעלים סרטון, ואז הכלים כאן עובדים עליו.</p>}
       <AutoEditButton disabled={!hasClips} />
+      <MyKeyCard />
       <Section title="טרנדים עכשיו">
         <TrendsPanel />
       </Section>
@@ -151,7 +154,7 @@ async function loadHooks(report?: AutoEditReport | null) {
       transcript && `תמלול: ${transcript}`,
       report?.done.length && `מה נעשה בעריכה: ${report.done.join(" · ")}`,
     ].filter(Boolean).join("\n");
-    const res = await fetch("/api/hooks", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ context, current: currentHook() }) });
+    const res = await fetch("/api/hooks", { method: "POST", headers: brainHeaders(), body: JSON.stringify({ context, current: currentHook() }) });
     const data = await res.json().catch(() => null);
     if (!res.ok || !data?.hooks) {
       logEvent("brain_failed", { route: "hooks", status: res.status, error: data?.error, detail: data?.detail });
@@ -597,7 +600,7 @@ function TrendsPanel() {
       kind: timeline.captions.length ? "talking" : "vibe",
     };
     try {
-      const res = await fetch("/api/trends", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      const res = await fetch("/api/trends", { method: "POST", headers: brainHeaders(), body: JSON.stringify(body) });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data) {
         logEvent("brain_failed", { route: "trends", status: res.status, error: data?.error, detail: data?.detail });

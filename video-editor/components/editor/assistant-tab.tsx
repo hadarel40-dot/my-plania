@@ -1,4 +1,5 @@
 "use client";
+import { brainHeaders } from "@/lib/ai/my-key";
 import { useEffect, useRef, useState } from "react";
 import { create } from "zustand";
 import { Loader2, SendHorizontal, Undo2 } from "lucide-react";
@@ -26,7 +27,7 @@ export async function sendChat(text: string) {
   let out: ChatReply;
   try {
     const res = await fetch("/api/edit-chat", {
-      method: "POST", headers: { "content-type": "application/json" },
+      method: "POST", headers: brainHeaders(),
       body: JSON.stringify({ message, context: chatContext(), history }),
     });
     if (!res.ok) throw new Error(`status ${res.status}`);

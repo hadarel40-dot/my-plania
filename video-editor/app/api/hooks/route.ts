@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { HooksSchema, type HooksRequest } from "@/lib/ai/smart-plan";
-import { askBrain, brainProvider, BrainError } from "@/lib/ai/brain";
+import { askBrain, brainProvider, BrainError, withUserKey } from "@/lib/ai/brain";
 import { supabaseEnabled } from "@/lib/supabase/env";
 import { getUser } from "@/lib/supabase/server";
 
@@ -16,7 +16,7 @@ Use neutral gender forms or plural when addressing viewers. Be specific to this 
 Do not repeat the current hook.`;
 
 /** שלוש הצעות למשפט פתיחה, לפי התוכן של הסרטון */
-export async function POST(request: Request) {
+export const POST = withUserKey(async (request: Request) => {
   if (!brainProvider()) return NextResponse.json({ error: "צריך לחבר את העריכה החכמה" }, { status: 404 });
   if (supabaseEnabled && !(await getUser()).user) return NextResponse.json({ error: "צריך להתחבר" }, { status: 401 });
   const body = (await request.json().catch(() => null)) as HooksRequest | null;
@@ -32,4 +32,4 @@ export async function POST(request: Request) {
     if (e instanceof BrainError) return NextResponse.json({ error: e.message, detail: e.detail }, { status: e.status });
     throw e;
   }
-}
+});
