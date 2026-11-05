@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Bellefair&family=Playpen+Sans+Hebrew:wght@300;400&family=Assistant:wght@300;400;600;700&display=block" rel="stylesheet">
+<style>
+  :root{--ivory:#F7F2E7;--sage:#9AA585;--sage2:#5E6A50;--deep:#3F4735;--gold:#BE9A5E;--cream:#FFFCF6}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1080px;height:1920px;overflow:hidden;background:var(--ivory)}
+  body{font-family:'Assistant',sans-serif;color:var(--deep);position:relative}
+  .grain{position:absolute;inset:0;pointer-events:none;opacity:.3;mix-blend-mode:multiply;z-index:20;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .4 0 0 0 0 .42 0 0 0 0 .32 0 0 0 .2 0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .band{position:absolute;bottom:0;left:0;right:0;height:560px;background:var(--sage);opacity:.32}
+
+  .brand{position:absolute;top:150px;left:0;right:0;text-align:center}
+  .brand .be{font-family:'Bellefair';font-size:44px;letter-spacing:12px;direction:ltr}
+  .brand .t{font-size:19px;letter-spacing:4px;color:var(--sage2);font-weight:600}
+
+  .head{position:absolute;top:262px;left:0;right:0;text-align:center}
+  h1{font-family:'Bellefair';font-weight:400;font-size:250px;line-height:.9;color:var(--deep)}
+  .script{font-family:'Playpen Sans Hebrew';font-weight:300;font-size:64px;color:var(--gold);margin-top:-30px;position:relative}
+  .kick{font-size:24px;letter-spacing:3px;color:var(--sage2);font-weight:600;margin-top:10px}
+
+  .arch-line{position:absolute;top:608px;left:162px;width:780px;height:880px;border:1.5px solid var(--gold);border-radius:390px 390px 0 0}
+  .arch{position:absolute;top:630px;left:140px;width:780px;height:880px;border-radius:390px 390px 0 0;overflow:hidden;
+    box-shadow:0 30px 50px -30px rgba(63,71,53,.5)}
+  .arch img{width:100%;height:100%;object-fit:cover;object-position:52% 30%}
+
+  .sm{position:absolute;width:210px;height:210px;border-radius:50%;overflow:hidden;border:7px solid var(--cream);
+    box-shadow:0 18px 36px -16px rgba(63,71,53,.6)}
+  .sm img{width:100%;height:100%;object-fit:cover}
+  .s1{top:1130px;right:60px}.s2{top:1270px;left:56px}
+
+  .sprig{position:absolute}
+  .sp1{top:640px;right:70px;transform:rotate(14deg)}
+  .sp2{top:990px;left:50px;transform:scaleX(-1) rotate(10deg)}
+
+  .note{position:absolute;top:1520px;left:150px;right:150px;background:var(--cream);border-radius:6px;padding:26px 30px 24px;text-align:center;
+    box-shadow:0 20px 40px -24px rgba(63,71,53,.5)}
+  .note p{font-size:27px;line-height:1.45}
+  .note p b{font-weight:700;color:var(--sage2)}
+  .note .f{font-size:20px;letter-spacing:2px;color:var(--gold);font-weight:700;margin-top:8px}
+
+  .cta{position:absolute;top:1700px;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:22px}
+  .cta .w{font-family:'Playpen Sans Hebrew';font-size:28px;color:var(--deep)}
+  .cta .n{font-family:'Bellefair';font-size:52px;direction:ltr;color:var(--deep);letter-spacing:1px}
+  .cta i{width:8px;height:8px;border-radius:50%;background:var(--gold)}
+</style>
+</head>
+<body>
+<div class="band"></div>
+<div class="grain"></div>
+
+<div class="brand"><div class="be">BE</div><div class="t">סדנאות אפייה ובישול לנשים</div></div>
+
+<div class="head">
+  <h1>עונג שבת</h1>
+  <div class="script">בואי לבשל איתי</div>
+</div>
+
+<svg class="sprig sp1" width="120" height="220" viewBox="0 0 120 220" fill="none" stroke="#5E6A50" stroke-width="1.6" stroke-linecap="round">
+  <path d="M60 215 C56 160 58 100 70 8"/>
+  <ellipse cx="44" cy="170" rx="18" ry="8" transform="rotate(30 44 170)"/><ellipse cx="78" cy="140" rx="18" ry="8" transform="rotate(-30 78 140)"/>
+  <ellipse cx="44" cy="110" rx="17" ry="7.5" transform="rotate(30 44 110)"/><ellipse cx="80" cy="82" rx="16" ry="7" transform="rotate(-30 80 82)"/>
+  <ellipse cx="50" cy="56" rx="14" ry="6.5" transform="rotate(30 50 56)"/><ellipse cx="78" cy="30" rx="12" ry="6" transform="rotate(-30 78 30)"/>
+</svg>
+<svg class="sprig sp2" width="120" height="220" viewBox="0 0 120 220" fill="none" stroke="#BE9A5E" stroke-width="1.6" stroke-linecap="round">
+  <path d="M60 215 C56 160 58 100 70 8"/>
+  <ellipse cx="44" cy="170" rx="18" ry="8" transform="rotate(30 44 170)"/><ellipse cx="78" cy="140" rx="18" ry="8" transform="rotate(-30 78 140)"/>
+  <ellipse cx="44" cy="110" rx="17" ry="7.5" transform="rotate(30 44 110)"/><ellipse cx="80" cy="82" rx="16" ry="7" transform="rotate(-30 80 82)"/>
+  <ellipse cx="50" cy="56" rx="14" ry="6.5" transform="rotate(30 50 56)"/>
+</svg>
+
+<div class="arch-line"></div>
+<div class="arch"><img src="hands.jpg"></div>
+<div class="sm s1"><img src="fried.jpg" style="object-position:50% 62%"></div>
+<div class="sm s2"><img src="dishes.jpg" style="object-position:62% 30%"></div>
+
+<div class="note">
+  <p>סדנה חווייתית לנשים לקראת שבת המלכה,<br>מכינות יחד <b>את כל הטוב של שבת</b></p>
+  <div class="f">בישול ואפייה · מתכונים · השראה</div>
+</div>
+
+<div class="cta"><span class="w">בתאל טייב</span><i></i><span class="n">052-5741471</span></div>
+</body>
+</html>
