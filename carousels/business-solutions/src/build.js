@@ -3,7 +3,8 @@ const fs=require('fs'),path=require('path');const {chromium}=require('playwright
 const ROOT=path.join(__dirname,'..');const N=9;
 const CR='#E4D8CD',BU='#5C151A',LI='#F3EAE2',INK='#5C151A';
 function photo(n){for(const e of['jpg','jpeg','png','JPG','JPEG','PNG']){const p=path.join(ROOT,'photos',`${n}.${e}`);if(fs.existsSync(p))return `data:image/${e.toLowerCase()==='png'?'png':'jpeg'};base64,`+fs.readFileSync(p).toString('base64');}return null;}
-const img=(n)=>{const p=photo(n);return p?`<div style="position:absolute;inset:0;background:url(${p}) center/cover"></div>`:`<div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,#9b8a80 0 26px,#a39288 26px 52px);display:flex;align-items:center;justify-content:center"><span style="font:700 34px Rubik;color:#fff;background:#0004;padding:10px 26px;border-radius:30px">תמונה ${n}</span></div>`;};
+const POS={1:'88% 58%',4:'50% 30%',7:'45% 55%',9:'30% 60%'};
+const img=(n)=>{const p=photo(n);return p?`<div style="position:absolute;inset:0;background:url(${p}) ${POS[n]||'center'}/cover"></div>`:`<div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,#9b8a80 0 26px,#a39288 26px 52px);display:flex;align-items:center;justify-content:center"><span style="font:700 34px Rubik;color:#fff;background:#0004;padding:10px 26px;border-radius:30px">תמונה ${n}</span></div>`;};
 // continuous dashed thread: enters right edge at Y[i-1], leaves left edge at Y[i]
 const Y=[1318,1318,1318,1318,1318,1318,1318,1318,null];
 const thread=(i,color,mid)=>{const yin=i===0?null:Y[i-1],yout=Y[i];const pts=mid||[];
