@@ -11,6 +11,7 @@ import { TimelinePanel } from "./timeline";
 import { SidePanel, type Tab } from "./side-panel";
 import { OPEN_SMART_EVENT } from "./smart-tab";
 import { openCaptionsSheet } from "./captions-sheet";
+import { StoryboardSheet } from "./storyboard-sheet";
 import { OPEN_TOOL_EVENT, type ToolName } from "@/lib/editor/chat";
 import { ExportDialog } from "./export-dialog";
 import { useProjectBootstrap, type SaveState } from "./use-project-bootstrap";
@@ -43,7 +44,12 @@ export function Editor({ backend, account }: EditorProps) {
     return <div className="grid h-screen place-items-center text-sm text-zinc-500">טוען פרויקט…</div>;
   }
 
-  return <Layout top={<TopBar saveState={saveState} cloudSave={backend.kind === "cloud"} account={account} />} />;
+  return (
+    <>
+      <Layout top={<TopBar saveState={saveState} cloudSave={backend.kind === "cloud"} account={account} />} />
+      <StoryboardSheet />
+    </>
+  );
 }
 
 function Layout({ top }: { top: React.ReactNode }) {

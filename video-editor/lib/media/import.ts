@@ -3,6 +3,7 @@ import { uid } from "@/lib/editor/timeline-utils";
 import { getBackend } from "@/lib/backend";
 import { errorText, logEvent } from "@/lib/telemetry";
 import { MAX_UPLOAD_BYTES, mb, prepareVideoForUpload } from "./compress";
+import { saveOriginal } from "./originals";
 
 /**
  * מייבא קובץ וידאו: מנגנים אותו מיד מהדפדפן (blob URL), ובמקביל שומרים אותו
@@ -39,7 +40,10 @@ export async function importFile(
   const asset = isAudio ? await probeAudio(url, file.name) : await probeUploadedVideo(file, url);
   onProgress?.(base, "upload");
   const stored = await getBackend().storeFile(asset.id, file, (p) => onProgress?.(base + Math.round((p * (100 - base)) / 100), "upload"));
-  return { ...asset, ...stored };
+  // סרטון שכווץ כדי להיכנס למגבלת הענן: המקור באיכות מלאה נשמר בטלפון, והייצוא ממנו
+  let hasOriginal = false;
+  if (file !== original) hasOriginal = await saveOriginal(asset.id, original);
+  return { ...asset, ...stored, ...(hasOriginal ? { hasOriginal: true } : {}) };
 }
 
 /**

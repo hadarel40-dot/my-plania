@@ -37,7 +37,10 @@ export async function renderToMp4(
   await Promise.all(families.map((f) => document.fonts.load(`700 64px ${f}`).catch(() => undefined)));
   await document.fonts.ready;
 
-  const inputProps: CompositionProps = { timeline, assets, override: null };
+  // סרטונים ארוכים שכווצו לענן: מייצאים מהמקור באיכות מלאה, אם הוא שמור בטלפון הזה
+  const { withOriginals } = await import("@/lib/media/originals");
+  const { assets: exportAssets, release } = await withOriginals(assets);
+  const inputProps: CompositionProps = { timeline, assets: exportAssets, override: null };
   const result = await renderMediaOnWeb({
     composition: {
       id: "export",
@@ -57,5 +60,9 @@ export async function renderToMp4(
     licenseKey: process.env.NEXT_PUBLIC_REMOTION_LICENSE_KEY || null,
     logLevel: "warn",
   });
-  return result.getBlob();
+  try {
+    return await result.getBlob();
+  } finally {
+    release();
+  }
 }

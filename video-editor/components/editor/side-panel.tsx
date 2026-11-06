@@ -22,6 +22,7 @@ import { ClipControls } from "./clip-controls";
 import { BgTab, TricksTab } from "./tricks-tab";
 import { AssistantTab } from "./assistant-tab";
 import { VoiceCard } from "./voice-card";
+import { StylePicker } from "./style-picker";
 import { OPEN_TOOL_EVENT, type ToolName } from "@/lib/editor/chat";
 
 export type Tab = "assistant" | "smart" | "text" | "sound" | "style" | "bg" | "tricks" | "ai";
@@ -310,7 +311,14 @@ function StyleTab() {
   const { setClipLook, setClipVolume } = useEditor.getState();
 
   if (!clip) {
-    return <p className="p-8 text-center text-sm leading-relaxed text-zinc-500">בחרו קליפ בציר הזמן כדי לשנות את הסגנון והסאונד שלו</p>;
+    return (
+      <div className="space-y-4 p-4">
+        <Section title="🎨 ספריית הסגנונות" hint="לכל הסרטון">
+          <StylePicker applyButton />
+        </Section>
+        <p className="text-center text-xs leading-relaxed text-zinc-500">לשינוי צבע ועוצמת סאונד של קליפ אחד: בוחרים אותו בציר הזמן</p>
+      </div>
+    );
   }
   const current = detectStyle(clip.look);
   const strength = current.id === "none" ? 0.7 : current.strength;

@@ -19,6 +19,12 @@ export interface MyStyle {
   dictionary?: Record<string, string>;
   /** כמה פעמים נבחרה כל גרסה (לפי סוג: talk-0, vibe-1...) */
   picks?: Record<string, number>;
+  /** הסגנונות ששמרתי (הספרייה שלי) */
+  styles?: import("./style-library").EditStyle[];
+  /** הסגנון שנבחר לעריכות האוטומטיות הבאות */
+  activeStyle?: string | null;
+  /** false: לא להציג את התוכנית (סטוריבורד) לאישור לפני הבנייה */
+  storyboard?: boolean;
 }
 
 const BASE_KEY = "ai-video-editor:my-style:v1";

@@ -32,3 +32,6 @@ export function detectStyle(look: Look): { id: string; strength: number } {
   }
   return { id: "custom", strength: 0.7 };
 }
+
+/** עוצמה רגילה של גוון בעריכה אוטומטית: שחור-לבן ונואר במלואם, השאר 70% */
+export const autoStrength = (id: string) => (id === "bw" || id === "noir" ? 1 : 0.7);

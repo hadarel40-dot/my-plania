@@ -3,7 +3,7 @@ import { useEditor } from "@/stores/editor-store";
 import { usePlayback } from "@/stores/playback-store";
 import type { ChatAction, ChatReply } from "@/lib/ai/edit-chat";
 import type { MusicMood } from "@/lib/music/moods";
-import { CLIP_STYLES, detectStyle } from "./clip-styles";
+import { autoStrength, CLIP_STYLES, detectStyle } from "./clip-styles";
 import { presetById } from "./overlay-presets";
 import { layoutClips, uid, videoEnd, type SourceRange } from "./timeline-utils";
 import { musicClip, currentStyle, T } from "./auto-edit";
@@ -124,7 +124,7 @@ async function run(a: ChatAction): Promise<string | null> {
     case "filter": {
       const style = CLIP_STYLES.find((x) => x.id === a.filter);
       if (!style) return null;
-      for (const c of useEditor.getState().timeline.clips) useEditor.getState().setClipLook(c.id, { ...c.look, filter: style.look(0.7).filter });
+      for (const c of useEditor.getState().timeline.clips) useEditor.getState().setClipLook(c.id, { ...c.look, filter: style.look(autoStrength(style.id)).filter });
       return `גוון: ${style.label}`;
     }
     case "speed": {

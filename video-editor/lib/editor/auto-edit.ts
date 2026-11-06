@@ -4,12 +4,14 @@ import { create } from "zustand";
 import { genreInfo, type GenreInfo, type VideoGenre } from "./genres";
 import { watchFootage } from "@/lib/ai/director";
 import { favoritePick, hasMyCaptionStyle, loadMyStyle } from "./my-style";
+import { activeStyle } from "./style-library";
+import { askStoryboard, buildScenes, closeStoryboard, wantsStoryboard } from "./storyboard";
 import { useEditor } from "@/stores/editor-store";
 import { decodeAssetAudio } from "@/lib/audio/decode";
 import { findSpeech } from "@/lib/audio/silence";
 import { detectBeats } from "@/lib/audio/beats";
 import { presetById } from "./overlay-presets";
-import { CLIP_STYLES } from "./clip-styles";
+import { autoStrength, CLIP_STYLES } from "./clip-styles";
 import { clipLength, layoutClips, transitionOverlap, uid, videoEnd } from "./timeline-utils";
 import type { AnimationLevel, CaptionPreset, ClipEffect, Moment, Overlay, Timeline, TransitionStyle, TransitionType } from "./types";
 import { applyMoments, guessMoments } from "./moments";
@@ -414,6 +416,10 @@ interface TalkingLook {
   punchZoom?: boolean;
   /** מעבר בכל חיתוך */
   cutTransition?: { type: TransitionType; duration: number };
+  /** מסגנון מהספרייה: צבע טקסט וכמות אנימציות */
+  textColor?: string;
+  animation?: AnimationLevel;
+  styleId?: string;
 }
 
 const TALKING_LOOKS: TalkingLook[] = [
@@ -440,7 +446,7 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
   useEditor.getState().select(null);
   const wantsVoice = !/קול מקורי|בלי שיפור קול|בלי ניקוי/.test(useEditor.getState().notes);
   planSteps(["התאמה למסך עומד", "הקשבה לדיבור", "קאטים", "כתוביות", ...(wantsVoice ? ["ניקוי רעשים", "קול פודקאסט"] : []),
-    pendingInserts.length ? "עריכה חכמה ושילוב צילומי מסך" : "עריכה חכמה", "גרסאות"]);
+    pendingInserts.length ? "עריכה חכמה ושילוב צילומי מסך" : "עריכה חכמה", ...(wantsStoryboard() && useEditor.getState().cloud?.smartEdit ? ["אישור התוכנית"] : []), "גרסאות"]);
 
   await step("התאמה למסך עומד", async () => {
     const { reframed, faces } = await autoReframe((s) => onStatus(`1/5 · ${s}`));
@@ -516,9 +522,20 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
   });
   if (s0) looks.push({ template: s0.plan.template, preset: s0.plan.caption_style, accent: s0.plan.accent, font: s0.plan.caption_font, color: s0.plan.color_style, title: `הבחירה של ${brainName()}`, description: "הסגנון שהבינה המלאכותית בחרה לתוכן", punchZoom: true });
   for (const l of TALKING_LOOKS) if (looks.length < 3 && !looks.some((x) => x.template === l.template)) looks.push({ ...l });
+  // הסגנון שנבחר מהספרייה: הגרסה הראשונה, בדיוק בסגנון הזה
+  const chosen = activeStyle();
+  if (chosen) {
+    looks.unshift({
+      template: chosen.template, preset: chosen.preset, accent: chosen.accent, font: chosen.font, color: chosen.color,
+      title: `${chosen.emoji} ${chosen.name}`, description: chosen.description, punchZoom: chosen.punchZoom,
+      cutTransition: chosen.cut ? T(chosen.cut, 0.22) : undefined, textColor: chosen.textColor, animation: chosen.animation, styleId: chosen.id,
+    });
+    looks.splice(3);
+  }
   // סגנון המעברים: בלי = בלי זום ומעברים; נקי = זום לסירוגין בלבד; מוגזם = פאנץ' והבזקים בכל חיתוך
   const tstyle = currentStyle();
   for (const [k, l] of looks.entries()) {
+    if (l.styleId) continue;
     if (tstyle === "none") { l.punchZoom = false; l.cutTransition = undefined; }
     if (tstyle === "clean") l.cutTransition = undefined;
     if (tstyle === "extreme") { l.punchZoom = true; l.cutTransition = k % 2 ? T("flash", 0.2) : T("punch", 0.25); }
@@ -534,11 +551,11 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
     useEditor.setState({ timeline: base });
     const { applyTemplate, styleAllCaptions, setClipLook } = useEditor.getState();
     applyTemplate(look.template, { hook, extraOverlays: extras.map((o) => ({ ...o, id: uid("ovl") })), hookOnly: !!s0 });
-    styleAllCaptions({ preset: look.preset, accent: look.accent, font: look.font });
+    styleAllCaptions({ preset: look.preset, accent: look.accent, font: look.font, ...(look.styleId ? { color: look.textColor ?? "#ffffff" } : {}) });
     const style = CLIP_STYLES.find((st) => st.id === look.color);
     // זום לסירוגין בכל חיתוך (כמו ב-CapCut): הפנים קרובות יותר בקטע אחד ורחוקות בבא, והחיתוך מרגיש מכוון
     useEditor.getState().timeline.clips.forEach((clip, k) => {
-      setClipLook(clip.id, { ...clip.look, filter: style ? style.look(0.7).filter : clip.look.filter, zoom: look.punchZoom && k % 2 ? 1.12 : 1 });
+      setClipLook(clip.id, { ...clip.look, filter: style ? style.look(autoStrength(style.id)).filter : clip.look.filter, zoom: look.punchZoom && k % 2 ? 1.12 : 1 });
     });
     if (look.cutTransition) {
       const { updateClip } = useEditor.getState();
@@ -547,12 +564,12 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
     if (musicClip()) await syncToBeat(() => undefined).catch(() => undefined);
     // אנימציות ברגעים החשובים (בגרסה האנרגטית יותר מהן)
     useEditor.setState((st) => ({ timeline: { ...st.timeline, moments: pool } }));
-    applyMoments(level === "some" && look.template === "energy" ? "lots" : level, look.accent);
+    applyMoments(look.animation ?? (level === "some" && look.template === "energy" ? "lots" : level), look.accent);
     // בגרסה האנרגטית: הקפאת תמונה קצרה מיד אחרי המשפט הכי חשוב, כמו "פאוזה" דרמטית בריל
     let description = look.description;
     if (look.template === "energy" && freezeAtPeak()) description += " · הקפאה דרמטית ברגע השיא";
     useEditor.setState({ selection: null });
-    options.push({ id: `talk-${look.title === "הסגנון שלי" ? "mine" : look.template}-${i}`, title: look.title, description, timeline: useEditor.getState().timeline });
+    options.push({ id: look.styleId ? `talk-style-${i}` : `talk-${look.title === "הסגנון שלי" ? "mine" : look.template}-${i}`, title: look.title, description, timeline: useEditor.getState().timeline });
   }
   report.done.push(`נבנו ${options.length} גרסאות לבחירה`);
   return { report, options };
@@ -604,7 +621,37 @@ async function smartCuts(): Promise<SmartCuts> {
     logEvent("brain_failed", { route: "smart-edit", status: response.status, error: data?.error, detail: data?.detail });
     throw new Error(data?.error ?? "השרת לא החזיר תוכנית");
   }
-  const plan = data as SmartPlan;
+  let plan = data as SmartPlan;
+
+  // 0. סטוריבורד: התוכנית מוצגת לאישור לפני שבונים. אפשר לשנות מה נשאר ומה נחתך,
+  // את ההוק, או להשאיר הערות, ואז המוח מתקן את התוכנית לפיהן
+  if (wantsStoryboard()) {
+    markStep("אישור התוכנית", "active");
+    const files = pendingInserts.map((x) => ({ name: x.name, image: x.image }));
+    for (let round = 0; round < 4; round++) {
+      const scenes = await buildScenes(plan, lines, files);
+      const r = await askStoryboard({ scenes, hook: plan.hook, cta: plan.cta, summary: plan.summary, round });
+      if (r.action === "skip") break;
+      if (r.action === "approve") {
+        plan = { ...plan, hook: r.hook.trim() || plan.hook, remove_segments: r.scenes.filter((x) => !x.keep).map((x) => x.index) };
+        logEvent("storyboard_approved", { rounds: round, scenes: r.scenes.length, changed: r.scenes.filter((x, i) => x.keep !== scenes[i].keep).length });
+        break;
+      }
+      // הערות: שולחים שוב למוח, עם ההערות לכל סצנה, ומציגים את התוכנית המתוקנת
+      const notes = [
+        r.general.trim() && `הערה כללית: ${r.general.trim()}`,
+        ...r.scenes.filter((x) => x.note.trim()).map((x) => `על מקטע [${x.index}] ("${x.text.slice(0, 40)}"): ${x.note.trim()}`),
+        ...r.scenes.filter((x, i) => x.keep !== scenes[i].keep).map((x) => `מקטע [${x.index}]: ${x.keep ? "להשאיר" : "לחתוך"}`),
+        r.hook.trim() !== plan.hook && `ההוק שהיוצרת רוצה: ${r.hook.trim()}`,
+      ].filter(Boolean).join("\n");
+      const again = await fetch("/api/smart-edit", { method: "POST", headers: brainHeaders(), body: JSON.stringify({ ...body, notes: `${body.notes ?? ""}\n\nהערות היוצרת על התוכנית הקודמת (לתקן לפיהן):\n${notes}` }) });
+      const fixed = await again.json().catch(() => null);
+      if (again.ok && fixed) plan = fixed as SmartPlan;
+      logEvent("storyboard_notes", { round, ok: again.ok, notes: notes.length });
+    }
+    closeStoryboard();
+    markStep("אישור התוכנית", "done");
+  }
 
   // 1. חיתוך המשפטים שנבחרו (לפי זמני ציר הזמן), והכתוביות זזות איתם
   const removeIds = new Set(plan.remove_segments.flatMap((i) => (lines[i] ?? []).map((c) => c.id)));
@@ -848,8 +895,14 @@ async function autoEditVibe(onStatus: (s: string) => void): Promise<AutoEditResu
     { title: "רגוע וקולנועי", description: "קטעים ארוכים, תנועת מצלמה איטית ומעברים רכים", pace: [2.2, 3.4], mood: mainMood === "cinematic" ? "romantic" : "cinematic", color: "warm", useBrainOrder: false, motion: MOTION_BY_STYLE[style][2] },
   ];
 
+  // הסגנון שנבחר מהספרייה: מחליף את הגרסה הראשונה (עם הסדר שהמוח בחר)
+  const chosenVibe = activeStyle();
+  if (chosenVibe) {
+    looks[0] = { ...looks[0], title: `${chosenVibe.emoji} ${chosenVibe.name}`, description: chosenVibe.description, pace: chosenVibe.pace,
+      mood: chosenVibe.mood ?? looks[0].mood, color: chosenVibe.color, motion: MOTION_BY_STYLE[chosenVibe.transitions][0] };
+  }
   // הסגנון שלי: אם בדרך כלל בוחרים גרסה אחרת, היא עוברת להיות הראשונה
-  const fav = favoritePick("vibe");
+  const fav = chosenVibe ? null : favoritePick("vibe");
   const order = looks.map((_, i) => i);
   if (fav && fav < looks.length) { order.splice(fav, 1); order.unshift(fav); }
 

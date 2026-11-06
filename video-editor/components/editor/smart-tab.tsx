@@ -1,4 +1,5 @@
 "use client";
+import { StylePicker } from "./style-picker";
 import { MyKeyCard } from "./my-key-card";
 import { brainHeaders } from "@/lib/ai/my-key";
 import { useEffect, useRef, useState } from "react";
@@ -418,6 +419,19 @@ function EditorNotes() {
   );
 }
 
+/** להציג את התוכנית (סטוריבורד) לאישור לפני שהעורך בונה */
+function StoryboardToggle() {
+  const [on, setOn] = useState(true);
+  useEffect(() => { setOn(loadMyStyle().storyboard !== false); }, []);
+  return (
+    <label className="mb-3 flex items-start gap-2 rounded-xl border border-zinc-800 p-3 text-sm">
+      <input type="checkbox" checked={on} onChange={(e) => { setOn(e.target.checked); rememberStyle({ storyboard: e.target.checked }); }} className="mt-1 accent-violet-500" />
+      <span>📋 להראות לי את התוכנית לפני שהעורך בונה
+        <span className="block text-[11px] text-zinc-500">סצנה אחרי סצנה: מה נשאר, מה נחתך ואיפה כל צילום מסך נכנס. אפשר לאשר, לשנות או להשאיר הערות</span></span>
+    </label>
+  );
+}
+
 const GOALS = ["למכור מוצר או שירות", "ללמד או להסביר משהו", "לספר סיפור אישי", "שיעקבו אחריי", "להראות תוצאות או המלצות", "להזמין לאירוע"];
 
 /**
@@ -511,6 +525,11 @@ function AutoEditButton({ disabled }: { disabled: boolean }) {
   const settingsBlock = (
     <>
       <GoalField disabled={!!busy} />
+      <div className="mb-3 space-y-1.5 rounded-xl border border-zinc-800 p-3">
+        <p className="text-sm font-medium">🎨 סגנון</p>
+        <StylePicker />
+      </div>
+      <StoryboardToggle />
       <EditorNotes />
       <MyStyleLine />
       <TransitionStylePicker />
