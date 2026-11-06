@@ -34,6 +34,7 @@ mark{background:none;color:inherit;box-shadow:inset 0 -.32em 0 var(--hl)}
 `;
 const page=(cls,i,inner,o={})=>`<!doctype html><html lang="he"><head><meta charset="utf-8"><style>${css}</style></head><body class="${cls}">${inner}
 ${o.noNum?'':`<div class="num">${String(i+1).padStart(2,'0')} / 0${N}</div>`}${o.noHandle?'':`<div class="handle">@plania.il</div>`}</body></html>`;
+const APP=(()=>{const f=path.join(ROOT,'photos','app.png');return fs.existsSync(f)?'data:image/png;base64,'+fs.readFileSync(f).toString('base64'):'';})();
 const S=[];
 // 1 COVER — burgundy, arch photo left, title right
 S.push(page('b',0,thread(0,LI,[[760,1318]])+`
@@ -81,13 +82,9 @@ const row=(l,v,w)=>`<div style="margin-top:20px"><div style="display:flex;justif
 S.push(page('c',5,thread(5,BU)+`
 <div class="z" style="right:110px;left:110px;top:140px;text-align:center"><div class="hand" style="font-size:70px">למשל,</div><h1 style="font-size:82px">בניתי אפליקציה ל<mark>מאמנת הרזיה</mark>.</h1>
 <div class="body" style="margin-top:20px;font-size:38px;opacity:.85">לכל לקוחה יש אזור אישי עם הנתונים שלה וההתקדמות שלה בתהליך.</div></div>
-<div class="z" style="left:300px;top:660px;width:480px;height:800px;background:#fdf8f4;border:14px solid #2b1214;border-radius:64px;padding:46px 36px;color:#2b1214;box-shadow:0 -10px 60px #5c151a33">
- <div style="width:130px;height:12px;border-radius:6px;background:#2b1214;margin:-24px auto 30px"></div>
- <div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:24px;color:#8a6d6a">האזור האישי שלי</div><div style="font-size:40px;font-weight:800">היי, נועה</div></div><div style="width:64px;height:64px;border-radius:50%;background:${CR};display:flex;align-items:center;justify-content:center;font-weight:900;color:${BU};font-size:30px">נ</div></div>
- <div style="background:${BU};color:${LI};border-radius:26px;padding:24px 26px;margin-top:24px;display:flex;align-items:center;gap:24px">
-  <svg width="96" height="96" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" stroke="#ffffff33" stroke-width="4" fill="none"/><circle cx="18" cy="18" r="15" stroke="${LI}" stroke-width="4" fill="none" stroke-dasharray="47 95" stroke-linecap="round" transform="rotate(-90 18 18)"/></svg>
-  <div><div style="font-size:22px;opacity:.8">ההתקדמות שלי</div><div style="font-size:36px;font-weight:800">שבוע 6 מתוך 12</div></div></div>
- ${row('מים היום','6/8 כוסות',75)}${row('תפריט שבועי','4/7 ימים',57)}</div>`,{noHandle:false}));
+<div class="z" style="left:300px;top:640px;width:480px;height:820px;background:#fdf8f4;border:14px solid #2b1214;border-radius:64px;overflow:hidden;box-shadow:0 -10px 60px #5c151a33">
+ <div style="height:44px;display:flex;align-items:center;justify-content:center"><div style="width:130px;height:12px;border-radius:6px;background:#2b1214"></div></div>
+ <div style="height:800px;background:url(${APP}) top center/100% auto no-repeat"></div></div>`,{noHandle:false}));
 // 7 burgundy — photo + before/after strip
 S.push(page('b',6,thread(6,LI)+`
 <div class="frame" style="left:76px;top:120px;width:440px;height:560px;border-radius:28px;transform:rotate(-3deg)">${img(7)}</div>
