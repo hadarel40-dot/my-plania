@@ -33,8 +33,9 @@ mark{background:none;color:inherit;box-shadow:inset 0 -.32em 0 var(--hl)}
 .tape{position:absolute;z-index:3;width:150px;height:44px;background:#f3eae2cc;transform:rotate(-6deg)}
 `;
 const page=(cls,i,inner,o={})=>`<!doctype html><html lang="he"><head><meta charset="utf-8"><style>${css}</style></head><body class="${cls}">${inner}
-${o.noNum?'':`<div class="num">${String(i+1).padStart(2,'0')} / 0${N}</div>`}${o.noHandle?'':`<div class="handle">@plania.il</div>`}</body></html>`;
+${o.noNum?'':`<div class="num">${String(i+1).padStart(2,'0')} / 0${N}</div>`}${o.noLogo?'':`<img class="handle" style="opacity:.9;height:46px" src="${LOGO(cls==='b'?'cream':'burgundy')}">`}</body></html>`;
 const APP=(()=>{const f=path.join(ROOT,'photos','app.png');return fs.existsSync(f)?'data:image/png;base64,'+fs.readFileSync(f).toString('base64'):'';})();
+const LOGO=c=>'data:image/png;base64,'+fs.readFileSync(path.join(ROOT,'photos',`logo-${c}.png`)).toString('base64');
 const S=[];
 // 1 COVER — burgundy, arch photo left, title right
 S.push(page('b',0,thread(0,LI,[[760,1318]])+`
@@ -42,7 +43,7 @@ S.push(page('b',0,thread(0,LI,[[760,1318]])+`
 <div class="z" style="right:90px;top:170px;width:460px"><h1 style="font-size:118px;margin-top:10px">יש לך <mark>עסק</mark> קטן?</h1></div>
 <div class="z" style="right:90px;left:90px;top:860px"><div class="body" style="font-size:46px;font-weight:500">אחרי שנים שאני עובדת עם עסקים,</div>
 <div class="hand" style="font-size:92px;margin-top:6px">הבנתי משהו על מה שבאמת חסר להם.</div></div>
-<div class="z" style="left:76px;top:1180px;font-weight:800;font-size:36px">להחליק ←</div>`,{noHandle:true}));
+<div class="z" style="left:76px;top:1140px;font-weight:800;font-size:36px">להחליק ←</div>`,{}));
 // 2 cream — what clients see vs what's below the line
 const item=(t,k)=>`<div style="display:flex;align-items:center;gap:22px;font-size:40px;font-weight:700;padding:20px 0;border-bottom:2px solid #5c151a22">${svg(k,40,BU)}${t}</div>`;
 S.push(page('c',1,thread(1,BU)+`
@@ -61,7 +62,7 @@ S.push(page('b',2,thread(2,LI)+`<svg width="1080" height="1350" style="position:
 <div class="body" style="margin-top:24px;opacity:.85">עוד הודעה בוואטסאפ, עוד קובץ, עוד משהו שצריך לזכור.</div></div>
 ${nodes.map(([x,y,k,t])=>`<div class="z" style="left:${x-80}px;top:${y-38}px;width:160px;display:flex;flex-direction:column;align-items:center;gap:8px"><div style="width:76px;height:76px;border-radius:50%;background:${LI};display:flex;align-items:center;justify-content:center">${svg(k,36,BU)}</div><div style="font-size:26px;font-weight:700">${t}</div></div>`).join('')}
 <div class="z" style="left:${cx-70}px;top:${cy-70}px;width:140px;height:140px;border-radius:50%;background:${CR};color:${BU};display:flex;align-items:center;justify-content:center;font-weight:900;font-size:44px;box-shadow:0 0 0 14px #f3eae233">את</div>
-<div class="z hand" style="right:100px;left:100px;top:1160px;font-size:66px;text-align:center">ובדרך, גם דברים חשובים הולכים לאיבוד.</div>`,{noHandle:true}));
+<div class="z hand" style="right:100px;left:100px;top:1160px;font-size:66px;text-align:center">ובדרך, גם דברים חשובים הולכים לאיבוד.</div>`,{}));
 // 4 cream — taped photo + business card crossed out
 S.push(page('c',3,thread(3,BU)+`
 <div class="z" style="right:110px;left:110px;top:140px"><div class="hand" style="font-size:72px">ואז הבנתי</div>
@@ -84,14 +85,14 @@ S.push(page('c',5,thread(5,BU)+`
 <div class="body" style="margin-top:20px;font-size:38px;opacity:.85">לכל לקוחה יש אזור אישי עם הנתונים שלה וההתקדמות שלה בתהליך.</div></div>
 <div class="z" style="left:300px;top:640px;width:480px;height:820px;background:#fdf8f4;border:14px solid #2b1214;border-radius:64px;overflow:hidden;box-shadow:0 -10px 60px #5c151a33">
  <div style="height:44px;display:flex;align-items:center;justify-content:center"><div style="width:130px;height:12px;border-radius:6px;background:#2b1214"></div></div>
- <div style="height:800px;background:url(${APP}) top center/100% auto no-repeat"></div></div>`,{noHandle:false}));
+ <div style="height:800px;background:url(${APP}) top center/100% auto no-repeat"></div></div>`,{}));
 // 7 burgundy — photo + before/after strip
 S.push(page('b',6,thread(6,LI)+`
 <div class="frame" style="left:76px;top:120px;width:440px;height:560px;border-radius:28px;transform:rotate(-3deg)">${img(7)}</div>
 <div class="z" style="right:90px;top:170px;width:440px"><h1 style="font-size:86px">ומה זה <mark>שינה</mark> בעסק?</h1></div>
 <div class="z" style="right:90px;left:90px;top:760px">
  <div class="body" style="font-size:40px">במקום לנהל את כל תהליכי הליווי דרך אינסוף הודעות בוואטסאפ, המידע וההתקדמות מרוכזים במקום אחד.</div>
- <div class="hand" style="margin-top:34px;font-size:88px;color:${CR}">פחות התעסקות מסביב, יותר מקום לליווי עצמו.</div></div>`,{noHandle:true}));
+ <div class="hand" style="margin-top:34px;font-size:88px;color:${CR}">פחות התעסקות מסביב, יותר מקום לליווי עצמו.</div></div>`,{}));
 // 8 cream — typographic stack
 S.push(page('c',7,thread(7,BU)+`
 <div class="z" style="right:110px;left:110px;top:150px"><h1>זה מה שאני <mark>אוהבת</mark> ליצור.</h1>
@@ -101,13 +102,13 @@ S.push(page('c',7,thread(7,BU)+`
 <div class="z hand" style="right:110px;left:110px;top:1030px;font-size:74px">מאתרים ועד אפליקציות ומערכות ניהול בהתאמה אישית.</div>`));
 // 9 CTA — burgundy, arch photo bottom, thread ends
 S.push(page('b',8,thread(8,LI,[[300,1318]])+`
-<div class="z" style="right:76px;top:60px;font-weight:900;font-size:42px;direction:ltr">PLANIA'S</div>
+<img class="z" style="right:76px;top:60px;height:70px" src="${LOGO('cream')}">
 <div class="z" style="right:100px;left:100px;top:180px"><h1 style="font-size:84px">מה אם גם העסק שלך יכול <mark>לעבוד אחרת</mark>?</h1>
 <div class="body" style="margin-top:22px;font-size:36px;opacity:.9">ספרו לי מה אתם עושים, מה מסורבל לכם היום ומה הייתם רוצים לשנות.</div>
 <div class="body" style="margin-top:10px;font-size:36px;opacity:.9">נחשוב יחד על פתרון שמתאים בדיוק לעסק שלכם.</div></div>
 <div class="frame arch" style="left:76px;top:740px;width:400px;height:520px;border:10px solid ${LI}">${img(9)}</div>
 <div class="z" style="right:100px;top:830px;width:480px"><div class="hand" style="font-size:84px">הפרטים בקישור בביו.</div>
-<div style="display:inline-block;margin-top:30px;background:${LI};color:${BU};font-weight:900;font-size:40px;padding:22px 46px;border-radius:60px">לקישור בביו ↑</div></div>`,{noHandle:true}));
+<div style="display:inline-block;margin-top:30px;background:${LI};color:${BU};font-weight:900;font-size:40px;padding:22px 46px;border-radius:60px">לקישור בביו ↑</div></div>`,{noLogo:true}));
 (async()=>{const b=await chromium.launch();const p=await b.newPage({viewport:{width:1080,height:1350}});
 for(let i=0;i<N;i++){await p.setContent(S[i],{waitUntil:'networkidle'});await p.evaluate(()=>document.fonts.ready);await p.screenshot({path:path.join(ROOT,`slide-${i+1}.png`)});}
 await b.close();console.log('done');})();
