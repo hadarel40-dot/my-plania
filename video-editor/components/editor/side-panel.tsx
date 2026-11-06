@@ -21,6 +21,7 @@ import { MusicLibrary } from "./music-library";
 import { ClipControls } from "./clip-controls";
 import { BgTab, TricksTab } from "./tricks-tab";
 import { AssistantTab } from "./assistant-tab";
+import { VoiceCard } from "./voice-card";
 import { OPEN_TOOL_EVENT, type ToolName } from "@/lib/editor/chat";
 
 export type Tab = "assistant" | "smart" | "text" | "sound" | "style" | "bg" | "tricks" | "ai";
@@ -218,7 +219,7 @@ function SoundTab() {
   const addSfx = useEditor((s) => s.addSfx);
   const addAsset = useEditor((s) => s.addAsset);
   const addAudioClip = useEditor((s) => s.addAudioClip);
-  const music = useEditor(useShallow((s) => Object.values(s.assets).filter((a) => a.kind === "audio" && a.origin !== "library")));
+  const music = useEditor(useShallow((s) => Object.values(s.assets).filter((a) => a.kind === "audio" && a.origin !== "library" && !a.internal)));
   const [playing, setPlaying] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -253,6 +254,7 @@ function SoundTab() {
 
   return (
     <div className="space-y-5 p-4">
+      <VoiceCard />
       <p className="rounded-lg bg-zinc-950 p-2.5 text-[11px] leading-relaxed text-zinc-400">
         💡 רוצים שיר טרנדי מאינסטגרם? מייצאים את הסרטון בלי מוזיקה, ומוסיפים את השיר באפליקציה של אינסטגרם כשמעלים את הרילס
         (שירים מספוטיפיי ומאינסטגרם מוגנים בזכויות יוצרים ואי אפשר להכניס אותם לעורך).

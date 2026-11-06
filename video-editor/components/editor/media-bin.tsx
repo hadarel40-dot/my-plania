@@ -66,7 +66,7 @@ export function MediaBin() {
         {errors.map((e) => <p key={e} className="rounded-md bg-red-500/10 p-2 text-xs text-red-300">{e}</p>)}
 
         {/* תוצאות AI מופיעות בפאנל הווריאציות, לא בספרייה */}
-        {Object.values(assets).filter((a) => a.origin !== "ai_variant" && a.origin !== "library").map((a) => (
+        {Object.values(assets).filter((a) => a.origin !== "ai_variant" && a.origin !== "library" && !a.internal).map((a) => (
           <div key={a.id} onDoubleClick={() => addToTimeline(a)}
             className="group flex gap-2 rounded-md border border-transparent p-1.5 hover:border-zinc-700 hover:bg-zinc-800/50">
             <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded bg-zinc-800">

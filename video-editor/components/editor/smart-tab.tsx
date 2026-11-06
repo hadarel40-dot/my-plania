@@ -1,14 +1,14 @@
 "use client";
 import { MyKeyCard } from "./my-key-card";
 import { brainHeaders } from "@/lib/ai/my-key";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { create } from "zustand";
 import { Captions, Crop, Loader2, Music2, Scissors, Send, Sparkles, TrendingUp } from "lucide-react";
 import type { Trends, TrendsRequest } from "@/lib/ai/smart-plan";
 import { logEvent } from "@/lib/telemetry";
 import { beginGesture, useEditor } from "@/stores/editor-store";
 import type { Timeline, TransitionStyle } from "@/lib/editor/types";
-import { applyTransitionStyle, autoEditAll, autoReframe, currentStyle, removeSilences, syncToBeat, type AutoEditReport, type EditOption } from "@/lib/editor/auto-edit";
+import { applyTransitionStyle, autoEditAll, autoReframe, currentStyle, removeSilences, syncToBeat, useEditProgress, type AutoEditReport, type EditOption } from "@/lib/editor/auto-edit";
 import { GENRES, genreInfo, type VideoGenre } from "@/lib/editor/genres";
 import { forgetMyStyle, loadMyStyle, rememberPick, rememberStyle } from "@/lib/editor/my-style";
 import { toggleMusic } from "@/lib/editor/quick-fixes";
@@ -450,6 +450,36 @@ function GoalField({ disabled }: { disabled: boolean }) {
   );
 }
 
+/** מה העורך עושה עכשיו: רשימת שלבים עם "בוצע" / "עכשיו" / "ממתין", ופס התקדמות */
+function EditSteps() {
+  const steps = useEditProgress((s) => s.steps);
+  const active = steps.find((s) => s.state === "active")?.label;
+  const box = useRef<HTMLDivElement>(null);
+  // השלב של עכשיו תמיד בתוך המסך (בטלפון המגירה קטנה)
+  useEffect(() => { box.current?.querySelector("[data-active]")?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }, [active]);
+  if (!steps.length) return null;
+  const done = steps.filter((s) => s.state === "done" || s.state === "skipped").length;
+  return (
+    <div ref={box} className="mt-2 space-y-1 rounded-xl border border-zinc-800 bg-zinc-950/60 p-2.5">
+      <p className="text-xs font-medium text-zinc-300">מה העורך עושה לבד</p>
+      {steps.map((st) => (
+        <div key={st.label} data-active={st.state === "active" ? "" : undefined} className={cn("flex items-center gap-2 rounded-lg px-2.5 py-1 text-[13px] transition",
+          st.state === "done" ? "bg-emerald-500/10" : st.state === "active" ? "bg-violet-500/15" : "bg-zinc-900")}>
+          <span className={cn("grid size-5 shrink-0 place-items-center rounded-full text-[11px]",
+            st.state === "done" ? "bg-emerald-500 text-black" : st.state === "active" ? "bg-violet-500" : st.state === "skipped" ? "bg-zinc-700 text-zinc-400" : "border border-zinc-700")}>
+            {st.state === "done" ? "✓" : st.state === "active" ? <Loader2 className="size-3 animate-spin" /> : st.state === "skipped" ? "–" : ""}
+          </span>
+          <span className={cn("flex-1", st.state === "todo" ? "text-zinc-500" : "text-zinc-100")}>{st.label}</span>
+          <span className="text-[11px] text-zinc-500">{st.state === "done" ? "בוצע" : st.state === "active" ? "עכשיו" : st.state === "skipped" ? "דולג" : "ממתין"}</span>
+        </div>
+      ))}
+      <div className="h-1.5 overflow-hidden rounded-full bg-zinc-800">
+        <div className="h-full rounded-full bg-gradient-to-l from-violet-500 to-fuchsia-500 transition-[width] duration-500" style={{ width: `${Math.round((done / steps.length) * 100)}%` }} />
+      </div>
+    </div>
+  );
+}
+
 function AutoEditButton({ disabled }: { disabled: boolean }) {
   const { busy, report, error, before, genre, options, chosen } = useAutoEditRun();
   const choose = (o: EditOption) => {
@@ -505,11 +535,12 @@ function AutoEditButton({ disabled }: { disabled: boolean }) {
             {busy ?? (mode === "vibe"
               ? "לחיצה אחת: בחירת הקטעים הכי יפים, מוזיקה מתאימה, חיתוכים על הקצב וצבע. אחר כך אפשר לשנות הכל."
               : mode === "talking"
-                ? "לחיצה אחת: חיתוך שתיקות, כתוביות, הוק, אימוג'ים, אפקטים וצבע. אחר כך אפשר לשנות הכל."
-                : "מזהה לבד אם מדברים בסרטון או שזה סרטון אווירה, ועורך בהתאם. אחר כך אפשר לשנות הכל.")}
+                ? "לחיצה אחת: קאטים, כתוביות, ניקוי רעשים, קול פודקאסט, הוק, אנימציות וצבע. אחר כך אפשר לשנות הכל."
+                : "שמים סרטונים ולוחצים: העורך מבין לבד מה יש בהם (דיבור, אווירה, צילומי מסך) ועורך בהתאם. אחר כך אפשר לשנות הכל.")}
           </span>
         </span>
       </button>
+      {busy && <EditSteps />}
     </>
   );
   return (

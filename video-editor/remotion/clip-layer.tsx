@@ -15,13 +15,16 @@ export interface ClipLayerProps {
   fps: number;
   /** כשהאדם בלי רקע: מה מופיע מאחוריו */
   backdrop?: MediaAsset | null;
+  /** הקול המשופר (באותם זמנים כמו הסרטון): מתנגן במקום הקול של הסרטון */
+  voice?: MediaAsset | null;
+  Audio?: React.ComponentType<Record<string, unknown>>;
 }
 
 /**
  * קליפ אחד בקומפוזיציה, עם כל מה שמשפיע עליו: מהירות, תנועת מצלמה, התאמות צבע,
  * רקע מטושטש, ומעברים. הכל מחושב מהפריים, ולכן זהה בנגן ובייצוא.
  */
-export function ClipLayer({ clip, asset, look, duration, intro, Video, mode, fps, backdrop }: ClipLayerProps) {
+export function ClipLayer({ clip, asset, look, duration, intro, Video, mode, fps, backdrop, voice, Audio }: ClipLayerProps) {
   const frame = useCurrentFrame();
   const { width: W, height: H } = useVideoConfig();
   const speed = clip.speed ?? 1;
@@ -37,6 +40,7 @@ export function ClipLayer({ clip, asset, look, duration, intro, Video, mode, fps
   const motion = effectTransform(clip.effect ?? "none", frame, duration, fps);
   const filter = [look.filter !== "none" ? look.filter : "", adjustFilter(clip.adjust), inStyle.filter ?? ""].filter(Boolean).join(" ") || undefined;
   const alpha = !!asset.alphaPacked;
+  const useVoice = !!(voice && Audio && !clip.freeze);
   // אדם בלי רקע: הוא ממוקם ומוגדל בתוך המסך, ומאחוריו הרקע שנבחר
   const cut = clip.cutout ?? { x: 0.5, y: 0.5, scale: 1 };
   const pw = W * cut.scale, ph = H * cut.scale;
@@ -68,7 +72,7 @@ export function ClipLayer({ clip, asset, look, duration, intro, Video, mode, fps
             {clip.freeze ? (
               <Freeze frame={0}><AlphaVideo Video={Video} mode={mode} common={{ ...common, volume: 0, muted: true }} style={box} /></Freeze>
             ) : (
-              <AlphaVideo Video={Video} mode={mode} common={{ ...common, volume: clip.volume ?? 1 }} style={box} />
+              <AlphaVideo Video={Video} mode={mode} common={{ ...common, volume: useVoice ? 0 : clip.volume ?? 1, muted: useVoice }} style={box} />
             )}
           </div>
         ) : clip.freeze ? (
@@ -77,10 +81,11 @@ export function ClipLayer({ clip, asset, look, duration, intro, Video, mode, fps
             <Video {...common} volume={0} muted style={{ ...(blurFill ? coverBoxFor(asset, W, H, 0.5, 0.5, "contain") : box), filter }} />
           </Freeze>
         ) : (
-          <Video {...common} volume={clip.volume ?? 1}
+          <Video {...common} volume={useVoice ? 0 : clip.volume ?? 1} muted={useVoice}
             style={{ ...(blurFill ? coverBoxFor(asset, W, H, 0.5, 0.5, "contain") : box), filter }} />
         )}
       </AbsoluteFill>
+      {useVoice && Audio && <Audio src={voice!.url} trimBefore={Math.round(clip.in * fps)} playbackRate={speed} volume={clip.volume ?? 1} />}
       {flash > 0 && <AbsoluteFill style={{ backgroundColor: "white", opacity: flash }} />}
     </AbsoluteFill>
   );

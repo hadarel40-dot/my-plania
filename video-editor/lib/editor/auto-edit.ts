@@ -1,5 +1,6 @@
 "use client";
 import { brainHeaders } from "@/lib/ai/my-key";
+import { create } from "zustand";
 import { genreInfo, type GenreInfo, type VideoGenre } from "./genres";
 import { watchFootage } from "@/lib/ai/director";
 import { favoritePick, hasMyCaptionStyle, loadMyStyle } from "./my-style";
@@ -178,6 +179,7 @@ export interface AutoEditResult {
 export async function autoEditAll(onStatus: (s: string) => void, genre: VideoGenre = "auto"): Promise<AutoEditResult> {
   if (!useEditor.getState().timeline.clips.length) throw new Error("קודם מעלים סרטון");
   activeGenre = genreInfo(genre);
+  useEditProgress.setState({ steps: [] });
   startFromRawFootage();
   // כמה זמן לקח כל שלב (לפי "1/4", "2/4"...), ליומן: כך רואים מה איטי בטלפון האמיתי
   const steps: Record<string, number> = {};
@@ -204,7 +206,13 @@ export async function autoEditAll(onStatus: (s: string) => void, genre: VideoGen
   }
   const started = Date.now();
   try {
+    if (mode === "vibe") {
+      planSteps(["התאמה למסך עומד", "בחירת הרגעים הכי טובים", "מוזיקה וחיתוך על הקצב", "גרסאות"]);
+      const inner = onStatus;
+      onStatus = (st: string) => { const n = Number(st.match(/^(\d)\/4/)?.[1]); if (n) reachStep(n - 1); inner(st); };
+    }
     const result = mode === "vibe" ? await autoEditVibe(onStatus) : await autoEditTalking(onStatus);
+    finishSteps();
     if (auto && mode === "talking") result.report.done.unshift("זוהה סרטון דיבור (אם זה סרטון אווירה, בחרו \"אווירה\" ונסו שוב)");
     if (result.options[0]) useEditor.setState({ timeline: result.options[0].timeline, selection: null });
     steps[stepKey] = (steps[stepKey] ?? 0) + Date.now() - stepAt;
@@ -249,7 +257,23 @@ function startFromRawFootage() {
   useEditor.setState((s) => ({ timeline: { ...s.timeline, raw: s.timeline.clips } }));
 }
 
-/** קובץ נוסף ששולבב בסרטון הדיבור (צילום מסך, תמונה, קטע בלי דיבור) */
+/** השלבים של העריכה האוטומטית, כדי להראות בדיוק מה נעשה עכשיו ("בוצע" / "עכשיו" / "ממתין") */
+export type EditStepState = "todo" | "active" | "done" | "skipped";
+export const useEditProgress = create<{ steps: { label: string; state: EditStepState }[] }>(() => ({ steps: [] }));
+function planSteps(labels: string[]) { useEditProgress.setState({ steps: labels.map((label) => ({ label, state: "todo" })) }); }
+function markStep(labels: string | string[], state: EditStepState) {
+  const set = new Set(Array.isArray(labels) ? labels : [labels]);
+  useEditProgress.setState((s) => ({ steps: s.steps.map((st) => (set.has(st.label) ? { ...st, state } : st)) }));
+}
+/** כל השלבים עד השלב הזה (לא כולל) בוצעו, והוא עכשיו */
+function reachStep(index: number) {
+  useEditProgress.setState((s) => ({ steps: s.steps.map((st, i) => (i < index ? { ...st, state: st.state === "skipped" ? "skipped" : "done" } : i === index ? { ...st, state: "active" } : st)) }));
+}
+function finishSteps() {
+  useEditProgress.setState((s) => ({ steps: s.steps.map((st) => (st.state === "todo" || st.state === "active" ? { ...st, state: "done" } : st)) }));
+}
+
+/** קובץ נוסף ששולב בסרטון הדיבור (צילום מסך, תמונה, קטע בלי דיבור) */
 interface Insert { assetId: string; in: number; out: number; kind: "image" | "video"; name: string; image: string | null }
 let pendingInserts: Insert[] = [];
 
@@ -401,16 +425,22 @@ const TALKING_LOOKS: TalkingLook[] = [
 
 async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditResult> {
   const report: AutoEditReport = { done: [], skipped: [] };
-  const step = async (label: string, run: () => Promise<string | null>) => {
+  const step = async (label: string, run: () => Promise<string | null>, shown: string[] = [label]) => {
+    markStep(shown, "active");
     try {
       const result = await run();
       if (result) report.done.push(result);
+      markStep(shown, "done");
     } catch (e) {
       report.skipped.push(`${label}: ${e instanceof Error ? e.message : "נכשל"}`);
+      markStep(shown, "skipped");
     }
   };
   // עובדים על כל הסרטון, גם אם נבחר קליפ
   useEditor.getState().select(null);
+  const wantsVoice = !/קול מקורי|בלי שיפור קול|בלי ניקוי/.test(useEditor.getState().notes);
+  planSteps(["התאמה למסך עומד", "הקשבה לדיבור", "קאטים", "כתוביות", ...(wantsVoice ? ["ניקוי רעשים", "קול פודקאסט"] : []),
+    pendingInserts.length ? "עריכה חכמה ושילוב צילומי מסך" : "עריכה חכמה", "גרסאות"]);
 
   await step("התאמה למסך עומד", async () => {
     const { reframed, faces } = await autoReframe((s) => onStatus(`1/5 · ${s}`));
@@ -419,14 +449,16 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
   const notesEarly = useEditor.getState().notes;
   // קודם מקשיבים לדיבור (התמלול נשמר עם הסרטון), ורק אז חותכים שתיקות: כך החיתוך
   // יודע איפה משפטים ולא קוטע מילים. הכתוביות עצמן נבנות שוב אחרי החיתוך (מהזיכרון, מיידי)
+  markStep("הקשבה לדיבור", "active");
   if (!/בלי כתוביות|ללא כתוביות/.test(notesEarly)) {
     const unsubscribe = useEditor.subscribe((st) => { if (st.transcribeStatus) onStatus(`2/5 · ${st.transcribeStatus}`); });
     try { await useEditor.getState().autoTranscribe(); } catch { /* הדוח יגיע בשלב הכתוביות */ } finally { unsubscribe(); useEditor.getState().setError(null); }
   }
+  markStep("הקשבה לדיבור", "done");
   await step("הסרת שתיקות", async () => {
     const removed = await removeSilences((s) => onStatus(`2/5 · ${s}`));
     return removed > 0.05 ? `הוסרו ${removed.toFixed(1)} שניות של שתיקה` : null;
-  });
+  }, ["קאטים"]);
   const notes = useEditor.getState().notes;
   const noCaptions = /בלי כתוביות|ללא כתוביות/.test(notes);
   if (noCaptions) report.done.push("בלי כתוביות, לפי ההוראות");
@@ -443,6 +475,13 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
     }
   });
 
+  // ניקוי רעשים וקול פודקאסט (פעם אחת לכל סרטון; הקול הנקי נשמר איתו)
+  if (wantsVoice) await step("ניקוי רעשים וקול פודקאסט", async () => {
+    const { cleanVoices } = await import("./voice-fix");
+    const { noiseCutDb } = await cleanVoices((s) => onStatus(`3/5 · ${s}`));
+    return `הקול נוקה ושופר לקול פודקאסט${noiseCutDb >= 3 ? ` (רעש הרקע ירד ב-${Math.round(noiseCutDb)} dB)` : ""}`;
+  }, ["ניקוי רעשים", "קול פודקאסט"]);
+
   // המוח (Gemini / Claude): חיתוך טייקים ותוכן (הוק, אימוג'ים, קריאה לפעולה), פעם אחת לכל הגרסאות
   let smart: SmartCuts | null = null;
   if (useEditor.getState().cloud?.smartEdit && useEditor.getState().timeline.captions.length > 0) {
@@ -450,7 +489,7 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
       onStatus(`4/5 · ${brainName()} עורך את הסרטון…`);
       smart = await smartCuts();
       return smart.summary;
-    });
+    }, [pendingInserts.length ? "עריכה חכמה ושילוב צילומי מסך" : "עריכה חכמה"]);
   }
   // הקבצים הנוספים נכנסים גם כשאין מוח או תמלול (מפוזרים לאורך הסרטון)
   if (pendingInserts.length && !useEditor.getState().timeline.layers?.some((l) => l.auto)) {
@@ -485,6 +524,9 @@ async function autoEditTalking(onStatus: (s: string) => void): Promise<AutoEditR
     if (tstyle === "extreme") { l.punchZoom = true; l.cutTransition = k % 2 ? T("flash", 0.2) : T("punch", 0.25); }
   }
 
+  // עריכה חכמה שלא רצה (בלי מוח מחובר או בלי דיבור): מסומנת כדולגה
+  useEditProgress.setState((st) => ({ steps: st.steps.map((x) => (x.label.startsWith("עריכה חכמה") && x.state === "todo" ? { ...x, state: "skipped" } : x)) }));
+  markStep("גרסאות", "active");
   onStatus("5/5 · בונה גרסאות…");
   const base = useEditor.getState().timeline;
   const options: EditOption[] = [];
