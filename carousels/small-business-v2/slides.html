@@ -4,149 +4,127 @@
 <meta charset="utf-8">
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;900&family=Karantina:wght@300;400&family=Heebo:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
-:root{--wine:#5c161c;--wine2:#4a1116;--cream:#f3ebe2;--sand:#e3d8cc;--rose:#d6b5ac;--muted:#9a6a6a}
+:root{--wine:#5c161c;--sand:#e3d8cc;--cream:#f3ebe2;--rose:#d6b5ac;--thread:#c4766e}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#222}
-.slide{width:1080px;height:1350px;position:relative;overflow:hidden;font-family:Heebo,sans-serif;padding:150px 110px 0;page-break-after:always}
-.dark{background:var(--wine);color:var(--cream)}
-.light{background:var(--sand);color:var(--wine)}
-h1{font-family:Rubik;font-weight:900;font-size:92px;line-height:1.05;letter-spacing:-1px}
-h1.xl{font-size:124px}
-.hl{background:linear-gradient(transparent 62%,var(--rose) 62%,var(--rose) 88%,transparent 88%);padding:0 6px}
-.dark .hl{background:linear-gradient(transparent 62%,rgba(255,255,255,.22) 62%,rgba(255,255,255,.22) 88%,transparent 88%)}
-.hand{font-family:Karantina;font-weight:300;font-size:84px;line-height:1}
-.body{font-size:38px;line-height:1.45;font-weight:400}
-.foot{position:absolute;bottom:58px;left:76px;right:76px;display:flex;justify-content:space-between;font-family:Rubik;font-weight:700;font-size:30px;opacity:.6;direction:ltr}
-.wave{position:absolute;bottom:0;left:0;width:1080px;height:60px}
-.photo{border:4px dashed currentColor;opacity:.55;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;font-family:Rubik;font-weight:500;font-size:30px;text-align:center}
-.photo small{font-family:Heebo;font-weight:300;font-size:24px}
-/* chat */
-.chat{display:flex;flex-direction:column;gap:22px;margin-top:60px}
-.bub{max-width:640px;background:var(--cream);color:#2b1a1a;border-radius:28px 28px 28px 6px;padding:22px 30px;font-size:34px;align-self:flex-start;box-shadow:0 10px 30px rgba(0,0,0,.18);position:relative}
-.bub b{display:block;font-family:Rubik;font-size:22px;color:var(--muted);margin-bottom:4px;font-weight:700}
-.bub time{position:absolute;left:18px;bottom:10px;font-size:20px;color:#a99}
-.bub.s1{transform:rotate(-1.5deg)}.bub.s2{transform:rotate(1deg);margin-right:120px}.bub.s3{transform:rotate(-.5deg)}
-.badge{position:absolute;top:140px;left:110px;background:var(--cream);color:var(--wine);font-family:Rubik;font-weight:900;font-size:44px;width:110px;height:110px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 14px rgba(255,255,255,.15)}
-/* iceberg */
-.berg{margin-top:70px;border-radius:30px;overflow:hidden}
-.berg .top{background:var(--wine);color:var(--cream);padding:34px 44px;font-family:Rubik;font-weight:700;font-size:40px;display:flex;justify-content:space-between}
-.berg .top span{font-weight:400;opacity:.7}
-.berg .line{height:6px;background:repeating-linear-gradient(90deg,var(--wine) 0 18px,transparent 18px 32px);margin:22px 0}
-.berg .under{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.berg .under div{border:3px solid rgba(92,22,28,.25);border-radius:22px;padding:24px 28px;font-family:Rubik;font-weight:700;font-size:36px}
-/* before after */
-.ba{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:70px}
-.col{border-radius:30px;padding:40px 36px}
-.col h3{font-family:Rubik;font-weight:900;font-size:48px;margin-bottom:26px}
-.col li{list-style:none;font-size:33px;line-height:1.35;padding:16px 0;border-top:2px solid rgba(255,255,255,.18)}
-.col.before{background:var(--wine2);color:var(--cream)}
-.col.before li{text-decoration:line-through;text-decoration-color:rgba(214,181,172,.7);text-decoration-thickness:3px}
-.col.after{background:var(--cream);color:var(--wine)}
-.col.after li{border-top-color:rgba(92,22,28,.15)}
-/* phone */
-.phone{position:absolute;left:50%;transform:translateX(-50%);bottom:-220px;width:470px;height:900px;border-radius:70px;border:16px solid #2a1214;background:#fbf6f2;color:var(--wine)}
-/* questions */
-.q{display:flex;gap:30px;align-items:flex-start;padding:38px 0;border-top:2px solid rgba(92,22,28,.2)}
-.q .n{font-family:Rubik;font-weight:900;font-size:80px;line-height:.9;color:var(--rose);min-width:90px}
-.q h4{font-family:Rubik;font-weight:900;font-size:50px;margin-bottom:8px}
-.q p{font-size:32px;line-height:1.4;opacity:.85}
-.btn{display:inline-block;background:var(--cream);color:var(--wine);font-family:Rubik;font-weight:900;font-size:42px;border-radius:60px;padding:28px 56px}
+body{background:#111;width:8640px}
+#pano{position:relative;width:8640px;height:1350px;overflow:hidden;font-family:Heebo,sans-serif}
+.bg{position:absolute;top:0;height:1350px}
+.abs{position:absolute}
+.R{font-family:Rubik;font-weight:900;letter-spacing:-1px;line-height:1.02}
+.K{font-family:Karantina;font-weight:300;line-height:.95}
+.H{font-family:Heebo}
+.c{color:var(--cream)}.w{color:var(--wine)}
+.ph{position:absolute;background:repeating-linear-gradient(45deg,rgba(0,0,0,.06) 0 22px,transparent 22px 44px),#b9a79a;display:flex;align-items:center;justify-content:center;flex-direction:column;color:rgba(60,20,20,.6);font-family:Rubik;font-weight:700;font-size:34px;text-align:center;gap:10px}
+.ph small{font:300 26px Heebo}
+.meta{position:absolute;top:60px;font:700 26px Rubik;direction:ltr;opacity:.55;letter-spacing:.5px}
+.tag{position:absolute;background:var(--cream);color:#2b1a1a;font:400 32px Heebo;padding:18px 28px;border-radius:14px;box-shadow:0 12px 26px rgba(92,22,28,.18);white-space:nowrap}
+.tag b{display:block;font:700 21px Rubik;color:#9a6a6a;margin-bottom:2px}
+.tag::before{content:"";position:absolute;width:14px;height:14px;border-radius:50%;background:var(--thread);top:-7px;left:50%;margin-left:-7px}
+.list div{font:500 36px Heebo;padding:16px 0;border-bottom:2px solid rgba(243,235,226,.15)}
+.outline{font-family:Rubik;font-weight:900;color:transparent;-webkit-text-stroke:3px var(--rose);line-height:.8}
+.btn{background:var(--wine);color:var(--cream);font:900 40px Rubik;border-radius:18px;padding:26px 46px;display:inline-block}
 </style>
 </head>
 <body>
+<div id="pano">
 
-<!-- 1 COVER -->
-<section class="slide dark">
-  <div class="photo" style="position:absolute;left:76px;top:150px;width:430px;height:620px;border-radius:215px 215px 24px 24px">תמונה שלך<small>(למשל: את עם הטלפון, הרבה התראות)</small></div>
-  <h1 style="width:430px;font-size:88px;line-height:1.1">העסק שלך <span class="hl">גר</span> בוואטסאפ?</h1>
-  <div style="position:absolute;top:900px;right:110px;left:110px">
-    <p class="hand" style="font-size:96px">וזה עובד. עד שזה כבר לא.</p>
-  </div>
-  <div style="position:absolute;top:1130px;left:80px;font-family:Rubik;font-weight:700;font-size:34px">להחליק ←</div>
-  <div class="foot"><span>@hadarelifergan</span><span>01 / 08</span></div>
-  <svg class="wave" viewBox="0 0 1080 60"><path d="M0 40 Q270 0 540 30 T1080 20" fill="none" stroke="#d6b5ac" stroke-width="5" stroke-dasharray="4 16" stroke-linecap="round"/></svg>
-</section>
+<!-- backgrounds -->
+<div class="bg" style="left:0;width:1080px;background:var(--wine)"></div>
+<div class="bg" style="left:1080px;width:2160px;background:var(--sand)"></div>
+<div class="bg" style="left:2160px;width:1080px;top:640px;height:710px;background:var(--wine)"></div>
+<div class="bg" style="left:3240px;width:1080px;background:var(--wine)"></div>
+<div class="bg" style="left:4320px;width:540px;background:var(--sand)"></div>
+<div class="bg" style="left:4860px;width:540px;background:var(--wine)"></div>
+<div class="bg" style="left:5400px;width:1080px;background:var(--sand)"></div>
+<div class="bg" style="left:6480px;width:1080px;background:var(--wine)"></div>
+<div class="bg" style="left:7560px;width:1080px;background:var(--sand)"></div>
 
-<!-- 2 STAKE: chat -->
-<section class="slide dark">
-  <h1>ככה נראה <span class="hl">יום רגיל</span> בעסק קטן.</h1>
-  <div class="chat">
-    <div class="bub s1"><b>לקוחה חדשה</b>היי, כמה זה עולה? 🙏</div>
-    <div class="bub s2"><b>לקוחה מלפני חודש</b>שלחת לי את הקובץ? לא מוצאת אותו</div>
-    <div class="bub s3"><b>עוד לקוחה</b>מתי הפגישה שלנו? שכחתי</div>
-    <div class="bub s2"><b>ספק</b>תזכירי לי מה סגרנו?</div>
-  </div>
-  <p class="hand" style="margin-top:60px">וכל זה צריך לשבת לך בראש.</p>
-  <div class="foot"><span>@hadarelifergan</span><span>02 / 08</span></div>
-  <svg class="wave" viewBox="0 0 1080 60"><path d="M0 40 Q270 0 540 30 T1080 20" fill="none" stroke="#d6b5ac" stroke-width="5" stroke-dasharray="4 16" stroke-linecap="round"/></svg>
-</section>
+<!-- photos (under thread) -->
+<div class="ph" style="left:0;top:0;width:1080px;height:600px">תמונה שלך<small>לרוחב · את עם הטלפון / המחשב</small></div>
+<div class="ph" style="left:3240px;top:760px;width:1080px;height:590px">תמונה שלך<small>לרוחב · סביבת העבודה</small></div>
+<div class="ph" style="left:7560px;top:0;width:1080px;height:560px">תמונה שלך<small>לרוחב</small></div>
 
-<!-- 3 iceberg -->
-<section class="slide light">
-  <h1>האתר הוא רק <span class="hl">החלון</span> לרחוב.</h1>
-  <p class="body" style="margin-top:30px">רוב העבודה קורה מאחורי הקלעים, ושם אף אחד לא בונה לך כלים.</p>
-  <div class="berg">
-    <div class="top">מה שרואים<span>אתר, דף, אינסטגרם</span></div>
-    <div class="line"></div>
-    <div class="under"><div>מעקב אחרי לקוחות</div><div>הצעות מחיר</div><div>תורים ופגישות</div><div>קבצים וטפסים</div><div>תשלומים</div><div>תזכורות</div></div>
-  </div>
-  <div class="foot"><span>@hadarelifergan</span><span>03 / 08</span></div>
-  <svg class="wave" viewBox="0 0 1080 60"><path d="M0 40 Q270 0 540 30 T1080 20" fill="none" stroke="#9a6a6a" stroke-width="5" stroke-dasharray="4 16" stroke-linecap="round"/></svg>
-</section>
+<!-- THE THREAD -->
+<svg class="abs" style="left:0;top:0;z-index:2" width="8640" height="1350" viewBox="0 0 8640 1350">
+  <path fill="none" stroke="var(--thread)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" d="
+   M 120 1215 C 600 1215, 900 1210, 1080 1120
+   C 1220 1050, 1230 820, 1420 860
+   C 1640 905, 1560 1120, 1400 1070
+   C 1250 1020, 1420 700, 1640 760
+   C 1880 825, 1800 1080, 1650 1030
+   C 1520 985, 1720 690, 1900 720
+   C 2060 745, 2100 640, 2160 640
+   L 3240 640
+   C 3500 640, 3700 700, 4000 700 C 4200 700, 4250 1230, 4320 1230
+   L 4920 1230 C 5030 1230, 5070 1110, 5160 1150 C 5280 1205, 5140 1310, 5100 1245
+   C 5050 1170, 5240 1120, 5320 1200 C 5360 1240, 5380 1230, 5400 1230
+   L 7700 1230 C 7900 1230, 7950 1185, 8060 1185"/>
+  <circle cx="120" cy="1215" r="16" fill="var(--thread)"/>
+  <circle cx="8060" cy="1185" r="16" fill="var(--thread)"/>
+</svg>
 
-<!-- 4 insight -->
-<section class="slide dark">
-  <p class="hand">ואז הבנתי,</p>
-  <h1 style="margin-top:10px">עסק לא צריך עוד <span class="hl">כרטיס ביקור.</span><br>הוא צריך כלי עבודה.</h1>
-  <div class="photo" style="position:absolute;right:110px;left:110px;top:640px;height:560px;border-radius:30px">תמונה שלך<small>(למשל: ידיים על המקלדת, כוס תה)</small></div>
-  <div class="foot"><span>@hadarelifergan</span><span>04 / 08</span></div>
-  <svg class="wave" viewBox="0 0 1080 60"><path d="M0 40 Q270 0 540 30 T1080 20" fill="none" stroke="#d6b5ac" stroke-width="5" stroke-dasharray="4 16" stroke-linecap="round"/></svg>
-</section>
+<!-- ===== 1 COVER ===== -->
+<div class="meta c" style="left:70px;top:640px">@hadarelifergan · 1/8</div>
+<div class="abs R c" style="right:8640px;"></div>
+<div class="abs R c" style="left:0;width:1080px;padding:0 100px;top:660px;font-size:132px;text-align:right">העסק שלך<br>גר בוואטסאפ?</div>
+<div class="abs K" style="left:0;width:1080px;padding:0 104px;top:965px;font-size:92px;text-align:right;color:var(--rose)">וזה עובד. עד שזה כבר לא.</div>
 
-<!-- 5 before/after -->
-<section class="slide light">
-  <h1>מה משתנה <span class="hl">ביום יום?</span></h1>
-  <div class="ba">
-    <div class="col before"><h3>לפני</h3><ul>
-      <li>הודעות בכל מקום</li><li>קבצים שהולכים לאיבוד</li><li>לקוחות ששואלים "איפה אני עומדת?"</li><li>הכול בראש שלך</li></ul></div>
-    <div class="col after"><h3>אחרי</h3><ul>
-      <li>הכול במקום אחד</li><li>כל לקוח רואה את שלו</li><li>ההתקדמות מול העיניים</li><li>יותר זמן לעבודה עצמה</li></ul></div>
-  </div>
-  <div class="foot"><span>@hadarelifergan</span><span>05 / 08</span></div>
-  <svg class="wave" viewBox="0 0 1080 60"><path d="M0 40 Q270 0 540 30 T1080 20" fill="none" stroke="#9a6a6a" stroke-width="5" stroke-dasharray="4 16" stroke-linecap="round"/></svg>
-</section>
+<!-- ===== 2 CHAOS ===== -->
+<div class="meta w" style="left:1150px">@hadarelifergan · 2/8</div>
+<div class="abs R w" style="left:1080px;width:1080px;padding:0 100px;top:150px;font-size:92px">ככה נראה<br>יום רגיל בעסק קטן.</div>
+<div class="abs K w" style="left:1080px;width:1080px;padding:0 104px;top:370px;font-size:72px">וכל זה צריך לשבת לך בראש.</div>
+<div class="tag" style="left:1600px;top:560px;transform:rotate(4deg)"><b>לקוחה חדשה</b>היי, כמה זה עולה? 🙏</div>
+<div class="tag" style="left:1150px;top:690px;transform:rotate(-5deg)"><b>לקוחה מלפני חודש</b>שלחת לי את הקובץ?</div>
+<div class="tag" style="left:1700px;top:900px;transform:rotate(-3deg)"><b>עוד לקוחה</b>מתי הפגישה שלנו?</div>
+<div class="tag" style="left:1230px;top:1110px;transform:rotate(3deg)"><b>ספק</b>תזכירי לי מה סגרנו?</div>
 
-<!-- 6 example -->
-<section class="slide dark" style="text-align:center">
-  <p class="hand">למשל,</p>
-  <h1>בניתי אפליקציה <span class="hl">למאמנת הרזיה.</span></h1>
-  <p class="body" style="margin-top:24px">כל לקוחה נכנסת ורואה את התפריט שלה ואת ההתקדמות. בלי לחפש בצ'אט.</p>
-  <div class="phone"><div class="photo" style="height:100%;border:none;opacity:.6">צילום מסך<small>מהאפליקציה</small></div></div>
-  <div class="foot" style="opacity:1"><span style="background:var(--wine);padding:6px 12px;border-radius:10px;opacity:.7">@hadarelifergan</span><span style="opacity:.6">06 / 08</span></div>
-</section>
+<!-- ===== 3 ICEBERG ===== -->
+<div class="meta w" style="left:2230px">@hadarelifergan · 3/8</div>
+<div class="abs R w" style="left:2160px;width:1080px;padding:0 100px;top:170px;font-size:96px">האתר הוא רק<br>החלון לרחוב.</div>
+<div class="abs H w" style="left:2160px;width:1080px;padding:0 104px;top:445px;font:700 30px Rubik;opacity:.6">מה שרואים: אתר, דף, אינסטגרם</div>
+<div class="abs H c" style="left:2160px;width:1080px;padding:0 104px;top:690px;font:700 30px Rubik;color:var(--rose)">ומה שקורה מתחת:</div>
+<div class="abs list c" style="left:2260px;width:880px;top:750px;display:grid;grid-template-columns:1fr 1fr;column-gap:60px">
+  <div>מעקב אחרי לקוחות</div><div>הצעות מחיר</div><div>תורים ופגישות</div><div>קבצים וטפסים</div><div>תשלומים</div><div>תזכורות</div>
+</div>
+<div class="abs K" style="left:2160px;width:1080px;padding:0 104px;top:1080px;font-size:70px;color:var(--rose)">שם אף אחד לא בונה לך כלים.</div>
 
-<!-- 7 recap / screenshot slide -->
-<section class="slide light">
-  <h1>3 שאלות לפני שבונים <span class="hl">משהו לעסק</span></h1>
-  <div style="margin-top:50px">
-    <div class="q"><div class="n">1</div><div><h4>מה חוזר על עצמו כל יום?</h4><p>את מה שאת עושה ידנית שוב ושוב, אפשר לבנות פעם אחת.</p></div></div>
-    <div class="q"><div class="n">2</div><div><h4>על מה הלקוחות שואלים?</h4><p>כל שאלה שחוזרת היא מקום שהלקוח לא רואה בעצמו.</p></div></div>
-    <div class="q"><div class="n">3</div><div><h4>מה נופל בין הכיסאות?</h4><p>שם בדיוק צריך את הכלי.</p></div></div>
-  </div>
-  <div class="foot"><span>@hadarelifergan</span><span>07 / 08</span></div>
-  <svg class="wave" viewBox="0 0 1080 60"><path d="M0 40 Q270 0 540 30 T1080 20" fill="none" stroke="#9a6a6a" stroke-width="5" stroke-dasharray="4 16" stroke-linecap="round"/></svg>
-</section>
+<!-- ===== 4 INSIGHT ===== -->
+<div class="meta c" style="left:3310px">@hadarelifergan · 4/8</div>
+<div class="abs K c" style="left:3240px;width:1080px;padding:0 100px;top:130px;font-size:130px">ואז הבנתי,</div>
+<div class="abs R c" style="left:3240px;width:1080px;padding:0 100px;top:290px;font-size:84px;line-height:1.12">עסק לא צריך עוד<br><span style="position:relative;opacity:.55">כרטיס ביקור.<span style="position:absolute;left:-10px;right:-10px;top:52%;height:10px;background:var(--rose);transform:rotate(-3deg)"></span></span><br>הוא צריך <span style="color:var(--rose)">כלי עבודה.</span></div>
 
-<!-- 8 CTA -->
-<section class="slide dark">
-  <h1>אתר, אפליקציה או <span class="hl">מערכת ניהול.</span></h1>
-  <p class="body" style="margin-top:28px">ספרו לי מה מסורבל לכם היום, ונחשוב יחד מה באמת מתאים לעסק שלכם.</p>
-  <div class="photo" style="position:absolute;left:76px;top:720px;width:400px;height:500px;border-radius:200px 200px 24px 24px">תמונה שלך</div>
-  <div style="position:absolute;right:110px;top:820px;text-align:right">
-    <p class="hand" style="margin-bottom:40px">הפרטים בקישור בביו.</p>
-    <span class="btn">לקישור בביו ↑</span>
-  </div>
-  <div class="foot"><span></span><span>08 / 08</span></div>
-  <svg class="wave" viewBox="0 0 1080 60"><path d="M0 40 Q270 0 540 30 T1080 20" fill="none" stroke="#d6b5ac" stroke-width="5" stroke-dasharray="4 16" stroke-linecap="round"/></svg>
-</section>
+<!-- ===== 5 BEFORE / AFTER ===== -->
+<div class="meta w" style="left:4390px">@hadarelifergan · 5/8</div>
+<div class="abs K c" style="left:4860px;width:540px;padding:0 60px;top:150px;font-size:120px">לפני</div>
+<div class="abs list c" style="left:4860px;width:540px;padding:0 60px;top:300px">
+  <div>הודעות בכל מקום</div><div>קבצים שהולכים לאיבוד</div><div>"איפה אני עומדת?"</div><div>הכול בראש שלך</div></div>
+<div class="abs K w" style="left:4320px;width:540px;padding:0 60px;top:150px;font-size:120px">אחרי</div>
+<div class="abs list w" style="left:4320px;width:540px;padding:0 60px;top:300px">
+  <div style="border-color:rgba(92,22,28,.15)">הכול במקום אחד</div><div style="border-color:rgba(92,22,28,.15)">כל לקוח רואה את שלו</div><div style="border-color:rgba(92,22,28,.15)">ההתקדמות מול העיניים</div><div style="border-color:rgba(92,22,28,.15)">זמן לעבודה עצמה</div></div>
+<div class="abs" style="left:4320px;width:1080px;text-align:center;top:850px;z-index:3"><span class="R" style="display:inline-block;background:var(--cream);color:var(--wine);font-size:76px;padding:26px 50px;border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,.2);transform:rotate(-2deg)">מה משתנה ביום יום?</span></div>
+
+<!-- ===== 6 EXAMPLE ===== -->
+<div class="meta w" style="left:5470px">@hadarelifergan · 6/8</div>
+<div class="abs K w" style="left:5400px;width:1080px;padding:0 100px;top:140px;font-size:100px">למשל,</div>
+<div class="abs R w" style="left:5400px;width:1080px;padding:0 100px;top:240px;font-size:84px">בניתי אפליקציה<br>למאמנת הרזיה.</div>
+<div class="abs H w" style="left:5940px;width:440px;top:520px;font-size:36px;line-height:1.45">כל לקוחה נכנסת ורואה את התפריט שלה ואת ההתקדמות. בלי לחפש בצ'אט.</div>
+<div class="abs" style="left:5470px;top:500px;width:440px;height:900px;border-radius:64px;border:16px solid #2a1214;background:#fbf6f2;transform:rotate(-7deg);box-shadow:30px 40px 60px rgba(92,22,28,.25);z-index:3;overflow:hidden"><div class="ph" style="inset:0;background:#efe6dd">צילום מסך<small>מהאפליקציה</small></div></div>
+
+<!-- ===== 7 RECAP ===== -->
+<div class="meta c" style="left:6550px">@hadarelifergan · 7/8</div>
+<div class="abs R c" style="left:6480px;width:1080px;padding:0 100px;top:150px;font-size:80px">3 שאלות לפני<br>שבונים משהו לעסק</div>
+<div class="abs" style="left:6480px;width:1080px;padding:0 100px;top:400px">
+  <div style="display:flex;gap:36px;align-items:center;margin-bottom:56px"><div class="outline" style="font-size:230px;width:150px;text-align:center">1</div><div class="c"><div class="R" style="font-size:52px;margin-bottom:10px">מה חוזר על עצמו כל יום?</div><div style="font-size:32px;opacity:.8">את מה שעושים ידנית שוב ושוב, בונים פעם אחת.</div></div></div>
+  <div style="display:flex;gap:36px;align-items:center;margin-bottom:56px"><div class="outline" style="font-size:230px;width:150px;text-align:center">2</div><div class="c"><div class="R" style="font-size:52px;margin-bottom:10px">על מה הלקוחות שואלים?</div><div style="font-size:32px;opacity:.8">כל שאלה שחוזרת היא משהו שהלקוח לא רואה לבד.</div></div></div>
+  <div style="display:flex;gap:36px;align-items:center"><div class="outline" style="font-size:230px;width:150px;text-align:center">3</div><div class="c"><div class="R" style="font-size:52px;margin-bottom:10px">מה נופל בין הכיסאות?</div><div style="font-size:32px;opacity:.8">שם בדיוק צריך את הכלי.</div></div></div>
+</div>
+
+<!-- ===== 8 CTA ===== -->
+<div class="meta w" style="left:7630px;top:590px">8/8</div>
+<div class="abs R w" style="left:7560px;width:1080px;padding:0 100px;top:620px;font-size:80px">אתר, אפליקציה<br>או מערכת ניהול.</div>
+<div class="abs H w" style="left:7560px;width:1080px;padding:0 100px;top:810px;font-size:34px;line-height:1.45">ספרו לי מה מסורבל לכם היום,<br>ונחשוב יחד מה באמת מתאים לעסק שלכם.</div>
+<div class="abs K w" style="left:7560px;width:1080px;padding:0 104px;top:960px;font-size:76px">הפרטים בקישור בביו.</div>
+<div class="abs" style="left:8100px;top:1120px;z-index:3"><span class="btn">לקישור בביו ↑</span></div>
+
+</div>
 </body></html>
