@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;900&family=Karantina:wght@300;400&family=Heebo:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--wine:#5c161c;--wine2:#4a1116;--cream:#f3ebe2;--sand:#e3d8cc;--rose:#d6b5ac;--muted:#9a6a6a}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#222}
+.slide{width:1080px;height:1350px;position:relative;overflow:hidden;font-family:Heebo,sans-serif;padding:150px 110px 0;page-break-after:always}
+.dark{background:var(--wine);color:var(--cream)}
+.light{background:var(--sand);color:var(--wine)}
+h1{font-family:Rubik;font-weight:900;font-size:92px;line-height:1.05;letter-spacing:-1px}
+h1.xl{font-size:124px}
+.hl{background:linear-gradient(transparent 62%,var(--rose) 62%,var(--rose) 88%,transparent 88%);padding:0 6px}
+.dark .hl{background:linear-gradient(transparent 62%,rgba(255,255,255,.22) 62%,rgba(255,255,255,.22) 88%,transparent 88%)}
+.hand{font-family:Karantina;font-weight:300;font-size:84px;line-height:1}
+.body{font-size:38px;line-height:1.45;font-weight:400}
+.foot{position:absolute;bottom:58px;left:76px;right:76px;display:flex;justify-content:space-between;font-family:Rubik;font-weight:700;font-size:30px;opacity:.6;direction:ltr}
+.wave{position:absolute;bottom:0;left:0;width:1080px;height:60px}
+.photo{border:4px dashed currentColor;opacity:.55;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;font-family:Rubik;font-weight:500;font-size:30px;text-align:center}
+.photo small{font-family:Heebo;font-weight:300;font-size:24px}
+/* chat */
+.chat{display:flex;flex-direction:column;gap:22px;margin-top:60px}
+.bub{max-width:640px;background:var(--cream);color:#2b1a1a;border-radius:28px 28px 28px 6px;padding:22px 30px;font-size:34px;align-self:flex-start;box-shadow:0 10px 30px rgba(0,0,0,.18);position:relative}
+.bub b{display:block;font-family:Rubik;font-size:22px;color:var(--muted);margin-bottom:4px;font-weight:700}
+.bub time{position:absolute;left:18px;bottom:10px;font-size:20px;color:#a99}
+.bub.s1{transform:rotate(-1.5deg)}.bub.s2{transform:rotate(1deg);margin-right:120px}.bub.s3{transform:rotate(-.5deg)}
+.badge{position:absolute;top:140px;left:110px;background:var(--cream);color:var(--wine);font-family:Rubik;font-weight:900;font-size:44px;width:110px;height:110px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 14px rgba(255,255,255,.15)}
+/* iceberg */
+.berg{margin-top:70px;border-radius:30px;overflow:hidden}
+.berg .top{background:var(--wine);color:var(--cream);padding:34px 44px;font-family:Rubik;font-weight:700;font-size:40px;display:flex;justify-content:space-between}
+.berg .top span{font-weight:400;opacity:.7}
+.berg .line{height:6px;background:repeating-linear-gradient(90deg,var(--wine) 0 18px,transparent 18px 32px);margin:22px 0}
+.berg .under{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.berg .under div{border:3px solid rgba(92,22,28,.25);border-radius:22px;padding:24px 28px;font-family:Rubik;font-weight:700;font-size:36px}
+/* before after */
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:70px}
+.col{border-radius:30px;padding:40px 36px}
+.col h3{font-family:Rubik;font-weight:900;font-size:48px;margin-bottom:26px}
+.col li{list-style:none;font-size:33px;line-height:1.35;padding:16px 0;border-top:2px solid rgba(255,255,255,.18)}
+.col.before{background:var(--wine2);color:var(--cream)}
+.col.before li{text-decoration:line-through;text-decoration-color:rgba(214,181,172,.7);text-decoration-thickness:3px}
+.col.after{background:var(--cream);color:var(--wine)}
+.col.after li{border-top-color:rgba(92,22,28,.15)}
+/* phone */
+.phone{position:absolute;left:50%;transform:translateX(-50%);bottom:-220px;width:470px;height:900px;border-radius:70px;border:16px solid #2a1214;background:#fbf6f2;color:var(--wine)}
+/* questions */
+.q{display:flex;gap:30px;align-items:flex-start;padding:38px 0;border-top:2px solid rgba(92,22,28,.2)}
+.q .n{font-family:Rubik;font-weight:900;font-size:80px;line-height:.9;color:var(--rose);min-width:90px}
+.q h4{font-family:Rubik;font-weight:900;font-size:50px;margin-bottom:8px}
+.q p{font-size:32px;line-height:1.4;opacity:.85}
+.btn{display:inline-block;background:var(--cream);color:var(--wine);font-family:Rubik;font-weight:900;font-size:42px;border-radius:60px;padding:28px 56px}
+</style>
+</head>
+<body>
+
+<!-- 1 COVER -->
+<section class="slide dark">
+  <div class="photo" style="position:absolute;left:76px;top:150px;width:430px;height:620px;border-radius:215px 215px 24px 24px">תמונה שלך<small>(למשל: את עם הטלפון, הרבה התראות)</small></div>
+  <h1 style="width:430px;font-size:88px;line-height:1.1">העסק שלך <span class="hl">גר</span> בוואטסאפ?</h1>
+  <div style="position:absolute;top:900px;right:110px;left:110px">
+    <p class="hand" style="font-size:96px">וזה עובד. עד שזה כבר לא.</p>
+  </div>
+  <div style="position:absolute;top:1130px;left:80px;font-family:Rubik;font-weight:700;font-size:34px">להחליק ←</div>
+  <div class="foot"><span>@hadarelifergan</span><span>01 / 08</span></div>
+  <svg class="wave" viewBox="0 0 1080 60"><path d="M0 40 Q270 0 540 30 T1080 20" fill="none" stroke="#d6b5ac" stroke-width="5" stroke-dasharray="4 16" stroke-linecap="round"/></svg>
+</section>
+
+<!-- 2 STAKE: chat -->
+<section class="slide dark">
+  <h1>ככה נראה <span class="hl">יום רגיל</span> בעסק קטן.</h1>
+  <div class="chat">
+    <div class="bub s1"><b>לקוחה חדשה</b>היי, כמה זה עולה? 🙏</div>
+    <div class="bub s2"><b>לקוחה מלפני חודש</b>שלחת לי את הקובץ? לא מוצאת אותו</div>
+    <div class="bub s3"><b>עוד לקוחה</b>מתי הפגישה שלנו? שכחתי</div>
+    <div class="bub s2"><b>ספק</b>תזכירי לי מה סגרנו?</div>
+  </div>
+  <p class="hand" style="margin-top:60px">וכל זה צריך לשבת לך בראש.</p>
+  <div class="foot"><span>@hadarelifergan</span><span>02 / 08</span></div>
+  <svg class="wave" viewBox="0 0 1080 60"><path d="M0 40 Q270 0 540 30 T1080 20" fill="none" stroke="#d6b5ac" stroke-width="5" stroke-dasharray="4 16" stroke-linecap="round"/></svg>
+</section>
+
+<!-- 3 iceberg -->
+<section class="slide light">
+  <h1>האתר הוא רק <span class="hl">החלון</span> לרחוב.</h1>
+  <p class="body" style="margin-top:30px">רוב העבודה קורה מאחורי הקלעים, ושם אף אחד לא בונה לך כלים.</p>
+  <div class="berg">
+    <div class="top">מה שרואים<span>אתר, דף, אינסטגרם</span></div>
+    <div class="line"></div>
+    <div class="under"><div>מעקב אחרי לקוחות</div><div>הצעות מחיר</div><div>תורים ופגישות</div><div>קבצים וטפסים</div><div>תשלומים</div><div>תזכורות</div></div>
+  </div>
+  <div class="foot"><span>@hadarelifergan</span><span>03 / 08</span></div>
+  <svg class="wave" viewBox="0 0 1080 60"><path d="M0 40 Q270 0 540 30 T1080 20" fill="none" stroke="#9a6a6a" stroke-width="5" stroke-dasharray="4 16" stroke-linecap="round"/></svg>
+</section>
+
+<!-- 4 insight -->
+<section class="slide dark">
+  <p class="hand">ואז הבנתי,</p>
+  <h1 style="margin-top:10px">עסק לא צריך עוד <span class="hl">כרטיס ביקור.</span><br>הוא צריך כלי עבודה.</h1>
+  <div class="photo" style="position:absolute;right:110px;left:110px;top:640px;height:560px;border-radius:30px">תמונה שלך<small>(למשל: ידיים על המקלדת, כוס תה)</small></div>
+  <div class="foot"><span>@hadarelifergan</span><span>04 / 08</span></div>
+  <svg class="wave" viewBox="0 0 1080 60"><path d="M0 40 Q270 0 540 30 T1080 20" fill="none" stroke="#d6b5ac" stroke-width="5" stroke-dasharray="4 16" stroke-linecap="round"/></svg>
+</section>
+
+<!-- 5 before/after -->
+<section class="slide light">
+  <h1>מה משתנה <span class="hl">ביום יום?</span></h1>
+  <div class="ba">
+    <div class="col before"><h3>לפני</h3><ul>
+      <li>הודעות בכל מקום</li><li>קבצים שהולכים לאיבוד</li><li>לקוחות ששואלים "איפה אני עומדת?"</li><li>הכול בראש שלך</li></ul></div>
+    <div class="col after"><h3>אחרי</h3><ul>
+      <li>הכול במקום אחד</li><li>כל לקוח רואה את שלו</li><li>ההתקדמות מול העיניים</li><li>יותר זמן לעבודה עצמה</li></ul></div>
+  </div>
+  <div class="foot"><span>@hadarelifergan</span><span>05 / 08</span></div>
+  <svg class="wave" viewBox="0 0 1080 60"><path d="M0 40 Q270 0 540 30 T1080 20" fill="none" stroke="#9a6a6a" stroke-width="5" stroke-dasharray="4 16" stroke-linecap="round"/></svg>
+</section>
+
+<!-- 6 example -->
+<section class="slide dark" style="text-align:center">
+  <p class="hand">למשל,</p>
+  <h1>בניתי אפליקציה <span class="hl">למאמנת הרזיה.</span></h1>
+  <p class="body" style="margin-top:24px">כל לקוחה נכנסת ורואה את התפריט שלה ואת ההתקדמות. בלי לחפש בצ'אט.</p>
+  <div class="phone"><div class="photo" style="height:100%;border:none;opacity:.6">צילום מסך<small>מהאפליקציה</small></div></div>
+  <div class="foot" style="opacity:1"><span style="background:var(--wine);padding:6px 12px;border-radius:10px;opacity:.7">@hadarelifergan</span><span style="opacity:.6">06 / 08</span></div>
+</section>
+
+<!-- 7 recap / screenshot slide -->
+<section class="slide light">
+  <h1>3 שאלות לפני שבונים <span class="hl">משהו לעסק</span></h1>
+  <div style="margin-top:50px">
+    <div class="q"><div class="n">1</div><div><h4>מה חוזר על עצמו כל יום?</h4><p>את מה שאת עושה ידנית שוב ושוב, אפשר לבנות פעם אחת.</p></div></div>
+    <div class="q"><div class="n">2</div><div><h4>על מה הלקוחות שואלים?</h4><p>כל שאלה שחוזרת היא מקום שהלקוח לא רואה בעצמו.</p></div></div>
+    <div class="q"><div class="n">3</div><div><h4>מה נופל בין הכיסאות?</h4><p>שם בדיוק צריך את הכלי.</p></div></div>
+  </div>
+  <div class="foot"><span>@hadarelifergan</span><span>07 / 08</span></div>
+  <svg class="wave" viewBox="0 0 1080 60"><path d="M0 40 Q270 0 540 30 T1080 20" fill="none" stroke="#9a6a6a" stroke-width="5" stroke-dasharray="4 16" stroke-linecap="round"/></svg>
+</section>
+
+<!-- 8 CTA -->
+<section class="slide dark">
+  <h1>אתר, אפליקציה או <span class="hl">מערכת ניהול.</span></h1>
+  <p class="body" style="margin-top:28px">ספרו לי מה מסורבל לכם היום, ונחשוב יחד מה באמת מתאים לעסק שלכם.</p>
+  <div class="photo" style="position:absolute;left:76px;top:720px;width:400px;height:500px;border-radius:200px 200px 24px 24px">תמונה שלך</div>
+  <div style="position:absolute;right:110px;top:820px;text-align:right">
+    <p class="hand" style="margin-bottom:40px">הפרטים בקישור בביו.</p>
+    <span class="btn">לקישור בביו ↑</span>
+  </div>
+  <div class="foot"><span></span><span>08 / 08</span></div>
+  <svg class="wave" viewBox="0 0 1080 60"><path d="M0 40 Q270 0 540 30 T1080 20" fill="none" stroke="#d6b5ac" stroke-width="5" stroke-dasharray="4 16" stroke-linecap="round"/></svg>
+</section>
+</body></html>
