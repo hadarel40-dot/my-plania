@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html { -webkit-text-size-adjust: 100%; }
+body {
+  color: #2a2622;
+  font-family: 'Assistant', sans-serif;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (max-width: 767px) {
+  input, textarea, select { font-size: 16px !important; }
+}
+.skip-link {
+  position: absolute; right: 1rem; top: -4rem; z-index: 100;
+  background: #fff; padding: .5rem 1rem; border-radius: .5rem;
+}
+.skip-link:focus { top: 1rem; }
+:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-snap-type: none !important; }
+}
