@@ -1,0 +1,19 @@
+# Netlify builds the site from the plania-site folder of this repository.
+[build]
+  base = "plania-site"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Every address (e.g. /business, /quote/...) is served by the app itself
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
