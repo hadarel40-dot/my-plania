@@ -1,0 +1,6 @@
+project_id = "xiujuumljfujxwcgffwe"
+
+# The handlers check who is signed in themselves (admin-only ones call auth.me()),
+# and some are public by design (lead form, questionnaire, client portal, quote approval).
+[functions.plania]
+verify_jwt = false
