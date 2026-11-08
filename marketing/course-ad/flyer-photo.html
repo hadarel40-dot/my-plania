@@ -2,66 +2,68 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
-<link href="https://fonts.googleapis.com/css2?family=Suez+One&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Suez+One&family=Assistant:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--cream:#E5D9CF;--wine:#5D1519;}
+:root{--cream:#E5D9CF;--wine:#5D1519;--soft:rgba(93,21,25,.25)}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Assistant',sans-serif}
-#flyer{width:1080px;height:1350px;background:var(--cream);color:var(--wine);position:relative;overflow:hidden}
-.top{position:absolute;top:70px;right:80px;left:80px}
-.row{display:flex;justify-content:space-between;align-items:center}
-.tag{border:3px solid currentColor;padding:10px 24px;font-weight:800;font-size:30px;border-radius:6px}
-.logo{width:220px}
-h1{font-family:'Suez One',serif;font-weight:400;font-size:86px;line-height:1.08;margin-top:30px}
-.swoosh{display:block;width:500px;height:40px;margin-top:12px}
-.arch-line{position:absolute;right:56px;top:556px;width:370px;height:750px;border:3px solid var(--wine);border-radius:185px 185px 0 0}
-.arch{position:absolute;right:80px;top:580px;width:370px;height:770px;border-radius:185px 185px 0 0;overflow:hidden;background:url(tea-photo.jpg) 25% 55%/cover no-repeat}
-.intro{font-size:34px;font-weight:600;line-height:1.35;margin-top:18px;max-width:900px}
-.side{position:absolute;left:80px;top:548px;width:500px}
-.lead{font-size:27px;font-weight:600;line-height:1.4}
-.k{display:block;font-size:29px;font-weight:800;margin-top:16px}
-ul{list-style:none;margin-top:4px}
-li{font-size:30px;font-weight:700;line-height:1.25;padding:7px 0;border-bottom:2px solid rgba(93,21,25,.25)}
+#flyer{width:1080px;height:1350px;background:var(--cream);color:var(--wine);position:relative;overflow:hidden;display:flex;flex-direction:column}
+b{font-weight:800}
+.top{text-align:center;padding:44px 60px 0}
+.logo{width:190px;display:block;margin:0 auto}
+.tag{display:inline-block;margin-top:16px;border:3px solid currentColor;padding:6px 22px;font-weight:800;font-size:26px;border-radius:6px}
+h1{font-family:'Suez One',serif;font-weight:400;font-size:80px;line-height:1.02;margin-top:14px}
+h1 .small{display:block;font-size:56px;margin-bottom:2px}
+.swoosh{display:block;width:430px;height:36px;margin:8px auto 0}
+.things{font-size:34px;font-weight:600;margin-top:18px;line-height:1.3}
+.dot{opacity:.45;margin:0 8px}
+.cost{font-size:31px;font-weight:500;line-height:1.35;margin-top:8px}
+.cost .big{font-size:38px;font-weight:800}
+.invite{font-family:'Suez One',serif;font-size:42px;margin-top:16px;line-height:1.15}
+.invite u{text-decoration:none;border-bottom:4px solid var(--wine)}
+.mid{flex:1;display:flex;gap:56px;padding:24px 90px 0;align-items:flex-end}
+.col{flex:1;text-align:center;align-self:center}
+.lead{font-size:27px;font-weight:500;line-height:1.4}
+.k{display:inline-block;font-family:'Suez One',serif;font-size:32px;margin-top:14px}
+ul{list-style:none;margin-top:8px}
+li{font-size:30px;font-weight:700;line-height:1.2;padding:7px 0;border-bottom:2px solid var(--soft)}
 li:last-child{border:none}
-.foot{position:absolute;left:80px;bottom:56px;width:500px;border-top:3px solid var(--wine);padding-top:18px}
-.fh{font-family:'Suez One',serif;font-size:34px;line-height:1.2}
-.ft{font-size:25px;font-weight:600;line-height:1.4;margin-top:8px}
-.soon{display:inline-block;margin-top:16px;background:var(--wine);color:var(--cream);font-weight:800;font-size:32px;padding:14px 32px;border-radius:8px}
-.intro{font-size:31px !important;line-height:1.38 !important;margin-top:14px !important}
-mark{background:var(--wine);color:var(--cream);padding:0 10px;border-radius:4px}
-.cta-line{font-family:'Suez One',serif;font-size:34px;margin-top:10px}
-.side{top:640px !important}
-.arch-line{top:626px !important;height:680px !important}
-.arch{top:650px !important;height:700px !important}
-.lead{font-size:26px !important}
-li{font-size:29px !important;padding:6px 0 !important}
-.k{margin-top:12px !important}
+.archwrap{position:relative;width:320px;height:430px;flex:none}
+.arch-line{position:absolute;inset:-16px 16px 0 -16px;border:3px solid var(--wine);border-bottom:none;border-radius:176px 176px 0 0}
+.arch{position:absolute;inset:0;border-radius:160px 160px 0 0;background:url(tea-photo.jpg) 22% 55%/cover no-repeat}
+.band{background:var(--wine);color:var(--cream);text-align:center;padding:26px 80px 30px}
+.band h2{font-family:'Suez One',serif;font-weight:400;font-size:44px;line-height:1.1}
+.band p{font-size:26px;font-weight:500;line-height:1.4;margin-top:10px}
+.soon{display:inline-block;margin-top:14px;background:var(--cream);color:var(--wine);font-weight:800;font-size:32px;padding:12px 40px;border-radius:8px}
 </style>
 </head>
 <body>
 <section id="flyer">
-  <div class="arch-line"></div>
-  <div class="arch" role="img" aria-label="כוס תה ליד מחשב נייד עם האתר של פלאניה"></div>
   <div class="top">
-    <div class="row"><span class="tag">קורס AI לבעלות עסקים</span><img class="logo" src="logo.png" alt="Plania's"></div>
-    <h1>לעשות לבד את מה<br>שהיית משלמת עליו</h1>
+    <img class="logo" src="logo.png" alt="Plania's">
+    <span class="tag">קורס AI לבעלות עסקים</span>
+    <h1><span class="small">לעשות לבד</span>את מה שהיית משלמת עליו</h1>
     <svg class="swoosh" viewBox="0 0 560 46"><path d="M6 34 C140 18 320 10 552 14 M60 40 C210 28 380 24 520 26" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg>
-    <p class="intro">אתר לעסק, עיצובים לרשתות, סרטונים ואפילו אוטומציות. דברים שיכולים לעלות לך <mark>אלפי שקלים</mark> ולהפוך להוצאה קבועה בכל פעם שאת רוצה לשדרג משהו בעסק.</p>
-    <p class="cta-line">בואי ללמוד איך ליצור אותם בעצמך בעזרת AI.</p>
+    <p class="things"><b>אתר לעסק</b><span class="dot">·</span><b>עיצובים לרשתות</b><span class="dot">·</span><b>סרטונים</b><span class="dot">·</span>ואפילו <b>אוטומציות</b></p>
+    <p class="cost">דברים שיכולים לעלות לך <span class="big">אלפי שקלים</span><br>ולהפוך להוצאה קבועה בכל פעם שאת רוצה לשדרג משהו בעסק.</p>
+    <p class="invite">בואי ללמוד ליצור אותם <u>בעצמך</u>, בעזרת AI.</p>
   </div>
-  <div class="side">
-    <p class="lead">נלמד איך להתאים את ה-AI לעסק שלך ולהשתמש בו כדי להפוך רעיונות לדברים שעובדים בשבילך.</p>
-    <span class="k">מה נלמד לעשות בעזרת AI?</span>
-    <ul>
-      <li>עיצוב פוסטים וקרוסלות</li>
-      <li>בניית אתר לעסק</li>
-      <li>יצירת תוכן וסרטונים</li>
-      <li>אוטומציות שחוסכות עבודה ידנית</li>
-    </ul>
+  <div class="mid">
+    <div class="col">
+      <p class="lead">נלמד איך להתאים את ה-AI <b>לעסק שלך</b>,<br>ולהשתמש בו כדי להפוך רעיונות<br>לדברים <b>שעובדים בשבילך</b>.</p>
+      <span class="k">מה נלמד לעשות?</span>
+      <ul>
+        <li>עיצוב פוסטים וקרוסלות</li>
+        <li>בניית אתר לעסק</li>
+        <li>יצירת תוכן וסרטונים</li>
+        <li>אוטומציות שחוסכות עבודה ידנית</li>
+      </ul>
+    </div>
+    <div class="archwrap"><div class="arch-line"></div><div class="arch" role="img" aria-label="כוס תה ליד מחשב נייד עם האתר של פלאניה"></div></div>
   </div>
-  <div class="foot">
-    <div class="fh">2 ערבים מעשיים, בקבוצה קטנה</div>
-    <p class="ft">יוצאות עם ידע וכלים שתוכלי להמשיך להשתמש בהם גם הרבה אחרי שהקורס יסתיים.<br>לומדות, מתנסות ונהנות מארוחת ערב קלה.</p>
+  <div class="band">
+    <h2>2 ערבים מעשיים, בקבוצה קטנה</h2>
+    <p>יוצאות עם ידע וכלים שתוכלי להמשיך להשתמש בהם <b>גם הרבה אחרי הקורס</b>.<br>לומדות, מתנסות ונהנות מארוחת ערב קלה.</p>
     <span class="soon">פרטים בהמשך</span>
   </div>
 </section>
