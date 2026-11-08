@@ -8,36 +8,36 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Assistant',sans-serif}
 #flyer{width:1080px;height:1350px;background:var(--cream);color:var(--wine);position:relative;overflow:hidden}
-.blob{position:absolute;width:820px;height:820px;border-radius:50%;background:#EDE3DA;left:340px;top:440px}
-.photo{position:absolute;bottom:0;right:-30px;height:820px;-webkit-mask-image:linear-gradient(to right,transparent 0,#000 90px);mask-image:linear-gradient(to right,transparent 0,#000 90px)}
 .top{position:absolute;top:70px;right:80px;left:80px}
 .row{display:flex;justify-content:space-between;align-items:center}
 .tag{border:3px solid currentColor;padding:10px 24px;font-weight:800;font-size:30px;border-radius:6px}
 .logo{width:220px}
 h1{font-family:'Suez One',serif;font-weight:400;font-size:90px;line-height:1.08;margin-top:36px}
 .swoosh{display:block;width:500px;height:40px;margin-top:12px}
-.side{position:absolute;left:80px;top:580px;width:420px;text-align:right}
-.lead{font-size:32px;font-weight:600;line-height:1.35;margin-top:22px;max-width:920px}
-.panel{position:absolute;left:0;bottom:0;width:470px;background:var(--wine);color:var(--cream);padding:40px 50px 50px 80px;border-top-right-radius:28px}
-.panel .facts{font-size:30px;font-weight:700;line-height:1.4}
-.panel .cta{display:inline-block;margin-top:22px;background:var(--cream);color:var(--wine);font-weight:800;font-size:32px;padding:16px 28px;border-radius:8px;white-space:nowrap}
-.side .k{font-size:30px;font-weight:800}
-.side ul{list-style:none;margin-top:12px}
-.side li{font-size:38px;font-weight:700;line-height:1.25;padding:12px 0;border-bottom:2px solid rgba(93,21,25,.25)}
-.side li:last-child{border:none}
+.arch-line{position:absolute;right:62px;top:470px;width:470px;height:830px;border:3px solid var(--wine);border-radius:235px 235px 0 0}
+.arch{position:absolute;right:86px;top:494px;width:470px;height:856px;border-radius:235px 235px 0 0;overflow:hidden;background:url(hadarel-photo.png) 80% 78%/auto 116% no-repeat}
+.side{position:absolute;left:80px;top:500px;width:420px}
+.lead{font-size:34px;font-weight:600;line-height:1.4}
+.k{display:block;font-size:30px;font-weight:800;margin-top:40px}
+ul{list-style:none;margin-top:10px}
+li{font-size:38px;font-weight:700;line-height:1.25;padding:13px 0;border-bottom:2px solid rgba(93,21,25,.25)}
+li:last-child{border:none}
+.foot{position:absolute;left:80px;bottom:70px;width:420px}
+.facts{font-size:30px;font-weight:700;line-height:1.45}
+.soon{display:inline-block;margin-top:20px;background:var(--wine);color:var(--cream);font-weight:800;font-size:34px;padding:16px 34px;border-radius:8px}
 </style>
 </head>
 <body>
 <section id="flyer">
-  <div class="blob"></div>
-  <img class="photo" src="hadarel-cutout.png" alt="">
+  <div class="arch-line"></div>
+  <div class="arch" role="img" aria-label="הדראל עם מחשב נייד בטבע"></div>
   <div class="top">
     <div class="row"><span class="tag">קורס AI לבעלות עסקים</span><img class="logo" src="logo.png" alt="Plania's"></div>
     <h1>לעשות לבד את מה<br>שהיית משלמת עליו</h1>
     <svg class="swoosh" viewBox="0 0 560 46"><path d="M6 34 C140 18 320 10 552 14 M60 40 C210 28 380 24 520 26" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg>
-    <p class="lead">בלי לחכות לגרפיקאית או לבונה אתרים על כל דבר קטן. חוסכות כסף וזמן, ועובדות פשוט יותר.</p>
   </div>
   <div class="side">
+    <p class="lead">בלי לחכות לגרפיקאית או לבונה אתרים על כל דבר קטן. חוסכות כסף וזמן, ועובדות פשוט יותר.</p>
     <span class="k">לומדות להשתמש ב-AI בשביל:</span>
     <ul>
       <li>עיצוב פוסטים וקרוסלות</li>
@@ -46,9 +46,9 @@ h1{font-family:'Suez One',serif;font-weight:400;font-size:90px;line-height:1.08;
       <li>אוטומציות שחוסכות עבודה</li>
     </ul>
   </div>
-  <div class="panel">
+  <div class="foot">
     <div class="facts">2 ערבים · 7 משתתפות<br>ארוחת ערב סביב שולחן אחד</div>
-    <span class="cta">פרטים בקישור בביו</span>
+    <span class="soon">פרטים בהמשך</span>
   </div>
 </section>
 </body>
