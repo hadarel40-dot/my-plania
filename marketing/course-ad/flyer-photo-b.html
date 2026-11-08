@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Suez+One&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--cream:#E5D9CF;--wine:#5D1519;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Assistant',sans-serif}
+#flyer{width:1080px;height:1350px;background:var(--cream);color:var(--wine);position:relative;overflow:hidden}
+.top{position:absolute;top:70px;right:80px;left:80px}
+.row{display:flex;justify-content:space-between;align-items:center}
+.tag{border:3px solid currentColor;padding:10px 24px;font-weight:800;font-size:30px;border-radius:6px}
+.logo{width:220px}
+h1{font-family:'Suez One',serif;font-weight:400;font-size:86px;line-height:1.08;margin-top:30px}
+.swoosh{display:block;width:500px;height:40px;margin-top:12px}
+.arch-line{position:absolute;right:62px;top:536px;width:410px;height:770px;border:3px solid var(--wine);border-radius:205px 205px 0 0}
+.arch{position:absolute;right:86px;top:560px;width:410px;height:790px;border-radius:205px 205px 0 0;overflow:hidden;background:url(hadarel-photo.png) 90% 78%/auto 114% no-repeat}
+.intro{font-size:34px;font-weight:600;line-height:1.35;margin-top:18px;max-width:900px}
+.side{position:absolute;left:80px;top:548px;width:500px}
+.lead{font-size:27px;font-weight:600;line-height:1.4}
+.k{display:block;font-size:29px;font-weight:800;margin-top:16px}
+ul{list-style:none;margin-top:4px}
+li{font-size:30px;font-weight:700;line-height:1.25;padding:7px 0;border-bottom:2px solid rgba(93,21,25,.25)}
+li:last-child{border:none}
+.foot{position:absolute;left:80px;bottom:56px;width:500px;border-top:3px solid var(--wine);padding-top:18px}
+.fh{font-family:'Suez One',serif;font-size:34px;line-height:1.2}
+.ft{font-size:25px;font-weight:600;line-height:1.4;margin-top:8px}
+.soon{display:inline-block;margin-top:16px;background:var(--wine);color:var(--cream);font-weight:800;font-size:32px;padding:14px 32px;border-radius:8px}
+</style>
+</head>
+<body>
+<section id="flyer">
+  <div class="arch-line"></div>
+  <div class="arch" role="img" aria-label="הדראל עם מחשב נייד בטבע"></div>
+  <div class="top">
+    <div class="row"><span class="tag">קורס AI לבעלות עסקים</span><img class="logo" src="logo.png" alt="Plania's"></div>
+    <h1>להפוך רעיונות<br>למשהו שעובד בפועל</h1>
+    <svg class="swoosh" viewBox="0 0 560 46"><path d="M6 34 C140 18 320 10 552 14 M60 40 C210 28 380 24 520 26" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg>
+    <p class="intro">יש לך רעיונות שיכולים לשדרג את העסק, אבל לא תמיד ברור איך להוציא אותם לפועל?</p>
+  </div>
+  <div class="side">
+    <p class="lead">נלמד איך לחבר את ה-AI לעסק שלך, להתאים אותו לצרכים שלך ולהשתמש בו כדי ליצור דברים שבאמת ישמשו אותך בעבודה.</p>
+    <span class="k">מה נלמד לעשות בעזרת AI?</span>
+    <ul>
+      <li>עיצוב פוסטים וקרוסלות</li>
+      <li>התחלת בניית אתר לעסק</li>
+      <li>יצירת תוכן וסרטונים</li>
+      <li>אוטומציה ראשונה שחוסכת עבודה ידנית</li>
+    </ul>
+  </div>
+  <div class="foot">
+    <div class="fh">2 ערבים מעשיים, בקבוצה קטנה</div>
+    <p class="ft">לומדות, בונות ויוצאות עם כלים שאפשר להמשיך לעבוד איתם גם אחרי הקורס.<br>ארוחת ערב משותפת סביב שולחן אחד.</p>
+    <span class="soon">פרטים בהמשך</span>
+  </div>
+</section>
+</body>
+</html>
