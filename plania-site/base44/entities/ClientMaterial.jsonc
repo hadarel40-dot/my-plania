@@ -1,0 +1,63 @@
+{
+  "name": "ClientMaterial",
+  "type": "object",
+  "required": [
+    "project_id"
+  ],
+  "properties": {
+    "project_id": {
+      "type": "string",
+      "description": "\u05de\u05d6\u05d4\u05d4 \u05d4\u05e4\u05e8\u05d5\u05d9\u05e7\u05d8"
+    },
+    "text": {
+      "type": "string",
+      "description": "\u05d8\u05e7\u05e1\u05d8 \u05e9\u05d4\u05dc\u05e7\u05d5\u05d7 \u05e9\u05dc\u05d7"
+    },
+    "files": {
+      "type": "array",
+      "description": "\u05e7\u05d1\u05e6\u05d9\u05dd \u05e9\u05d4\u05dc\u05e7\u05d5\u05d7 \u05d4\u05e2\u05dc\u05d4 (\u05e4\u05e8\u05d8\u05d9\u05d9\u05dd)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "uri": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "requested_item": {
+      "type": "string",
+      "description": "\u05dc\u05d0\u05d9\u05d6\u05d4 \u05e4\u05e8\u05d9\u05d8 \u05d1\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05d6\u05d4 \u05e9\u05d9\u05d9\u05da"
+    },
+    "seen": {
+      "type": "boolean",
+      "default": false,
+      "description": "\u05d4\u05d0\u05dd \u05e0\u05e6\u05e4\u05d4 \u05d1\u05de\u05e1\u05da \u05d4\u05e0\u05d9\u05d4\u05d5\u05dc"
+    }
+  },
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

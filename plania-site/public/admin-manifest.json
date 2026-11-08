@@ -1,0 +1,27 @@
+{
+  "name": "ניהול Plania's",
+  "short_name": "ניהול",
+  "description": "אזור הניהול של Plania's",
+  "lang": "he",
+  "dir": "rtl",
+  "start_url": "/hp-manage-7k2x",
+  "scope": "/hp-manage-7k2x",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f0e8df",
+  "theme_color": "#5E1D1D",
+  "icons": [
+    {
+      "src": "https://media.base44.com/images/public/6ac284b25278ab1689bc08f5/69c9d343d_logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://media.base44.com/images/public/6ac284b25278ab1689bc08f5/69c9d343d_logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

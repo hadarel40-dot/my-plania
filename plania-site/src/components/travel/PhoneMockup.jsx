@@ -1,0 +1,19 @@
+import { Image } from '@/components/ui/image';
+
+export default function PhoneMockup({ src, alt, className = 'w-[150px]' }) {
+  return (
+    <div
+      className={`shrink-0 rounded-[2rem] bg-[#2a2622] p-[6px] ring-1 ring-white/10 shadow-[0_22px_38px_-14px_rgba(42,38,34,0.5)] ${className}`}
+    >
+      <div className="relative rounded-[1.6rem] overflow-hidden bg-[#f9f7f3]">
+        <span className="absolute top-[7px] left-1/2 -translate-x-1/2 z-10 h-[6px] w-[38px] rounded-full bg-[#2a2622]/80" />
+        <Image
+          src={src}
+          alt={alt}
+          className="aspect-[9/19] w-full"
+          fittingType="fill"
+        />
+      </div>
+    </div>
+  );
+}

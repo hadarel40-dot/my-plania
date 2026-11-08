@@ -1,0 +1,173 @@
+{
+  "name": "TravelQuestionnaire",
+  "properties": {
+    "answers": {
+      "description": "\u05db\u05dc \u05d4\u05ea\u05e9\u05d5\u05d1\u05d5\u05ea \u05dc\u05e9\u05d0\u05dc\u05d5\u05df",
+      "items": {
+        "properties": {
+          "answer": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string"
+          },
+          "section": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "campaign": {
+      "description": "\u05d0\u05d9\u05d6\u05d4 \u05e7\u05d9\u05e9\u05d5\u05e8 \u05de\u05e2\u05e7\u05d1 \u05d4\u05d1\u05d9\u05d0 \u05d0\u05ea \u05d4\u05dc\u05e7\u05d5\u05d7 (utm_content)",
+      "type": "string"
+    },
+    "contract_signed": {
+      "description": "\u05d4\u05d0\u05dd \u05d4\u05dc\u05e7\u05d5\u05d7 \u05d7\u05ea\u05dd \u05e2\u05dc \u05d4\u05d4\u05e1\u05db\u05dd",
+      "type": "boolean"
+    },
+    "contract_text": {
+      "description": "\u05e0\u05d5\u05e1\u05d7 \u05d4\u05d4\u05e1\u05db\u05dd \u05d4\u05de\u05dc\u05d0 \u05db\u05e4\u05d9 \u05e9\u05e0\u05d7\u05ea\u05dd",
+      "type": "string"
+    },
+    "contract_version": {
+      "description": "\u05d2\u05e8\u05e1\u05ea \u05d4\u05d4\u05e1\u05db\u05dd \u05e9\u05e0\u05d7\u05ea\u05dd",
+      "type": "string"
+    },
+    "email": {
+      "description": "\u05db\u05ea\u05d5\u05d1\u05ea \u05de\u05d9\u05d9\u05dc \u05e9\u05dc \u05d4\u05de\u05de\u05dc\u05d0",
+      "type": "string"
+    },
+    "files": {
+      "description": "\u05e7\u05d1\u05e6\u05d9\u05dd \u05e9\u05e6\u05d5\u05e8\u05e4\u05d5 \u05dc\u05e9\u05d0\u05dc\u05d5\u05df (\u05e0\u05e9\u05de\u05e8\u05d9\u05dd \u05e4\u05e8\u05d8\u05d9\u05d9\u05dd)",
+      "items": {
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "uri": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "name": {
+      "description": "\u05e9\u05dd \u05de\u05dc\u05d0 \u05e9\u05dc \u05d4\u05de\u05de\u05dc\u05d0",
+      "type": "string"
+    },
+    "notes": {
+      "description": "\u05d4\u05e2\u05e8\u05d5\u05ea \u05e4\u05e0\u05d9\u05de\u05d9\u05d5\u05ea",
+      "type": "string"
+    },
+    "phone": {
+      "description": "\u05d8\u05dc\u05e4\u05d5\u05df \u05dc\u05d9\u05e6\u05d9\u05e8\u05ea \u05e7\u05e9\u05e8",
+      "type": "string"
+    },
+    "plan_tier": {
+      "description": "\u05de\u05e1\u05dc\u05d5\u05dc \u05e9\u05e0\u05d1\u05d7\u05e8: \u05d1\u05e1\u05d9\u05e1\u05d9 \u05d0\u05d5 \u05e4\u05e8\u05d9\u05de\u05d9\u05d5\u05dd",
+      "enum": [
+        "basic",
+        "premium"
+      ],
+      "type": "string"
+    },
+    "quote_approved_at": {
+      "description": "\u05de\u05d5\u05e2\u05d3 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d4\u05e6\u05e2\u05ea \u05d4\u05de\u05d7\u05d9\u05e8 \u05e2\u05dc \u05d9\u05d3\u05d9 \u05d4\u05dc\u05e7\u05d5\u05d7 (ISO)",
+      "type": "string"
+    },
+    "quote_approved_name": {
+      "description": "\u05e9\u05dd \u05d4\u05de\u05d0\u05e9\u05e8 \u05e9\u05dc \u05d4\u05e6\u05e2\u05ea \u05d4\u05de\u05d7\u05d9\u05e8",
+      "type": "string"
+    },
+    "quote_brief": {
+      "description": "\u05d4\u05d1\u05e8\u05d9\u05e3 \u05e9\u05e0\u05e9\u05dc\u05d7 \u05d1\u05d4\u05e6\u05e2\u05ea \u05d4\u05de\u05d7\u05d9\u05e8",
+      "type": "string"
+    },
+    "quote_delivery": {
+      "description": "\u05d6\u05de\u05df \u05d0\u05e1\u05e4\u05e7\u05d4 \u05d1\u05d4\u05e6\u05e2\u05ea \u05d4\u05de\u05d7\u05d9\u05e8",
+      "type": "string"
+    },
+    "quote_deposit": {
+      "description": "\u05de\u05e7\u05d3\u05de\u05d4 \u05d1\u05d4\u05e6\u05e2\u05ea \u05d4\u05de\u05d7\u05d9\u05e8",
+      "type": "number"
+    },
+    "quote_payment_url": {
+      "description": "\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05ea\u05e9\u05dc\u05d5\u05dd \u05d4\u05de\u05e7\u05d3\u05de\u05d4 (\u05e8\u05d9\u05d5\u05d5\u05d7\u05d9\u05ea)",
+      "type": "string"
+    },
+    "quote_price": {
+      "description": "\u05de\u05d7\u05d9\u05e8 \u05d1\u05d4\u05e6\u05e2\u05ea \u05d4\u05de\u05d7\u05d9\u05e8",
+      "type": "number"
+    },
+    "quote_sent_at": {
+      "description": "\u05de\u05d5\u05e2\u05d3 \u05e9\u05dc\u05d9\u05d7\u05ea \u05d4\u05e6\u05e2\u05ea \u05d4\u05de\u05d7\u05d9\u05e8 (ISO)",
+      "type": "string"
+    },
+    "quote_token": {
+      "description": "\u05d8\u05d5\u05e7\u05df \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d9\u05d9\u05d7\u05d5\u05d3\u05d9 \u05dc\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d4\u05e6\u05e2\u05ea \u05d4\u05de\u05d7\u05d9\u05e8",
+      "type": "string"
+    },
+    "signed_at": {
+      "description": "\u05de\u05d5\u05e2\u05d3 \u05d4\u05d7\u05ea\u05d9\u05de\u05d4 (ISO)",
+      "type": "string"
+    },
+    "signer_id_number": {
+      "description": "\u05de\u05e1\u05e4\u05e8 \u05ea\u05e2\u05d5\u05d3\u05ea \u05d6\u05d4\u05d5\u05ea \u05e9\u05dc \u05d4\u05d7\u05d5\u05ea\u05dd",
+      "type": "string"
+    },
+    "signer_name": {
+      "description": "\u05e9\u05dd \u05d4\u05d7\u05d5\u05ea\u05dd \u05db\u05e4\u05d9 \u05e9\u05d4\u05d5\u05e7\u05dc\u05d3",
+      "type": "string"
+    },
+    "source": {
+      "description": "\u05de\u05d0\u05d9\u05e4\u05d4 \u05d4\u05d2\u05d9\u05e2: instagram, facebook, whatsapp, google \u05d5\u05db\u05d5'",
+      "type": "string"
+    },
+    "status": {
+      "default": "\u05d7\u05d3\u05e9",
+      "description": "\u05de\u05e6\u05d1 \u05d4\u05d8\u05d9\u05e4\u05d5\u05dc \u05d1\u05e9\u05d0\u05dc\u05d5\u05df",
+      "enum": [
+        "\u05d7\u05d3\u05e9",
+        "\u05d9\u05e6\u05e8\u05ea\u05d9 \u05e7\u05e9\u05e8",
+        "\u05e0\u05e9\u05dc\u05d7 \u05e9\u05d0\u05dc\u05d5\u05df",
+        "\u05e0\u05e9\u05dc\u05d7\u05d4 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8",
+        "\u05d4\u05e6\u05e2\u05d4 \u05d0\u05d5\u05e9\u05e8\u05d4",
+        "\u05e0\u05e1\u05d2\u05e8\u05d4 \u05e2\u05e1\u05e7\u05d4",
+        "\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9"
+      ],
+      "type": "string"
+    },
+    "travelers_ages": {
+      "description": "\u05d2\u05d9\u05dc\u05d0\u05d9 \u05d4\u05e0\u05d5\u05e1\u05e2\u05d9\u05dd, \u05de\u05d4\u05de\u05d1\u05d5\u05d2\u05e8 \u05dc\u05e6\u05e2\u05d9\u05e8",
+      "items": {
+        "type": "number"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "type": "object",
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

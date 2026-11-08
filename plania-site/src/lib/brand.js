@@ -1,0 +1,1 @@
+export const LOGO_URL = 'https://media.base44.com/images/public/6ac284b25278ab1689bc08f5/3d68c2d17_DarkGreenandLightPinkModernCreativeStudioLogo-1.png';
