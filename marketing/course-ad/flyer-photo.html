@@ -9,53 +9,41 @@
 body{font-family:'Assistant',sans-serif}
 #flyer{width:1080px;height:1512px;background:var(--cream);color:var(--wine);position:relative;overflow:hidden;display:flex;flex-direction:column}
 b{font-weight:800}
-u{text-decoration:none;border-bottom:4px solid var(--wine)}
 .ltr{direction:ltr;unicode-bidi:isolate;display:inline-block}
 
-.top{text-align:center;padding:20px 60px 0}
+.top{text-align:center;padding:40px 60px 0}
 .head{display:flex;justify-content:space-between;align-items:center;padding:0 20px}
 .bsd{font-size:24px;font-weight:700}
-.logo{width:180px;display:block}
-.tag{display:inline-block;margin-top:2px;border:3px solid currentColor;padding:5px 20px;font-weight:800;font-size:25px;border-radius:6px}
-h1{font-family:'Suez One',serif;font-weight:400;font-size:72px;line-height:1.02;margin-top:8px}
-h1 .small{display:block;font-size:50px;margin-bottom:2px}
-.swoosh{display:block;width:420px;height:34px;margin:6px auto 0}
-.sub{font-family:'Suez One',serif;font-size:33px;line-height:1.28;margin-top:8px}
-.things{font-size:28px;font-weight:700;margin-top:10px}
-.dot{opacity:.45;margin:0 8px}
-.cost{font-size:25px;font-weight:500;line-height:1.35;margin-top:4px}
+.logo{width:190px;display:block}
+.tags{display:flex;gap:12px;justify-content:center;margin-top:18px}
+.tag{border:3px solid var(--wine);padding:6px 22px;font-weight:800;font-size:27px;border-radius:6px}
+.tag.fill{background:var(--wine);color:var(--cream)}
+h1{font-family:'Suez One',serif;font-weight:400;font-size:84px;line-height:1.02;margin-top:26px}
+h1 .small{display:block;font-size:58px;margin-bottom:4px}
+.swoosh{display:block;width:460px;height:38px;margin:10px auto 0}
+.things{font-size:31px;font-weight:700;margin-top:22px}
+.dot{opacity:.45;margin:0 10px}
 
-.mid{display:flex;gap:50px;padding:22px 100px 0;align-items:center}
+.mid{flex:1;display:flex;gap:70px;padding:0 110px;align-items:center}
 .col{flex:1;text-align:center}
-.q{font-size:24px;font-weight:500;line-height:1.38}
-.me{font-family:'Suez One',serif;font-size:34px;margin-top:6px}
-.how{font-size:24px;font-weight:500;line-height:1.38;margin-top:6px}
-.archwrap{position:relative;width:250px;height:320px;flex:none;margin-top:14px}
-.arch-line{position:absolute;inset:-14px 14px 14px -14px;border:3px solid var(--wine);border-radius:139px 139px 0 0}
-.arch{position:absolute;inset:0;border-radius:125px 125px 0 0;background:url(tea-photo.jpg) 22% 55%/cover no-repeat}
+.hook{font-family:'Suez One',serif;font-size:46px;line-height:1.18}
+.me{font-size:32px;font-weight:600;margin-top:22px;line-height:1.4}
+.archwrap{position:relative;width:300px;height:400px;flex:none}
+.arch-line{position:absolute;inset:-16px 16px 16px -16px;border:3px solid var(--wine);border-radius:166px 166px 0 0}
+.arch{position:absolute;inset:0;border-radius:150px 150px 0 0;background:url(tea-photo.jpg) 22% 55%/cover no-repeat}
 
-.cards{display:flex;gap:22px;padding:22px 70px 14px}
-.card{flex:1;border:3px solid var(--wine);border-radius:18px;padding:14px 22px 16px;text-align:center}
-.card h3{font-family:'Suez One',serif;font-weight:400;font-size:30px;margin-bottom:4px}
-.card p{font-size:22px;font-weight:500;line-height:1.38}
-.card p+p{margin-top:6px}
-.card .no{font-weight:700;margin-top:8px;padding-top:8px;border-top:2px solid var(--soft)}
+.points{display:flex;justify-content:center;padding:0 70px 44px}
+.points div{flex:1;text-align:center;font-size:27px;font-weight:700;line-height:1.3;padding:4px 18px}
+.points div+div{border-right:2px solid var(--soft)}
 
-.band{margin-top:auto;background:var(--wine);color:var(--cream);text-align:center;padding:22px 60px 26px}
-.band h2{font-family:'Suez One',serif;font-weight:400;font-size:38px;line-height:1.15}
-.band .meta{font-family:'Suez One',serif;font-size:28px;margin-top:6px}
-.band .after{font-size:23px;font-weight:500;margin-top:4px}
-.box{margin:14px auto 0;background:var(--cream);color:var(--wine);border-radius:22px;padding:14px 36px 16px;max-width:900px}
-.box .when{font-size:29px;font-weight:800;line-height:1.35}
-.box .where{font-size:29px;font-weight:600;line-height:1.35}
+.band{background:var(--wine);color:var(--cream);text-align:center;padding:36px 70px 44px}
+.band h2{font-family:'Suez One',serif;font-weight:400;font-size:44px;line-height:1.15}
+.box{margin:24px auto 0;background:var(--cream);color:var(--wine);border-radius:22px;padding:20px 36px 22px;max-width:860px}
+.box .meta{font-size:28px;font-weight:700}
+.box .when{font-size:32px;font-weight:800;margin-top:4px}
 .box .sep{opacity:.45;margin:0 12px}
-.box hr{border:none;border-top:2px solid var(--soft);width:70%;margin:8px auto}
-.box .reg{font-family:'Suez One',serif;font-size:34px}
-.tags{display:flex;gap:12px;justify-content:center;margin-top:2px}
-.tags .tag{margin-top:0}
-.tag.fill{background:var(--wine);color:var(--cream);border-color:var(--wine)}
-.hook{font-family:'Suez One',serif;font-size:36px;line-height:1.2}
-.q{margin-top:8px}
+.box hr{border:none;border-top:2px solid var(--soft);width:70%;margin:14px auto}
+.box .reg{font-family:'Suez One',serif;font-size:38px}
 </style>
 </head>
 <body>
@@ -65,40 +53,29 @@ h1 .small{display:block;font-size:50px;margin-bottom:2px}
     <div class="tags"><span class="tag">קורס AI לבעלות עסקים</span><span class="tag fill">מחזור 1</span></div>
     <h1><span class="small">לעשות לבד</span>את מה שהיית משלמת עליו</h1>
     <svg class="swoosh" viewBox="0 0 560 46"><path d="M6 34 C140 18 320 10 552 14 M60 40 C210 28 380 24 520 26" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg>
-    <p class="sub">כל מה שאת שומעת שאפשר לעשות עם AI,<br>הגיע הזמן ללמוד איך עושים את זה <u>באמת</u>.</p>
-    <p class="things">אתרים לעסק<span class="dot">·</span>עיצובים לרשתות<span class="dot">·</span>סרטונים<span class="dot">·</span>מערכות ותהליכים חכמים</p>
-    <p class="cost">דברים שבעבר היית משלמת עליהם <b>אלפי שקלים</b>,<br>או אפילו לא ידעת שאפשר ליצור <b>בעצמך</b>.</p>
+    <p class="things">אתרים לעסק<span class="dot">·</span>עיצובים לרשתות<span class="dot">·</span>סרטונים<span class="dot">·</span>תהליכים חכמים</p>
   </div>
 
   <div class="mid">
     <div class="col">
       <p class="hook">כולן כבר מדברות על AI.<br>ואת עדיין לא יודעת<br>מאיפה להתחיל?</p>
-      <p class="q">את רואה בעלות עסקים שעושות איתו<br>דברים מטורפים, ומרגישה שאת<br>קצת <b>נשארת מאחור</b>.</p>
-      <p class="me">אז בואי נעשה סדר.</p>
-      <p class="how">בשני ערבים מעשיים נתחיל <b>ממש מהבסיס</b><br>וניישם את מה שנלמד <b>על רעיון משלך</b>.</p>
+      <p class="me">אז בואי נעשה סדר.<br>מתחילות <b>ממש מהבסיס</b>.</p>
     </div>
     <div class="archwrap"><div class="arch-line"></div><div class="arch" role="img" aria-label="כוס תה ליד מחשב נייד עם האתר של פלאניה"></div></div>
   </div>
 
-  <div class="cards">
-    <div class="card">
-      <h3>מה נעשה בקורס?</h3>
-      <p>נלמד איך להשתמש ב-AI כדי ליצור דברים שהעסק שלך צריך, <b>גם בלי ידע טכנולוגי קודם</b>.</p>
-      <p>לא רק נדבר על מה שאפשר לעשות, <b>אלא נתנסה בעצמנו</b>: לעבוד עם הכלים בצורה פשוטה, לדייק תוצאות ולהפוך רעיונות לדברים שאפשר להשתמש בהם בפועל.</p>
-    </div>
-    <div class="card">
-      <h3>ומה תצאי איתו?</h3>
-      <p><b>תוצר ראשון משלך</b>, ניסיון מעשי ומדריך מסודר שילך איתך צעד אחר צעד גם אחרי הקורס.</p>
-      <p class="no">בלי ללכת לאיבוד בין עשרות מדריכים ברשת.<br>בלי להרגיש שאת צריכה להבין הכול לבד.</p>
-    </div>
+  <div class="points">
+    <div>בלי ידע<br>טכנולוגי קודם</div>
+    <div>מתנסות בעצמנו<br>על רעיון משלך</div>
+    <div>יוצאות עם תוצר<br>ומדריך מסודר</div>
   </div>
 
   <div class="band">
-    <h2>פחות להסתכל מהצד. יותר להתחיל לעשות בעצמך.</h2>
-    <p class="after">את לא צריכה להישאר מאחור. את יכולה להתחיל ליצור בעצמך.</p>
-    <p class="meta">מחזור 1 · 2 ערבים מעשיים בקבוצה של 6</p>
+    <h2>פחות להסתכל מהצד.<br>יותר להתחיל לעשות בעצמך.</h2>
     <div class="box">
-      <div class="when">ימי שלישי: 15.12 ו-22.12<span class="sep">|</span>18:00 עד 21:00<span class="sep">|</span>מרכז קליקה, איתמר</div>
+      <div class="meta">2 ערבים מעשיים בקבוצה של 6</div>
+      <div class="when">ימי שלישי 15.12 ו-22.12<span class="sep">|</span>18:00 עד 21:00</div>
+      <div class="meta">מרכז קליקה, איתמר</div>
       <hr>
       <div class="reg">לפרטים והרשמה: <span class="ltr">053-9306048</span></div>
     </div>
