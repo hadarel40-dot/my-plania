@@ -1,26 +1,43 @@
 <!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8">
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;900&family=Karantina:wght@300;400&family=Heebo:wght@300;400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="base.css"></head><body>
-<section class="slide light">
+<link rel="stylesheet" href="base.css">
+<style>
+.receipt{position:absolute;background:#fbf6f0;color:#3a1a1c;width:500px;padding:40px 44px 46px;transform:rotate(-4deg);box-shadow:0 30px 60px rgba(0,0,0,.35);
+ -webkit-mask:radial-gradient(circle 12px at 50% 100%,transparent 11px,#000 12px) 0 0/30px 100% repeat-x, linear-gradient(#000,#000);}
+.receipt h4{font:900 40px Rubik;text-align:center;letter-spacing:2px}
+.receipt .sub{font:400 22px Heebo;text-align:center;opacity:.6;margin:4px 0 22px}
+.line{display:flex;justify-content:space-between;font:500 30px Heebo;padding:11px 0;border-bottom:2px dashed rgba(58,26,28,.25)}
+.line b{font:700 30px Rubik;color:#8a3a3a}
+.total{display:flex;justify-content:space-between;font:900 34px Rubik;padding-top:20px}
+.stamp{position:absolute;border:8px solid var(--wine);color:var(--wine);border-radius:18px;padding:10px 26px;font:900 66px Rubik;transform:rotate(-14deg);background:var(--rose);text-align:center;line-height:1.05;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+.stamp small{display:block;font:500 28px Heebo;letter-spacing:1px}
+.pol{position:absolute;background:#fbf6f0;padding:16px 16px 60px;transform:rotate(6deg);box-shadow:0 26px 50px rgba(0,0,0,.35)}
+.pol img{display:block}
+.pol span{position:absolute;bottom:12px;left:0;right:0;text-align:center;font:400 40px Karantina;color:var(--wine)}
+</style></head><body>
+<section class="slide dark">
   <div class="bsd">בס"ד</div>
-  <img class="abs" src="img/logo-wine.png" style="left:64px;top:40px;width:250px">
-  <div class="pills abs" style="top:150px;left:0;right:0"><span class="pill">קורס AI לבעלות עסקים</span><span class="pill fill">מחזור 1</span></div>
-  <div class="abs" style="top:250px;left:0;right:0;text-align:center">
-    <div class="K" style="font-size:96px">לעשות לבד</div>
-    <div class="R" style="font-size:100px;margin-top:4px">את מה שהיית<br>משלמת עליו.</div>
-    <svg class="uline" width="560" height="26" viewBox="0 0 560 26"><path d="M8 14 Q280 2 552 10 M60 22 Q300 12 500 18" stroke="#5c161c" stroke-width="5" fill="none" stroke-linecap="round"/></svg>
+  <img class="abs" src="img/logo-cream.png" style="left:64px;top:40px;width:240px">
+  <div class="pills abs" style="top:140px;left:0;right:0"><span class="pill">קורס AI לבעלות עסקים</span><span class="pill fill">מחזור 1</span></div>
+  <div class="abs R" style="top:240px;left:80px;right:80px;text-align:center;font-size:80px">כמה שילמת השנה<br>על דברים שיכולת<br>לעשות <span style="color:var(--rose)">לבד?</span></div>
+
+  <div class="pol" style="left:90px;top:620px"><img src="img/polaroid.jpg" width="300" height="345"><span>יום עבודה רגיל</span></div>
+
+  <div class="receipt" style="right:90px;top:560px">
+    <h4>קבלה</h4><div class="sub">העסק שלי · השנה</div>
+    <div class="line"><span>עיצוב לפוסט</span><b>₪</b></div>
+    <div class="line"><span>דף נחיתה לעסק</span><b>₪₪</b></div>
+    <div class="line"><span>סרטון לרשתות</span><b>₪₪</b></div>
+    <div class="line"><span>תהליך חכם</span><b>₪₪₪</b></div>
+    <div class="total"><span>סה"כ: יותר מדי.</span></div>
   </div>
-  <div class="archline" style="left:56px;top:640px;width:480px;height:440px;color:var(--wine)"></div>
-  <div class="abs" style="left:400px;top:620px;width:190px;height:190px;border-radius:50%;background:var(--wine);color:var(--cream);display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(-10deg);box-shadow:0 14px 30px rgba(0,0,0,.25);z-index:5;text-align:center"><span style="font:500 28px Heebo">כאן</span><span style="font:900 46px Rubik;line-height:1">בשומרון</span></div>
-  <div class="arch" style="left:76px;top:660px;width:440px;height:440px;border-radius:220px 220px 0 0"><img src="img/ad.jpg"></div>
-  <div class="abs" style="right:80px;top:690px;width:440px">
-    <div style="font:700 30px Rubik;opacity:.6;margin-bottom:14px">מה לומדות ליצור:</div>
-    <div style="font:900 44px Rubik;line-height:1.55">אתרים לעסק<br>עיצובים לרשתות<br>סרטונים<br>תהליכים חכמים</div>
-    <div class="K" style="font-size:58px;margin-top:22px">בלי שום ידע טכנולוגי קודם.</div>
-  </div>
-  <div class="abs dark" style="left:0;right:0;bottom:0;height:250px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--wine)">
-    <div class="R" style="font-size:52px">2 ערבים מעשיים בשומרון · קבוצה של 6</div>
-    <div style="font:500 32px Heebo">ימי שלישי 15.12 ו-22.12 · 18:00 עד 21:00 · מרכז קליקה, איתמר</div>
+  <div class="stamp" style="right:440px;top:900px;z-index:4;font-size:86px;padding:10px 32px"><small style="font-size:30px">מעכשיו</small>לבד.</div>
+
+  <div class="abs" style="left:50px;top:540px;width:170px;height:170px;border-radius:50%;background:var(--cream);color:var(--wine);display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(10deg);box-shadow:0 14px 30px rgba(0,0,0,.3);z-index:5"><span style="font:500 26px Heebo">כאן</span><span style="font:900 42px Rubik;line-height:1">בשומרון</span></div>
+
+  <div class="abs" style="left:0;right:0;bottom:0;height:200px;background:var(--sand);color:var(--wine);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px">
+    <div class="R" style="font-size:46px">2 ערבים מעשיים · בלי ידע קודם · קבוצה של 6</div>
+    <div style="font:500 30px Heebo">ימי שלישי 15.12 ו-22.12 · 18:00 עד 21:00 · מרכז קליקה, איתמר</div>
   </div>
 </section>
 </body></html>
