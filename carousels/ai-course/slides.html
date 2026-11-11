@@ -17,6 +17,14 @@
 .card .l:last-child{border:none}
 .card .k{font:500 32px Heebo;opacity:.7}.card .v{font:900 40px Rubik}
 .btn{display:inline-block;white-space:nowrap;background:var(--cream);color:var(--wine);font:900 38px Rubik;border-radius:60px;padding:24px 44px}
+.receipt{position:absolute;background:#fbf6f0;color:#3a1a1c;width:560px;padding:40px 48px 46px;transform:rotate(-3deg);box-shadow:0 30px 60px rgba(92,22,28,.25)}
+.receipt h4{font:900 42px Rubik;text-align:center;letter-spacing:2px}
+.receipt .sub{font:400 24px Heebo;text-align:center;opacity:.6;margin:4px 0 20px}
+.line{display:flex;justify-content:space-between;font:500 32px Heebo;padding:12px 0;border-bottom:2px dashed rgba(58,26,28,.25)}
+.line b{font:700 32px Rubik;color:#8a3a3a}
+.total{font:900 36px Rubik;padding-top:20px}
+.stamp{position:absolute;border:8px solid var(--wine);color:var(--wine);background:var(--rose);border-radius:18px;padding:10px 34px;font:900 92px Rubik;transform:rotate(-14deg);text-align:center;line-height:1.05;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.stamp small{display:block;font:500 32px Heebo}
 </style></head><body>
 
 <!-- 1 -->
@@ -37,16 +45,17 @@
 <!-- 2 -->
 <section class="slide light">
   <div class="bsd">בס"ד</div>
-  <div class="abs" style="top:170px;left:110px;right:110px">
-    <div class="R" style="font-size:88px">כמה פעמים שילמת על משהו שיכולת לעשות לבד?</div>
-    <div style="margin-top:70px">
-      <div class="strike">עיצוב לפוסט או לסטורי<i>לבד</i></div>
-      <div class="strike">דף נחיתה לעסק<i>לבד</i></div>
-      <div class="strike">סרטון קצר לרשתות<i>לבד</i></div>
-      <div class="strike">משימה שחוזרת על עצמה כל שבוע<i>לבד</i></div>
-    </div>
-    <div class="K" style="font-size:80px;margin-top:70px">לא כי זה קשה.<br>פשוט אף אחד לא הראה לך איך.</div>
+  <div class="abs R" style="top:150px;left:100px;right:100px;text-align:center;font-size:80px">כמה פעמים שילמת על משהו שיכולת לעשות <span style="color:#a0524f">לבד?</span></div>
+  <div class="receipt" style="left:260px;top:440px">
+    <h4>קבלה</h4><div class="sub">העסק שלי · השנה</div>
+    <div class="line"><span>עיצוב לפוסט</span><b>₪</b></div>
+    <div class="line"><span>דף נחיתה לעסק</span><b>₪₪</b></div>
+    <div class="line"><span>סרטון לרשתות</span><b>₪₪</b></div>
+    <div class="line"><span>תהליך חכם</span><b>₪₪₪</b></div>
+    <div class="total">סה"כ: יותר מדי.</div>
   </div>
+  <div class="stamp" style="left:110px;top:760px;z-index:4"><small>מעכשיו</small>לבד.</div>
+  <div class="abs K" style="top:1050px;left:100px;right:100px;text-align:center;font-size:72px">לא כי זה קשה.<br>פשוט אף אחד לא הראה לך איך.</div>
   <div class="foot"><span>@hadarelifergan</span><span>2/7</span></div>
 </section>
 
