@@ -1,0 +1,47 @@
+<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Suez+One&family=Assistant:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--cream:#E5D9CF;--wine:#5D1519}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#000;font-family:'Assistant',sans-serif}
+.f{width:1080px;height:1920px;position:relative;overflow:hidden;color:var(--cream)}
+.bg{position:absolute;inset:0;background-size:cover;background-repeat:no-repeat}
+.bg:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(93,21,25,.45),rgba(93,21,25,.65) 60%,rgba(93,21,25,.85))}
+.solid{background:var(--wine)}
+/* safe zone: y 230..1440, keep right 230 clear -> content box */
+.safe{position:absolute;top:300px;bottom:520px;left:110px;right:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.chip{display:inline-block;font-family:'Suez One',serif;font-size:104px;line-height:1;background:var(--cream);color:var(--wine);padding:22px 46px 32px;border-radius:16px;box-shadow:10px 12px 0 rgba(0,0,0,.25);margin:18px 0}
+.r1{transform:rotate(-4deg)}.r2{transform:rotate(3deg)}.r3{transform:rotate(-2deg)}
+.big{font-family:'Suez One',serif;font-size:92px;line-height:1.15;text-shadow:0 4px 24px rgba(0,0,0,.35)}
+.mid{font-size:52px;font-weight:700;line-height:1.35;margin-top:30px;text-shadow:0 3px 18px rgba(0,0,0,.35)}
+.sw{width:520px;height:44px;margin-top:22px}
+.box{background:var(--cream);color:var(--wine);border-radius:26px;padding:34px 40px;margin-top:40px;width:100%}
+.box .a{font-size:46px;font-weight:800}.box .b{font-size:40px;font-weight:700;margin-top:6px}
+.logo{width:300px;margin-bottom:40px}
+.tag{border:4px solid var(--cream);padding:10px 30px;border-radius:8px;font-weight:800;font-size:40px;margin-bottom:40px}
+</style></head><body>
+<div class="f" id="b1"><div class="bg" style="background-image:url(../laptop-photo.jpg);background-position:50% 30%"></div><div class="safe">
+<span class="chip r1">פרומפט?</span><span class="chip r2">סקיל?</span><span class="chip r3">קלוד קוד?</span></div></div>
+
+<div class="f" id="b2"><div class="bg" style="background-image:url(../tea-photo.jpg);background-position:30% 40%"></div><div class="safe">
+<p class="big">כולן כבר<br>מדברות על זה.</p></div></div>
+
+<div class="f" id="b3"><div class="bg" style="background-image:url(../laptop-photo.jpg);background-position:70% 85%"></div><div class="safe">
+<p class="big">ואת עדיין<br>לא יודעת<br>מאיפה להתחיל?</p></div></div>
+
+<div class="f" id="b4"><div class="bg solid"></div><div class="safe">
+<span class="tag">קורס AI לבעלות עסקים</span>
+<p class="big">2 ערבים מעשיים.<br>ממש מהבסיס.</p>
+<svg class="sw" viewBox="0 0 560 46"><path d="M6 34 C140 18 320 10 552 14 M60 40 C210 28 380 24 520 26" fill="none" stroke="#E5D9CF" stroke-width="5" stroke-linecap="round"/></svg>
+<p class="mid">קבוצה של 6.<br>בלי ידע טכנולוגי קודם.</p></div></div>
+
+<div class="f" id="b5"><div class="bg" style="background-image:url(../tea-photo.jpg);background-position:70% 20%"></div><div class="safe">
+<p class="big">יוצאת עם Claude<br>מוכן לעבודה</p>
+<p class="mid">ועם אתר או מוצר דיגיטלי<br>שהעסק שלך צריך</p></div></div>
+
+<div class="f" id="b6"><div class="bg solid"></div><div class="safe">
+<img class="logo" src="../logo-cream.png">
+<p class="big" style="font-size:80px">בואי נעשה סדר.</p>
+<div class="box"><div class="a">מחזור 1 · 15.12 ו-22.12</div><div class="b">מרכז קליקה, איתמר · כולל ארוחת ערב</div><div class="b">אפשרות ל-4 תשלומים קלילים</div></div>
+<p class="mid">לפרטים: כתבי לי "קורס"</p></div></div>
+</body></html>
