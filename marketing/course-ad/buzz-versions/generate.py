@@ -57,7 +57,7 @@ POINTS='''<div class="value"><h3>עם מה את יוצאת?</h3><ul>
 <p class="why2">במקום לשלם בכל פעם מחדש על עיצוב, סרטון או שינוי באתר.</p></div>'''
 BOX='''<div class="box"><div class="meta">2 ערבים מעשיים בקבוצה של 6<span class="sep">·</span>כולל ארוחת ערב</div>
 <div class="when">ימי שלישי 15.12 ו-22.12<span class="sep">|</span>18:00 עד 21:00</div>
-<div class="meta">מרכז קליקה, איתמר</div><hr>
+<div class="meta">מרכז קליקה, איתמר</div><span class="pay">אפשרות ל-4 תשלומים קלילים</span><hr>
 <div class="reg">לפרטים: <span class="ltr">053-9306048</span></div><div class="meta">ההרשמה בקישור המצורף</div></div>'''
 PHOTO="url(../laptop-photo.jpg)"
 V={}
@@ -65,7 +65,7 @@ V={}
 V['a-full-bleed']=('''
 .bg{position:absolute;inset:0 0 auto 0;height:930px;background:%s 50%% 62%%/cover no-repeat}
 .bg:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(93,21,25,.55) 0%%,rgba(93,21,25,.35) 35%%,rgba(93,21,25,.75) 70%%,#5D1519 100%%)}
-.txt{position:relative;z-index:2;margin-top:30px;padding:0 90px}
+.txt{position:relative;z-index:2;margin-top:70px;padding:0 90px}
 .txt .lead{text-shadow:0 2px 12px rgba(0,0,0,.35)}
 '''%PHOTO, '<div class="bg"></div>'+HEAD+WORDS+'<div class="txt">'+TEXT+'</div>'+POINTS+BOX)
 # B: polaroid
