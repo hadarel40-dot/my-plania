@@ -3,26 +3,25 @@ S = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); N=f"{S}/norm2";
 OUT = "/home/user/my-plania/marketing/reels-2026-11-15/01_SUPER_kniyot_lashavua.mp4"
 # (clip, in, out, speed); "MID" = brand card
 segs = [("4745",7.4,9.0,1.3),("4747",0.0,1.5,1.3),("4749",1.75,3.3,1.3),("4750",0.0,1.5,1.3),("4753",0.0,2.5,1.0),
-        ("MID",0,1.0,1),
         ("APPA",0,4.0,1),("APPB",0,2.85,1),              # plania auto-planning (screen recording, fast)
         ("4724",3.3,4.6,1),                               # list builds itself
         ("4743",2.7,3.7,1),                               # price comparison
-        ("4734",1.8,3.0,1),("4727",2.2,3.4,1),("4737",0.5,1.5,1),   # only what's needed
-        ("4732",2.0,6.0,1.3)]                             # whole week set
+        ("4734",1.8,3.0,1),("4727",2.2,3.4,1),("4737",0.5,1.5,1),   # only what's in the plan
+        ("4732",2.0,6.6,1.3)]                             # one shop, whole week
 T = sum((b-a)/sp for _,a,b,sp in segs)
 st=[0]; [st.append(st[-1]+(b-a)/sp) for _,a,b,sp in segs]
-BEFORE_END = st[5]; AFTER = st[6]
+BEFORE_END = st[5]; AFTER = st[5]
 texts = [
- dict(name="b1", title="בלי plania:", sub="מעמיסה מה שנראה טוב", ts=130, top=240, t0=0, t1=st[4]),
+ dict(name="b1", title="קניות בלי רשימה:", sub="כל מה שנראה טוב נכנס לעגלה", ts=124, top=240, t0=0, t1=st[4]),
  dict(name="b2", title="עגלה מלאה...", sub="ועדיין אין מה לבשל", ts=124, top=240, t0=st[4], t1=st[5]),
- dict(name="a1", title="עם plania:", sub="עונה על 5 שאלות", ts=124, top=110, t0=st[6], t1=st[7]),
- dict(name="a2", title="וכל השבוע מתוכנן", sub="בוקר, צהריים וערב", top=110, t0=st[7], t1=st[8]),
- dict(name="a3", title="רשימת הקניות נבנית לבד", top=240, t0=st[8], t1=st[9]),
- dict(name="a4", title="עם השוואת מחירים", top=240, t0=st[9], t1=st[10]),
- dict(name="a5", title="לוקחת רק מה שצריך", top=240, t0=st[10], t1=st[13]),
- dict(name="a6", title="כל השבוע סגור", sub="בלי לרוץ למכולת באמצע השבוע", ts=124, top=240, t0=st[13], t1=T-0.05),
- dict(name="end", kind="endlogo", sub="", t0=T-1.7, t1=T),
- dict(name="mid", kind="mid", title="ועם plania?"),
+ dict(name="a0", title="ועם plania?", ts=140, top=110, t0=st[5], t1=st[5]+1.1),
+ dict(name="a1", title="עונה על 5 שאלות קצרות", top=110, t0=st[5]+1.1, t1=st[6]),
+ dict(name="a2", title="וכל השבוע מתוכנן", sub="בוקר, צהריים וערב", top=110, t0=st[6], t1=st[7]),
+ dict(name="a3", title="רשימת הקניות נבנית לבד", top=240, t0=st[7], t1=st[8]),
+ dict(name="a4", title="עם השוואת מחירים", top=240, t0=st[8], t1=st[9]),
+ dict(name="a5", title="קונה רק מה שבתפריט", top=240, t0=st[9], t1=st[12]),
+ dict(name="a6", title="קונה פעם אחת", sub="בלי לרוץ למכולת באמצע השבוע", ts=124, top=240, t0=st[12], t1=T-1.9),
+ dict(name="end", title="plania", ts=190, color="#f5afb9", line="קנייה אחת. שבוע שלם מסודר.", ls=78, top=240, t0=T-1.9, t1=T),
 ]
 subprocess.run(["node", f"{S}/scripts/overlay2.js", "/dev/stdin", OV], input=json.dumps(texts).encode(), check=True)
 BRIGHT = "curves=master='0/0.03 0.25/0.26 0.5/0.53 0.75/0.79 1/0.96',colorbalance=rh=0.02:bh=-0.015:rs=-0.005:bs=0.01,eq=saturation=1.06"
@@ -38,9 +37,9 @@ for i,(c,a,b,sp) in enumerate(segs):
 n=len(segs)
 fc.append("".join(f"[s{i}]" for i in range(n)) + f"concat=n={n}:v=1:a=0,settb=1/30[ab]")
 cur="ab"; k=n
-for j,t in enumerate([t for t in texts if t.get("kind") in (None,"endlogo")]):
+for j,t in enumerate([t for t in texts if not t.get("kind")]):
     inp += ["-loop","1","-t","25","-i",f"{OV}/{t['name']}.png"]
-    fc.append(f"[{k}:v]format=rgba,fade=in:st={t['t0']:.3f}:d={0.5 if t.get('kind') else 0.1}:alpha=1[o{j}]")
+    fc.append(f"[{k}:v]format=rgba,fade=in:st={t['t0']:.3f}:d={0.35 if t['name']=='end' else 0.1}:alpha=1[o{j}]")
     fc.append(f"[{cur}][o{j}]overlay=0:0:enable='between(t,{t['t0']:.3f},{t['t1']-0.001:.3f})'[c{j}]"); cur=f"c{j}"; k+=1
 fc.append(f"[{cur}]format=yuv420p[vout]")
 TOT = T

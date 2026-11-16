@@ -8,22 +8,22 @@ LIFT = "eq=brightness=0.035:gamma=1.08:saturation=1.03,"
 notes = [("4662",1.15,1.75),("4667",0.85,1.4),("4669",0.75,1.3),("4677",0.25,1.2)]
 XF = 0.0
 segs = [("4685",0.6,2.0,"boom"),("4705",2.3,4.6,""),("4717",0.9,1.8,""),("4720",1.6,3.6,""),("APPA",0,4.0,""),
-        ("APPB",0,2.85,""),("4693",0.1,1.5,""),("4642",2.5,5.5,"zoom")]
+        ("APPB",0,2.85,""),("4693",0.1,1.5,""),("4642",2.5,6.0,"zoom")]
 A = sum(b-a for _,a,b in notes) - XF*(len(notes)-1)
 SP = {"4685":1.6}
 T = A + sum((b-a)/SP.get(c,1) for c,a,b,_ in segs)
 o = A - 3.88 + ((2.0-0.6)/1.6 - 2.05)   # shift vs. previous timeline
 HIT = A + (1.0-0.6)/1.6
 texts = [
- dict(name="t1", title="המקרר שלי בכל שבוע:", ts=130, color="#f5afb9", top=250, t0=0, t1=A),
- dict(name="t2", title="פותחת את המקפיא", sub="ושוב לא יודעת מה מכינים", top=1050, t0=5.93+o, t1=8.23+o),
+ dict(name="t1", title="ככה נראה הראש שלי כל שבוע:", ts=130, color="#f5afb9", top=250, t0=0, t1=A),
+ dict(name="t2", title="18:00. פותחת את המקפיא", sub="ושוב אין לי מושג מה מכינים", top=1050, t0=5.93+o, t1=8.23+o),
  dict(name="t3", title="ואז הבנתי", ts=140, top=760, t0=8.23+o, t1=9.13+o),
  dict(name="t4", title="שאפשר לרכז הכול במקום אחד", top=280, t0=9.13+o, t1=11.13+o),
- dict(name="t5", title="עונה על 5 שאלות", top=110, t0=11.13+o, t1=15.13+o),
+ dict(name="t5", title="עונה על 5 שאלות קצרות", top=110, t0=11.13+o, t1=15.13+o),
  dict(name="t5b", title="וכל השבוע מתוכנן", sub="בוקר, צהריים וערב", top=110, t0=15.13+o, t1=17.98+o),
- dict(name="t6", title="ובערב יודעת מה מבשלים", top=280, t0=17.98+o, t1=19.38+o),
- dict(name="t7", sub="וסוף סוף, ראש שקט", ss=130, top=300, t0=19.65+o, t1=T-0.05),
- dict(name="end", kind="endlogo", sub="", t0=T-1.7, t1=T),
+ dict(name="t6", title="וב-18:00 כבר יודעת מה מבשלים", top=280, t0=17.98+o, t1=19.38+o),
+ dict(name="t7", sub="וסוף סוף, ראש שקט", ss=130, top=300, t0=19.65+o, t1=T-1.9),
+ dict(name="end", title="plania", ts=190, color="#f5afb9", line="מתכננים פעם אחת. כל השבוע רגוע.", ls=74, top=260, t0=T-1.9, t1=T),
 ]
 subprocess.run(["node", f"{S}/scripts/overlay2.js", "/dev/stdin", OV], input=json.dumps(texts).encode(), check=True)
 inp, fc = [], []
@@ -51,9 +51,9 @@ for i,(c,a,b,fl) in enumerate(segs):
 n=len(segs)+NB
 fc.append(f"[{prev}]" + "".join(f"[s{i}]" for i in range(len(segs))) + f"concat=n={len(segs)+1}:v=1:a=0,settb=1/30[ab]")
 cur="ab"; k=n
-for j,t in enumerate([t for t in texts if t.get("kind") in (None,"endlogo")]):
+for j,t in enumerate([t for t in texts if not t.get("kind")]):
     inp += ["-loop","1","-t","25","-i",f"{OV}/{t['name']}.png"]
-    fc.append(f"[{k}:v]format=rgba,fade=in:st={t['t0']}:d={0.5 if t.get('kind') else 0.1}:alpha=1[o{j}]")
+    fc.append(f"[{k}:v]format=rgba,fade=in:st={t['t0']}:d={0.35 if t['name']=='end' else 0.1}:alpha=1[o{j}]")
     fc.append(f"[{cur}][o{j}]overlay=0:0:enable='between(t,{t['t0']},{t['t1']-0.001:.3f})'[c{j}]"); cur=f"c{j}"; k+=1
 fc.append(f"[{cur}]format=yuv420p[vout]")
 inp += ["-f","lavfi","-i","anullsrc=r=48000:cl=stereo"]
