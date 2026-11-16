@@ -85,16 +85,19 @@
 
 ## 8. איך עורכים (טכני)
 
+הערכה נבנתה מחדש ב-16.11 ונמצאת בריפו, ב-`marketing/video-kit/`. התיקיות `raw/`, `norm/` ו-`out/` לא נשמרות ב-git.
+
 ```bash
 cd marketing/video-kit
-# 1. מורידים את הקבצים ל-raw/ (מ-Drive; קבצים מעל 10MB צריכים גישה ל-drive.usercontent.google.com)
-# 2. ממירים כל קליפ: HDR -> SDR, 1080x1920, 30fps
-scripts/norm.sh 4705          # יוצר norm2/IMG_4705.mp4
-# 3. מריצים את סקריפט הריל (רשימת שוטים, טקסטים, סאונד בתוך הקובץ)
-FONTS=assets/fonts LOGO=assets/logo.png NODE_PATH=$(npm root -g) python3 scripts/sup.py
+# 1. מורידים קבצים מ-Drive ל-raw/IMG_xxxx.MOV (התיקייה משותפת בקישור, אז curl עובד):
+#    curl -L -o raw/IMG_4705.MOV "https://drive.usercontent.google.com/download?id=<FILE_ID>&export=download&confirm=t"
+# 2. ממירים: HDR -> SDR עם tone mapping, 1080x1920, 30fps, lanczos
+scripts/norm.sh 4705 4717      # יוצר norm/IMG_4705.mp4 ...
+# 3. מריצים את סקריפט הריל
+python3 scripts/hero.py        # יוצר out/00_PLANIA_HERO.mp4
 ```
 
-- `overlay2.js`: מצייר את הטקסטים כשכבות PNG עם Playwright. הסוגים: טקסט רגיל, `num` (עיגול ממוספר), `mid` (כרטיס ירוק), `endlogo` (לוגו בסוף).
-- `hero2.py`: הריל הראשי (פתקים, "נמאס לי", plania, ראש שקט). `sup.py`: ריל הסופר (לפני ואחרי).
-- בכל סקריפט, `segs` היא רשימת השוטים: (קובץ, התחלה, סוף, מהירות). `texts` הם הטקסטים, לפי זמנים.
-- הנתיבים בסקריפטים נכתבו לסשן הענן. לפני הרצה מעדכנים את `S`, `OUT` ואת התיקייה של הקליפים המומרים (`norm` או `norm2`).
+- `scripts/overlay.js`: מצייר את הטקסטים כשכבות PNG שקופות עם Playwright. הסוגים: טקסט (`title`, `sub`, `pos: top|low`, `pink`, `num` לעיגול ממוספר) ו-`endlogo`.
+- `scripts/hero.py`: הריל הראשי. `segs` היא רשימת השוטים: (קובץ, התחלה, סוף, מהירות, מראה). המראה הוא `notes`, `before`, `boom` או `after`. `texts` הם הטקסטים לפי זמנים. הסאונד (המולה, בום, אווירה) נבנה בתוך הסקריפט מהסאונד של הצילומים.
+- `assets/`: `logo.png` (מהדרייב), `logo_t.png` (שקוף, נגזר ממנו), והגופנים.
+- ריל הסופר (`sup.py`) עוד לא נבנה מחדש.
