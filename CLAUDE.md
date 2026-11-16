@@ -17,3 +17,8 @@ into `.claude/skills/`. After a fresh clone, run `git submodule update --init --
 For full video pipelines, read `vendor/OpenMontage/AGENT_GUIDE.md` first and run `make setup`
 inside `vendor/OpenMontage` (needs Python 3.10+, FFmpeg, Node 22+). Skills that mention `tools/`,
 `pipeline_defs/` or `AGENT_GUIDE.md` mean paths inside `vendor/OpenMontage`.
+
+## Video editing for plania
+
+Before editing any video for @plania.il, read `.claude/instagram/video-style.md` (brand, on-screen text,
+color, pacing, sound rules, and the best shots from the Drive folder). Write updates back to that file.
