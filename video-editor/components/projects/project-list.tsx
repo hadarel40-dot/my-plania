@@ -43,6 +43,11 @@ export function ProjectList({ email, projects, error, showPassword, hasPassword,
             <KeyRound className="size-4" />
           </Link>
           {admin && (
+            <Link href="/content" title="מאגר התוכן לאינסטגרם" className="flex items-center gap-1 rounded-full border border-zinc-700 px-2.5 py-1 text-zinc-300 hover:border-violet-500 hover:text-white">
+              <Sparkles className="size-3.5" /> תוכן
+            </Link>
+          )}
+          {admin && (
             <Link href="/admin" title="ניהול" className="relative flex items-center gap-1 rounded-full border border-zinc-700 px-2.5 py-1 text-zinc-300 hover:border-violet-500 hover:text-white">
               <ShieldCheck className="size-3.5" /> ניהול
               {admin.pending > 0 && <span className="absolute -end-1.5 -top-1.5 grid size-4 place-items-center rounded-full bg-amber-400 text-[10px] font-bold text-zinc-950">{admin.pending}</span>}
