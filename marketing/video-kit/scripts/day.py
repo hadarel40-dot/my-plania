@@ -4,7 +4,7 @@ S = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); N=f"{S}/norm2";
 OUT = "/home/user/my-plania/marketing/reels-2026-11-15/02_YOM_RISHON.mp4"
 # (clip, in, out, speed, flags)  flags: tight = zoom-in crop that hides ceilings/floors, zoom = slow push-in
 segs = [("4642",0.8,1.9,1,"zoom"),("4638",0.1,0.8,1,""),
-        ("APPA6",0,2.7,1,""),("APPB2",0,2.1,1,""),
+        ("APPAF",0,2.7,1,""),("APPB2",0,2.1,1,""),
         ("4727",2.4,3.2,1,"tz"),("4755",0.2,0.8,1,"tz"),("4726",12.2,12.8,1,"tz"),("4730",8.8,9.4,1,"tz"),
         ("4756",0.2,0.8,1,"tz"),("4726",19.3,20.0,1,"tz"),
         ("4688",5.4,6.2,1,""),("4693",0.3,1.1,1,""),
@@ -13,7 +13,7 @@ T = sum((b-a)/sp for _,a,b,sp,_ in segs)
 st=[0]; [st.append(st[-1]+(b-a)/sp) for _,a,b,sp,_ in segs]
 texts = [
  dict(name="h", title="יש דבר אחד שאני עושה כל יום ראשון", sub="וכל השבוע מסתדר", ts=110, top=1060, t0=0, t1=st[2]),
- dict(name="q", title="עונה על 5 שאלות קצרות", top=110, t0=st[2], t1=st[3]),
+ dict(name="q", title="עונה על 5 שאלות קצרות", ts=92, top=90, t0=st[2], t1=st[3]),
  dict(name="p", title="והתפריט של השבוע מוכן", sub="בוקר, צהריים וערב", ts=92, ss=80, top=90, t0=st[3], t1=st[4]),
  dict(name="l", title="רשימת הקניות כבר מחכה", sub="עם השוואת מחירים", top=240, t0=st[4], t1=st[6]),
  dict(name="o", title="קונה רק מה שבתפריט", top=240, t0=st[6], t1=st[10]),
