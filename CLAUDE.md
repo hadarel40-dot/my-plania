@@ -9,3 +9,9 @@ the repo copy directly). Write any voice updates back to the repo copy, and do t
 `swipe.md` and other files the skills keep under `~/.claude/instagram/`.
 
 All Instagram output is in Hebrew.
+
+## Content bank on hadarelifergan.com
+
+Finished reels and carousels go into the "תוכן" tab of the site's admin area
+(Base44 app "Plania's", entity `ContentPost`) and are published to Instagram from there.
+To add or schedule one, follow `.claude/skills/ig-schedule/SKILL.md`.
