@@ -9,3 +9,9 @@ the repo copy directly). Write any voice updates back to the repo copy, and do t
 `swipe.md` and other files the skills keep under `~/.claude/instagram/`.
 
 All Instagram output is in Hebrew.
+
+## Video editing (plania reels)
+
+Before editing any plania video, read `.claude/instagram/video-style.md` (brand, text, color, cut, sound and
+ending rules, plus the shot list from the 15.11 shoot). The editing scripts and brand fonts/logo live in
+`marketing/video-kit/`. When the user gives a note, continue from the latest version and change only what she asked.
