@@ -3,12 +3,12 @@ import json, subprocess, os
 S = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); N=f"{S}/norm2"; OV=f"{S}/ov5"; os.makedirs(OV, exist_ok=True)
 OUT = "/home/user/my-plania/marketing/reels-2026-11-15/02_YOM_RISHON.mp4"
 # (clip, in, out, speed, flags)  flags: tight = zoom-in crop that hides ceilings/floors, zoom = slow push-in
-segs = [("4642",0.3,2.3,1,"zoom"),("4638",0.0,1.0,1,""),
-        ("APPA",0,4.0,1,""),("APPB",0,2.85,1,""),
-        ("4727",2.2,3.4,1,"tight"),("4755",0.0,1.0,1,"tight"),("4726",12.0,13.0,1,"tight"),("4730",8.6,9.6,1,"tight"),
-        ("4756",0.0,1.0,1,"tight"),("4726",19.0,20.2,1,"tight"),
-        ("4688",5.0,6.4,1,""),("4693",0.1,1.5,1,""),
-        ("4643",1.0,4.4,1,"zoom")]
+segs = [("4642",0.8,1.9,1,"zoom"),("4638",0.1,0.8,1,""),
+        ("APPA6",0,2.7,1,""),("APPB2",0,2.1,1,""),
+        ("4727",2.4,3.2,1,"tz"),("4755",0.2,0.8,1,"tz"),("4726",12.2,12.8,1,"tz"),("4730",8.8,9.4,1,"tz"),
+        ("4756",0.2,0.8,1,"tz"),("4726",19.3,20.0,1,"tz"),
+        ("4688",5.4,6.2,1,""),("4693",0.3,1.1,1,""),
+        ("4643",1.5,4.3,1,"zoom")]
 T = sum((b-a)/sp for _,a,b,sp,_ in segs)
 st=[0]; [st.append(st[-1]+(b-a)/sp) for _,a,b,sp,_ in segs]
 texts = [
@@ -29,6 +29,7 @@ for i,(c,a,b,sp,fl) in enumerate(segs):
     look = "null" if c.startswith("APP") else WARM
     f = f"[{i}:v]trim={a}:{b},setpts=(PTS-STARTPTS)/{sp},{look}"
     if fl == "tight": f += ",scale=1296:-2:flags=lanczos,crop=1080:1920"
+    if fl == "tz": D=(b-a)/sp; f += f",scale=w='trunc(1080*(1.2+0.08*t/{D:.2f})/2)*2':h=-2:eval=frame:flags=lanczos,crop=1080:1920"
     if fl == "zoom": D=(b-a)/sp; f += f",scale=w='trunc(1080*(1+0.07*t/{D:.2f})/2)*2':h=-2:eval=frame:flags=lanczos,crop=1080:1920"
     fc.append(f + f",fps=30,settb=1/30,format=yuv420p[s{i}]")
 n=len(segs)
