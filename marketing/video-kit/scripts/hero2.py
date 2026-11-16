@@ -7,8 +7,8 @@ HDR = {"4705","4717","4720","4693"}
 LIFT = "eq=brightness=0.035:gamma=1.08:saturation=1.03,"
 notes = [("4662",1.15,1.75),("4667",0.85,1.4),("4669",0.75,1.3),("4677",0.25,1.2)]
 XF = 0.0
-segs = [("4685",0.6,2.0,"boom"),("4705",2.3,4.6,""),("4717",0.9,1.8,""),("4720",1.6,3.6,""),("4638",0.0,1.1,""),
-        ("4641",0.6,2.2,""),("4693",0.1,1.5,""),("4642",2.5,5.5,"zoom")]
+segs = [("4685",0.6,2.0,"boom"),("4705",2.3,4.6,""),("4717",0.9,1.8,""),("4720",1.6,3.6,""),("APPA",0,4.0,""),
+        ("APPB",0,2.85,""),("4693",0.1,1.5,""),("4642",2.5,5.5,"zoom")]
 A = sum(b-a for _,a,b in notes) - XF*(len(notes)-1)
 SP = {"4685":1.6}
 T = A + sum((b-a)/SP.get(c,1) for c,a,b,_ in segs)
@@ -19,9 +19,10 @@ texts = [
  dict(name="t2", title="פותחת את המקפיא", sub="ושוב לא יודעת מה מכינים", top=1050, t0=5.93+o, t1=8.23+o),
  dict(name="t3", title="ואז הבנתי", ts=140, top=760, t0=8.23+o, t1=9.13+o),
  dict(name="t4", title="שאפשר לרכז הכול במקום אחד", top=280, t0=9.13+o, t1=11.13+o),
- dict(name="t5", title="כל השבוע מתוכנן", sub="מה מבשלים, ומתי", top=280, t0=11.13+o, t1=13.83+o),
- dict(name="t6", title="ובערב יודעת מה מבשלים", top=280, t0=13.83+o, t1=15.23+o),
- dict(name="t7", sub="וסוף סוף, ראש שקט", ss=130, top=300, t0=15.5+o, t1=T-0.05),
+ dict(name="t5", title="עונה על 5 שאלות", top=110, t0=11.13+o, t1=15.13+o),
+ dict(name="t5b", title="וכל השבוע מתוכנן", sub="בוקר, צהריים וערב", top=110, t0=15.13+o, t1=17.98+o),
+ dict(name="t6", title="ובערב יודעת מה מבשלים", top=280, t0=17.98+o, t1=19.38+o),
+ dict(name="t7", sub="וסוף סוף, ראש שקט", ss=130, top=300, t0=19.65+o, t1=T-0.05),
  dict(name="end", kind="endlogo", sub="", t0=T-1.7, t1=T),
 ]
 subprocess.run(["node", f"{S}/scripts/overlay2.js", "/dev/stdin", OV], input=json.dumps(texts).encode(), check=True)
@@ -39,7 +40,7 @@ for j in (range(1,len(notes)) if XF else []):
 NB=len(notes)
 for i,(c,a,b,fl) in enumerate(segs):
     inp += ["-i", f"{N}/IMG_{c}.mp4"]
-    f = f"[{i+NB}:v]trim={a}:{b},setpts=(PTS-STARTPTS)/{SP.get(c,1)}," + (G if c=="4685" else (LIFT+FILM if c in HDR else FILM))
+    f = f"[{i+NB}:v]trim={a}:{b},setpts=(PTS-STARTPTS)/{SP.get(c,1)}," + ("null" if c.startswith("APP") else (G if c=="4685" else (LIFT+FILM if c in HDR else FILM)))
     if fl=="boom":
         h=(1.0-0.6)/1.6
         f += (f",scale=w='trunc(1080*(1.06+0.16*exp(-(t-{h})*9)*gte(t,{h}))/2)*2':h=-2:eval=frame:flags=bicubic"
@@ -64,7 +65,7 @@ print(subprocess.run(["ffprobe","-v","error","-show_entries","format=duration","
 SFX = "/home/user/my-plania/video-editor/public/sfx"; RAW = f"{S}/raw"
 cuts = [0.0]
 for c,a,b in notes[:-1]: cuts.append(cuts[-1] + (b-a))
-s1 = A + (2.0-0.6)/1.6; s2 = s1 + 2.3; s3 = s2 + 0.9; s4 = s3 + 2.0; s5 = s4 + 1.1; s6 = s5 + 1.6; s7 = s6 + 1.4
+s1 = A + (2.0-0.6)/1.6; s2 = s1 + 2.3; s3 = s2 + 0.9; s4 = s3 + 2.0; s5 = s4 + 4.0; s6 = s5 + 2.85; s7 = s6 + 1.4
 L = HIT + 0.05; TOT = T
 ai, af = [], []
 def add_in(args): ai.extend(args); return len([x for x in ai if x == "-i"]) - 1
