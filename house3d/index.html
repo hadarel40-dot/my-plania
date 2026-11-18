@@ -268,7 +268,7 @@ const artPhoto=k=>T(cv(256,320,(g,w,h)=>{const gr=g.createLinearGradient(0,0,0,h
   if(k===0){g.beginPath();g.arc(w/2,h*.45,60,0,7);g.fill();}else if(k===1){g.fillRect(40,150,176,120);g.beginPath();g.moveTo(30,150);g.lineTo(w/2,70);g.lineTo(226,150);g.fill();}else{for(let i=0;i<5;i++){g.beginPath();g.ellipse(50+i*40,220,12,60-i*6,0,0,7);g.fill();}}grain(g,w,h,8000,.1);}));
 const plaqueTex=()=>T(cv(512,160,(g,w,h)=>{g.fillStyle='#e9e1d3';g.fillRect(0,0,w,h);g.strokeStyle='#5b3b27';g.lineWidth=6;g.strokeRect(10,10,w-20,h-20);g.fillStyle='#3a2a1e';g.textAlign='center';g.textBaseline='middle';g.direction='rtl';g.font='600 58px Rubik, Arial, sans-serif';g.fillText('משפחת איפרגן',w/2,h/2+4);}));
 
-const oushakTex=()=>T(cv(512,768,(g,w,h)=>{const sand='#cdb093',rust='#ad6a52',sage='#8b9175',cream='#eadcc6',clay='#9a5c48';g.fillStyle=sand;g.fillRect(0,0,w,h);
+const oushakTex=()=>T(cv(512,768,(g,w,h)=>{const sand='#cdb093',rust='#9f6e5c',sage='#8b9175',cream='#eadcc6',clay='#9a5c48';g.fillStyle=sand;g.fillRect(0,0,w,h);
   g.fillStyle=clay;g.fillRect(0,0,w,46);g.fillRect(0,h-46,w,46);g.fillRect(0,0,46,h);g.fillRect(w-46,0,46,h);g.strokeStyle=cream;g.lineWidth=3;g.strokeRect(50,50,w-100,h-100);g.strokeStyle=sage;g.lineWidth=2;g.strokeRect(58,58,w-116,h-116);
   g.fillStyle=cream;g.globalAlpha=.55;for(let x=30;x<w;x+=40){g.beginPath();g.ellipse(x,23,9,5,.5,0,7);g.fill();g.beginPath();g.ellipse(x,h-23,9,5,-.5,0,7);g.fill();}for(let y=30;y<h;y+=40){g.beginPath();g.ellipse(23,y,5,9,.5,0,7);g.fill();g.beginPath();g.ellipse(w-23,y,5,9,-.5,0,7);g.fill();}
   g.strokeStyle=rust;g.globalAlpha=.22;g.lineWidth=2;for(let k=-h;k<w+h;k+=56){g.beginPath();g.moveTo(k,60);g.lineTo(k+h,h+60);g.stroke();g.beginPath();g.moveTo(k,h-60);g.lineTo(k+h,-60);g.stroke();}
@@ -282,13 +282,13 @@ const beniTex=(zz='#b9643e')=>T(cv(512,640,(g,w,h)=>{const cream='#efe6d5',terra
 const whitePavTex=()=>T(cv(512,512,(g,w,h)=>{g.fillStyle='#a3a099';g.fillRect(0,0,w,h);grain(g,w,h,20000,.18);const n=2,s=w/n,j=30;for(let i=0;i<n;i++)for(let k=0;k<n;k++){g.fillStyle=shade('#efede6',R(-.04,.02));g.fillRect(i*s+j/2,k*s+j/2,s-j,s-j);}
   for(let i=0;i<5000;i++){g.fillStyle=`rgba(150,145,135,${R(.05,.2)})`;g.fillRect(rnd()*w,rnd()*h,R(.6,2),R(.6,2));}blotch(g,w,h,40,.05,20,80);}));
 const tx={plaster:plasterTex('#eee7da'),terra:plasterTex('#b0603c',.13),blush:plasterTex('#e2c3b3',.07),sage:plasterTex('#a6b096',.08),mush:plasterTex('#cbbca4',.1),
-  olive:plasterTex('#878957',.1),dark:plasterTex('#4a2b2b',.1),garden:plasterTex('#b55e3a',.15),
+  olive:plasterTex('#878957',.1),dark:plasterTex('#4a2b2b',.1),garden:plasterTex('#a6735e',.12),
   oak:plankTex('#c29464'),oakLight:woodTex('#c8a179'),walnut:woodTex('#5a3a26'),walnutDark:woodTex('#3c271a'),rough:woodTex('#7a593c'),
   quartz:marbleTex('#ece7de','#8f8579'),trav:marbleTex('#d9c9ad','#b39b77',10),marble:marbleTex('#f2f0ec','#9a9a9a',14),
   zG:zelligeTex('#4c7858',8,8,'#d4cdbd'),zC:zelligeTex('#e8dfcd',12,4,'#d2c7b2'),zCf:zelligeTex('#e5dccb',8,8,'#cdc2ad'),zB:zelligeTex('#6c1e2a',8,10,'#3a1a1d'),
   checker:checkerTex(),court:courtTex(),persian:persianTex(),kilimM:kilimTex(['#9c4a2c','#c27a4e','#e8dac2','#5a3a2a','#c89a4a']),kilimH:kilimTex(['#7a3424','#d9c7a6','#2f3a4a','#b8693f']),
   kilimO:kilimTex(['#6f7046','#d9c9a6','#a0522d','#3f3a2a']),jute:juteTex(),juteRound:juteRoundTex(),cane:caneTex(),linen:linenTex('#f2ede4'),checkRug:checkRugTex(),
-  stripeBW:stripeTex('#f2eee5','#1e1d1b',10),stripeBlue:stripeTex('#eef0ea','#6d8ea6',8,'#c9d6dd'),stripeGreen:stripeTex('#f1eee4','#6c7c58',10),stripeRust:stripeTex('#efe7d8','#a65532',12),
+  stripeBW:stripeTex('#f2eee5','#1e1d1b',10),stripeBlue:stripeTex('#eef0ea','#6d8ea6',8,'#c9d6dd'),stripeGreen:stripeTex('#f1eee4','#6c7c58',10),stripeRust:stripeTex('#efe7d8','#9a6552',12),
   roof:roofTex(),grass:grassTex(),earth:earthTex(),gravel:gravelTex(),pavers:paverTex(),fringe:fringeTex(),macrame:macrameTex(),
   artA:artAbstract(),artL:artLandscape(),artK1:artKids('#c9805a','#8fa08a'),artK2:artKids('#8fa08a','#d39a8a'),artBot:artBotanical(),ph0:artPhoto(0),ph1:artPhoto(1),ph2:artPhoto(2),plaque:plaqueTex(),oushak:oushakTex(),beni:beniTex('#8c8174'),runner:T(cv(768,256,(g,w,h)=>{g.fillStyle='#e3d8c4';g.fillRect(0,0,w,h);for(let i=0;i<16000;i++){g.fillStyle=`rgba(${rnd()<.5?'255,255,250':'120,105,90'},${R(.04,.14)})`;g.fillRect(rnd()*w,rnd()*h,R(1,3),R(1,3));}g.fillStyle='#4a4038';for(const y of [16,30,h-34,h-20])g.fillRect(0,y,w,4);g.fillStyle='#8b8a6c';g.fillRect(0,40,w,3);g.fillRect(0,h-43,w,3);grain(g,w,h,5000,.06);})),whitePav:whitePavTex(),poolTile:zelligeTex('#7cc6d2',16,16,'#e6f3f3')};
 
@@ -307,15 +307,15 @@ const MAT={
   stone:M({color:'#dbd1c0',roughness:.7}),plinth:M({color:'#b6aa95',roughness:.9}),coping:M({color:'#e7dccb',roughness:.8}),
   brass:M({color:'#c9a265',metalness:1,roughness:.3}),copper:M({color:'#b9744f',metalness:1,roughness:.32,side:DS}),black:M({color:'#1e1c1a',metalness:.5,roughness:.45}),
   steel:M({color:'#d0d0cc',metalness:1,roughness:.22}),blackGlass:M({color:'#111111',metalness:.2,roughness:.08}),
-  ceramic:M({color:'#f5f3ee',roughness:.1}),ceramicMatte:M({color:'#e9e2d5',roughness:.6}),stoneware:M({color:'#8b7f72',roughness:.85}),darkCer:M({color:'#2d2a27',roughness:.7}),terraCer:M({color:'#b36a45',roughness:.7}),
+  ceramic:M({color:'#f5f3ee',roughness:.1}),ceramicMatte:M({color:'#e9e2d5',roughness:.6}),stoneware:M({color:'#8b7f72',roughness:.85}),darkCer:M({color:'#2d2a27',roughness:.7}),terraCer:M({color:'#a3735e',roughness:.7}),
   glass:M({color:'#dbeaee',transparent:true,opacity:.16,roughness:.04,depthWrite:false}),mirror:M({color:'#dfe5e6',metalness:1,roughness:.03}),
   frame:M({color:'#3b332b',metalness:.4,roughness:.5}),doorLeaf:M({map:tx.oakLight,roughness:.55}),
   zG:M({map:tx.zG,roughness:.1}),zC:M({map:tx.zC,roughness:.12}),zCf:M({map:tx.zCf,roughness:.3}),zB:M({map:tx.zB,roughness:.08}),checker:M({map:tx.checker,roughness:.22}),court:M({map:tx.court,roughness:.8}),
   roof:M({map:tx.roof,roughness:.8}),ridge:M({color:'#8f4429',roughness:.8}),soffit:M({map:tx.rough,roughness:.9,side:DS}),
   grass:M({map:tx.grass,roughness:1}),earth:M({map:tx.earth,roughness:1}),gravel:M({map:tx.gravel,roughness:1}),pavers:M({map:tx.pavers,roughness:.9}),
-  oliveV:MP({color:'#5c6133',sheen:1,sheenRoughness:.45,sheenColor:new THREE.Color('#a6ac78')}),rustV:MP({color:'#9b4925',sheen:1,sheenRoughness:.45,sheenColor:new THREE.Color('#d9925f')}),
+  oliveV:MP({color:'#5c6133',sheen:1,sheenRoughness:.45,sheenColor:new THREE.Color('#a6ac78')}),rustV:MP({color:'#8c5442',sheen:1,sheenRoughness:.45,sheenColor:new THREE.Color('#c49a84')}),
   brownV:MP({color:'#6a4428',sheen:1,sheenRoughness:.45,sheenColor:new THREE.Color('#b0855e')}),boucle:M({color:'#ebe3d2',roughness:1}),
-  linen:M({map:tx.linen,roughness:.95}),terraL:M({color:'#b45f39',roughness:.95}),oliveL:M({color:'#6e6f45',roughness:.95}),mustard:M({color:'#c4943e',roughness:.95}),
+  linen:M({map:tx.linen,roughness:.95}),terraL:M({color:'#a26b56',roughness:.95}),oliveL:M({color:'#6e6f45',roughness:.95}),mustard:M({color:'#c4943e',roughness:.95}),
   sageL:M({color:'#9aa58a',roughness:.95}),oat:M({color:'#d6c7ab',roughness:.95}),blushL:M({color:'#d9a99a',roughness:.95}),
   curtain:M({map:tx.linen,color:'#f6f0e6',roughness:.95,side:DS}),
   persian:M({map:tx.persian,roughness:1}),kilimM:M({map:tx.kilimM,roughness:1}),kilimH:M({map:tx.kilimH,roughness:1}),kilimO:M({map:tx.kilimO,roughness:1}),
@@ -326,8 +326,8 @@ const MAT={
   leaf:M({color:'#557140',roughness:.7,side:DS}),leafDark:M({color:'#3d5731',roughness:.8,flatShading:true}),cactus:M({color:'#5b7a47',roughness:.8}),
   bark:M({color:'#6b5a49',roughness:1}),cypress:M({color:'#3b5333',roughness:.9,flatShading:true}),bougain:M({color:'#c2367a',roughness:.8,flatShading:true}),
   lavender:M({color:'#8b78b6',roughness:.9,flatShading:true}),pampas:M({color:'#e4d4b5',roughness:1}),soil:M({color:'#3a2a1f',roughness:1}),
-  terraPot:M({color:'#b4623c',roughness:.9}),blackPlanter:M({color:'#242220',roughness:.6}),whitePot:M({color:'#efebe3',roughness:.7}),
-  terraFrame:M({color:'#a85935',roughness:.55,metalness:.2}),wrought:M({color:'#eeeae1',roughness:.5,metalness:.3}),
+  terraPot:M({color:'#a56f5a',roughness:.9}),blackPlanter:M({color:'#242220',roughness:.6}),whitePot:M({color:'#efebe3',roughness:.7}),
+  terraFrame:M({color:'#946150',roughness:.55,metalness:.2}),wrought:M({color:'#eeeae1',roughness:.5,metalness:.3}),
   water:M({color:'#cfe0e0',roughness:.04}),plaque:M({map:tx.plaque,roughness:.7}),
   bulb:M({color:'#fff3dd',emissive:'#ffcf8a',emissiveIntensity:.3}),flame:M({color:'#ffb347',emissive:'#ff7a1a',emissiveIntensity:2.6,transparent:true,opacity:.9,depthWrite:false}),
   shade:M({color:'#efe6d5',emissive:'#ffc985',emissiveIntensity:0,roughness:.9,side:DS}),embers:M({color:'#3a2418',emissive:'#ff5a1a',emissiveIntensity:1.2}),
@@ -908,7 +908,7 @@ const ROOMS={
     det:['חלון ברוחב 2.60 מ׳ מעל הכיור המזרחי, בלי ארונות עליונים','שני כיורים: כיור חרס מתחת לחלון וכיור בפס הצפוני','ארון ייבוש כלים עם דלתות זכוכית מעל הכיור הצפוני','קיר ארונות עד התקרה באורך 3.20 מ׳: מזווה, תנור ומקרר','אי באורך 1.85 מ׳ עם שלושה כסאות בר','ראנר בהיר עם פסים דקים']},
   living:{name:'סלון',eb:'אזור ציבורי',dims:'3.55 × 4.95 מ׳ · 17.6 מ״ר',rect:[730,430,1085,925],pos:[1215,560,1.6],look:[830,770,.95],
     text:'ספה פינתית בקטיפה ירוק זית, כריות בחלודה וקרם ושטיח פרסי בגוני לבנה. מנורת קשת מפליז נמתחת מעל שולחן טרוורטין, ועל קיר הטיח בגוון פטריה תלויה תמונה מופשטת גדולה. דלת ההזזה הרחבה פותחת את הסלון לחצר.',
-    sw:[S('קטיפה ירוק זית','#5c6133'),S('קטיפה חלודה','#9b4925'),S('טרוורטין','#d9c9ad'),S('טיח פטריה','#cbbca4'),S('קטיפה חומה','#6a4428'),S('פשתן קרם','#f2ede4')],
+    sw:[S('קטיפה ירוק זית','#5c6133'),S('קטיפה חמרה','#8c5442'),S('טרוורטין','#d9c9ad'),S('טיח פטריה','#cbbca4'),S('קטיפה חומה','#6a4428'),S('פשתן קרם','#f2ede4')],
     det:['כורסת קטיפה חומה על מסגרת מתכת שחורה','קורות עץ חשופות לאורך התקרה','וילונות פשתן עד הרצפה בשני צדי דלת ההזזה','עציץ גדול בסל קלוע ליד החלון','פוף ג׳וט ושמיכת צמר על משענת הספה','מנורת קש מעל שולחן הקפה']},
   dining:{name:'פינת אוכל וספרייה',eb:'אזור ציבורי',dims:'2.05 × 4.95 מ׳ · 10.1 מ״ר',rect:[1085,430,1290,925],pos:[930,560,1.6],look:[1265,760,1.3],
     text:'שולחן אגוז לשישה מתחת לנברשת פליז, ומאחוריו ספרייה מאגוז מהרצפה עד התקרה, רק על הקיר המזרחי. הספרייה עוטפת את החלון, ומתחתיו ספסל קריאה עם כריות. סולם ספרייה מאלון רץ על מסילת פליז.',
@@ -948,11 +948,11 @@ const ROOMS={
     det:['דלת נפתחת החוצה כדי לפנות מקום','מנורת קיר כדורית','ריצוף משבצות קטן 20 × 20 ס״מ']},
   entry:{name:'כניסה ומסדרון',eb:'מעברים',dims:'מסדרון 4.30 × 1.12 מ׳',rect:[290,350,720,462],rect2:[420,462,546,569],pos:[1205,595,1.62],look:[1215,372,1.15],
     text:'דלת כניסה מאגוז עם ידית פליז ארוכה. מול הדלת עומד קיר גבוה שמפריד בין הכניסה למטבח, ובו נישת כניסה בנויה: ארונות מעילים ונעליים לכל הגובה משני הצדדים, ובאמצע ספסל אגוז עם כרית, קולבי פליז, מדף ותאורה. המסדרון ממשיך לחדרים עם ראנר בהיר וגלריית צילומים.',
-    sw:[S('אגוז','#5a3a26'),S('שמנת','#e6ddcc'),S('פליז','#c9a265'),S('כרית טרקוטה','#b45f39'),S('ראנר בהיר','#e3d8c4')],
+    sw:[S('אגוז','#5a3a26'),S('שמנת','#e6ddcc'),S('פליז','#c9a265'),S('כרית חמרה','#a26b56'),S('ראנר בהיר','#e3d8c4')],
     det:['ארונות מעילים ונעליים בגובה 2.68 מ׳','ספסל לנעילת נעליים וארבעה קולבי פליז','פס תאורה מתחת למדף','שלט "משפחת איפרגן" ליד הדלת','פנסים שחורים משני צדי הכניסה']},
   garden:{name:'חצר ופרגולה',eb:'חוץ',dims:'מגרש של כמעט דונם',rect:null,ext:{pos:[X(1760),3.0,Z(1760)],look:[X(1100),1.1,Z(1150)]},
     text:'פרגולת עץ צמודה לבית מעל אבני מדרך לבנות עם פוגות בטון, ומתחתיה פינת ישיבה ושולחן אוכל לשמונה. בכניסה למגרש חניה לשני רכבים עם שער הזזה, ולידה יחידת האירוח. במערב גינת ירק בערוגות מוגבהות ומחסן גינה מעץ, ומדורה בין עצי הזית.',
-    sw:[S('אבן מדרך לבנה','#efede6'),S('פוגות בטון','#a3a099'),S('עץ פרגולה','#c39a70'),S('טיח טרקוטה','#b55e3a'),S('פסים כחולים','#6d8ea6'),S('ירוק זית','#7f8f62')],
+    sw:[S('אבן מדרך לבנה','#efede6'),S('פוגות בטון','#a3a099'),S('עץ פרגולה','#c39a70'),S('טיח חמרה','#a6735e'),S('פסים כחולים','#6d8ea6'),S('ירוק זית','#7f8f62')],
     det:['חניה מרוצפת לשני רכבים ושער הזזה ברוחב 4 מ׳','מחסן גינה 3 × 2.4 מ׳ עם מדפים, כלים ומכסחת','פרגולה 6.8 × 4.8 מ׳ עם שולחן לשמונה','שש ערוגות מוגבהות ושולחן שתילה','שורת עצי הדר לאורך הקיר הצפוני']},
   pool:{name:'בריכה ומטע',eb:'חוץ',dims:'בריכה 10 × 3.6 מ׳',rect:null,ext:{pos:[X(2250),5.5,Z(2560)],look:[X(1150),0,Z(1880)]},
     text:'בריכה באורך עשרה מטרים בהמשך הציר של הפרגולה, עם דק מאותן אבנים לבנות, ארבע מיטות שיזוף בפסים ושתי שמשיות עם פרנזים. לאורך הצד המזרחי של המגרש מטע של 27 עצי פרי: הדרים, רימון, תאנה, מנגו, תפוח ואבוקדו.',
@@ -968,8 +968,8 @@ const ROOMS={
     det:['שולחן עבודה 2.00 מ׳ עם שני מסכים','מיקרופון על זרוע ורמקולי אולפן','16 פאנלים אקוסטיים על שני קירות','ספה ושולחן קפה לפגישות','דלת הזזה מזכוכית ודק עץ']},
 };
 const OVERVIEW={name:'הבית',eb:'קומת קרקע · 124 מ״ר',dims:'13.10 × 9.45 מ׳',
-  text:'בית חד קומתי עם גג שטוח, לפי תוכנית אדנים מ־29.11.2023 בקנ״מ 1:100, על מגרש של כמעט דונם. הקירות, הפתחים, המידות ומיקום הרהיטים נבנו מהתוכנית, והחומרים מלוחות ההשראה שלכם: מטבח באגוז וגריג׳, סלון בירוק זית, יחידת הורים בטרקוטה עם חדר ארונות, ספרייה בפינת האוכל, ובחוץ פרגולה, בריכה, מטע, חניה, מחסן, יחידת אירוח ומשרד ואולפן.',
-  sw:[S('אגוז','#5a3a26'),S('גריג׳','#b6aa97'),S('ירוק זית','#5c6133'),S('טרקוטה','#b0603c'),S('זליג׳ ירוק','#4c7858'),S('אבן לבנה','#efede6')],
+  text:'בית חד קומתי עם גג שטוח, לפי תוכנית אדנים מ־29.11.2023 בקנ״מ 1:100, על מגרש של כמעט דונם. הקירות, הפתחים, המידות ומיקום הרהיטים נבנו מהתוכנית, והחומרים מלוחות ההשראה שלכם: מטבח באגוז וגריג׳, סלון בירוק זית, יחידת הורים בירוק מרווה עם חדר ארונות, קיר היקפי בטיח חמרה, ספרייה בפינת האוכל, ובחוץ פרגולה, בריכה, מטע, חניה, מחסן, יחידת אירוח ומשרד ואולפן.',
+  sw:[S('אגוז','#5a3a26'),S('גריג׳','#b6aa97'),S('ירוק זית','#5c6133'),S('חמרה','#a6735e'),S('זליג׳ ירוק','#4c7858'),S('אבן לבנה','#efede6')],
   det:['לחצו על חדר ברשימה למטה כדי לעמוד בתוכו','במצב פריסה אפשר ללחוץ על כל חדר בתוכנית','סיור חופשי: הליכה עם החצים או W A S D, או הקשה על הרצפה','כפתור ערב מדליק את התאורה, הבריכה והמדורה']};
 /* ================= UI ================= */
 const $=id=>document.getElementById(id);
