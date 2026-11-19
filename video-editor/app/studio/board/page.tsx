@@ -38,36 +38,36 @@ export default function BoardPage() {
 
   return (
     <>
-      <PageHead title="לוח תוכן" sub="השלבים זזים רק כשאת מזיזה אותם. הסטודיו לא מפרסם כלום: הפרסום נשאר אצלך.">
+      <PageHead label="תכנון" title="לוח" accent="התוכן" sub="השלבים זזים רק כשאת מזיזה אותם. הסטודיו לא מפרסם כלום: הפרסום נשאר אצלך.">
         <Btn onClick={() => setEditing({ title: "", account: account === "all" ? "hadarelifergan" : account, niche: "travel", format: "reel", stage: "idea", planned_date: null, hook: "", caption: "", notes: "", draft_id: null, ig_permalink: "" })}>
           <Plus className="size-4" /> פריט חדש
         </Btn>
       </PageHead>
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="flex items-center border border-[#D9CFC2]">
-          <button type="button" aria-label="החודש הקודם" className="p-2 hover:bg-[#FBF8F3]" onClick={() => setMonth((m) => shiftMonth(m, -1))}><ChevronRight className="size-4" /></button>
+        <div className="flex items-center border border-[#E2DACD]">
+          <button type="button" aria-label="החודש הקודם" className="p-2 hover:bg-[#FBF8F2]" onClick={() => setMonth((m) => shiftMonth(m, -1))}><ChevronRight className="size-4" /></button>
           <span className="s-serif min-w-[120px] px-2 text-center">{monthLabel(month)}</span>
-          <button type="button" aria-label="החודש הבא" className="p-2 hover:bg-[#FBF8F3]" onClick={() => setMonth((m) => shiftMonth(m, 1))}><ChevronLeft className="size-4" /></button>
+          <button type="button" aria-label="החודש הבא" className="p-2 hover:bg-[#FBF8F2]" onClick={() => setMonth((m) => shiftMonth(m, 1))}><ChevronLeft className="size-4" /></button>
         </div>
         <Select value={account} onChange={setAccount} options={[{ value: "all" as const, label: "שני החשבונות" }, ...ACCOUNTS]} className="w-auto" />
-        <span className="text-xs text-[#6A6158]">מוצגים פריטים מהחודש הזה ופריטים בלי תאריך.</span>
+        <span className="text-xs text-[#6F675C]">מוצגים פריטים מהחודש הזה ופריטים בלי תאריך.</span>
       </div>
       {!items ? <Loading /> : (
         <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-5">
           {STAGES.map((stage) => {
             const list = visible.filter((i) => i.stage === stage.value);
             return (
-              <section key={stage.value} className="min-w-0 border-t-2 border-[#5E1D1D]/70 bg-[#EDE5D8]/60 p-2">
-                <h2 className="s-serif mb-2 flex items-baseline justify-between px-1 text-base">{stage.label}<span className="text-xs font-normal text-[#6A6158]">{list.length}</span></h2>
+              <section key={stage.value} className="min-w-0 border-t-0 rounded-xl bg-[#E3DDD2] p-2">
+                <h2 className="s-serif mb-2 flex items-baseline justify-between px-1 text-base">{stage.label}<span className="text-xs font-normal text-[#6F675C]">{list.length}</span></h2>
                 <ul className="space-y-2">
                   {list.map((item) => (
-                    <li key={item.id} className="border border-[#D9CFC2] bg-[#FBF8F3] p-2.5">
+                    <li key={item.id} className="rounded-lg border border-[#E2DACD] bg-[#FBF8F2] p-2.5">
                       <button type="button" className="w-full text-right" onClick={() => setEditing(item)}>
                         <span className="block text-sm font-semibold leading-snug">{item.title}</span>
                         <span className="mt-1 flex flex-wrap gap-1"><Tag>{labelOf(FORMATS, item.format)}</Tag><Tag tone={item.account === "plania.il" ? "green" : "wine"}>{labelOf(ACCOUNTS, item.account)}</Tag></span>
-                        <span className="mt-1 block text-[11px] text-[#6A6158]">{item.planned_date ? formatDate(item.planned_date) : "בלי תאריך"}</span>
+                        <span className="mt-1 block text-[11px] text-[#6F675C]">{item.planned_date ? formatDate(item.planned_date) : "בלי תאריך"}</span>
                       </button>
-                      <select aria-label="שלב" value={item.stage} onChange={(e) => move(item, e.target.value as Stage)} className="mt-2 w-full border border-[#CFC4B5] bg-[#FFFDF9] px-1.5 py-1 text-xs">
+                      <select aria-label="שלב" value={item.stage} onChange={(e) => move(item, e.target.value as Stage)} className="mt-2 w-full rounded-lg border border-[#DDD4C6] bg-white/70 px-1.5 py-1 text-xs">
                         {STAGES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                       </select>
                     </li>
@@ -119,7 +119,7 @@ function ItemEditor({ item, onClose, onSaved, onDeleted }: { item: Item; onClose
 
   return (
     <div className="fixed inset-0 z-40 flex justify-start bg-[#2A2622]/30" onClick={onClose}>
-      <div className="h-full w-full max-w-lg overflow-y-auto border-l border-[#D9CFC2] bg-[#F4EEE4] p-5" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="עריכת פריט">
+      <div className="h-full w-full max-w-lg overflow-y-auto border-l border-[#E2DACD] bg-[#ECE7DE] p-5" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="עריכת פריט">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="s-serif text-xl">{item.id ? "עריכת פריט" : "פריט חדש"}</h2>
           <button type="button" aria-label="סגירה" onClick={onClose}><X className="size-5" /></button>
@@ -138,7 +138,7 @@ function ItemEditor({ item, onClose, onSaved, onDeleted }: { item: Item; onClose
             <Field label="כיתוב" hint="כשאת מתקנת כיתוב, אציע מה ללמוד ממנו לפרופיל הקול."><textarea rows={5} className={inputCls} value={form.caption} onChange={(e) => set("caption")(e.target.value)} /></Field>
             <Field label="הערות"><textarea rows={2} className={inputCls} value={form.notes} onChange={(e) => set("notes")(e.target.value)} /></Field>
             <Field label="קישור לפוסט אחרי שפרסמת"><input dir="ltr" className={inputCls} value={form.ig_permalink} onChange={(e) => set("ig_permalink")(e.target.value)} /></Field>
-            {item.draft_id && <Link href={`/studio/reel?id=${item.draft_id}`} className="block text-sm text-[#5E1D1D] underline">לתסריט ולשוטים בסטודיו</Link>}
+            {item.draft_id && <Link href={`/studio/reel?id=${item.draft_id}`} className="block text-sm text-[#1F1B16] underline">לתסריט ולשוטים בסטודיו</Link>}
             <div className="flex justify-between gap-2 pt-2">
               {item.id ? <Btn variant="ghost" onClick={remove}>מחיקה</Btn> : <span />}
               <Btn busy={busy} onClick={submit}>שמירה</Btn>

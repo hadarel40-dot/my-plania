@@ -94,7 +94,8 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
   .no-scrollbar::-webkit-scrollbar-thumb { background: #52525b; border-radius: 3px; }
 }
 
-/* סטודיו התוכן: גופן גוף וגופן סריף לכותרות, בלי לגעת בעיצוב של העורך */
+/* סטודיו התוכן: גופן גוף, סריף לכותרות, וגופן תצוגה למילה המודגשת. בלי לגעת בעיצוב של העורך */
 .studio { font-family: "Assistant", "Heebo", system-ui, sans-serif; }
-.studio .s-serif, .studio h1, .studio h2, .studio h3 { font-family: "Frank Ruhl Libre", "David Libre", Georgia, serif; font-weight: 700; }
-.studio ::selection { background: rgb(94 29 29 / 0.18); }
+.studio .s-serif, .studio h1, .studio h2, .studio h3 { font-family: "Frank Ruhl Libre", "David Libre", Georgia, serif; font-weight: 900; letter-spacing: -0.01em; }
+.studio .s-accent { font-family: "Bellefair", "Frank Ruhl Libre", Georgia, serif; font-weight: 400; letter-spacing: 0; }
+.studio ::selection { background: rgb(246 231 166 / 0.8); }

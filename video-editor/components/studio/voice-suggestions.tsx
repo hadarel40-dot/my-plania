@@ -39,13 +39,13 @@ export function VoiceSuggestions({ account, suggestions, onDone }: { account: Ac
   if (!left.length) return null;
   return (
     <Panel title="ללמוד מהתיקון שלך?" tone="green">
-      <p className="mb-3 text-sm text-[#6A6158]">מהשינויים שעשית עולה שאולי כדאי לעדכן את פרופיל הקול. רק מה שתאשרי נשמר.</p>
+      <p className="mb-3 text-sm text-[#6F675C]">מהשינויים שעשית עולה שאולי כדאי לעדכן את פרופיל הקול. רק מה שתאשרי נשמר.</p>
       <ul className="space-y-2">
         {left.map((s) => (
-          <li key={s.kind + s.value} className="flex flex-wrap items-center justify-between gap-2 border-b border-dashed border-[#D9CFC2] pb-2">
+          <li key={s.kind + s.value} className="flex flex-wrap items-center justify-between gap-2 border-b border-dashed border-[#E2DACD] pb-2">
             <span className="min-w-0">
               <Tag tone="green">{KIND[s.kind]}</Tag> <span className="font-semibold">{s.value}</span>
-              <span className="block text-xs text-[#6A6158]">{s.reason}</span>
+              <span className="block text-xs text-[#6F675C]">{s.reason}</span>
             </span>
             <span className="flex gap-1.5">
               <Btn variant="ghost" disabled={busy === s.value} onClick={() => decide(s, false)}>לא</Btn>

@@ -140,6 +140,42 @@ ${performance}
   return recommendations.slice(0, 3);
 }
 
+// ---------- רעיונות לשבוע
+
+const WeekSchema = z.object({
+  ideas: z.array(z.object({
+    title: z.string(),
+    idea: z.string(),
+    why: z.string(),
+    account: z.enum(["hadarelifergan", "plania.il"]),
+    niche: z.enum(["travel", "business", "home", "meals"]),
+    format: z.enum(["reel", "carousel", "story", "image"]),
+  })),
+});
+
+/** רעיונות לשבוע: מהטרנדים המאומתים, מהביצועים ומה שהיא מקדמת. נכנסים לתור כרעיונות, בלי תאריך */
+export async function planWeek(input: { focus: string; trends: TrendItem[]; existing: string[] }) {
+  const performance = await performanceSummary(12);
+  const { ideas } = cleanDeep(await askBrain({
+    schema: WeekSchema,
+    system: "את מנהלת הסושיאל שלה ומתכננת איתה את השבוע. עברית ישירה וחמה, בלי אימוג'י, בלי מקפים ארוכים, בלי קלישאות. אסור להמציא מספרים.",
+    parts: [{ text: `שני חשבונות: @hadarelifergan (אישי: תכנון טיולים ומערכות לעסקים קטנים) ו-@plania.il (Plania: ארגון הבית ותכנון ארוחות).
+מה היא מקדמת השבוע: ${input.focus.trim() || "לא כתבה. לפי מה שעובד ומה שעולה עכשיו."}
+
+טרנדים מאומתים: ${JSON.stringify(input.trends.slice(0, 12).map((t) => ({ niche: t.niche, kind: t.kind, title: t.title, idea: t.reel_idea })))}
+ביצועים אחרונים (שמירות ושיתופים לפני לייקים):
+${performance}
+רעיונות שכבר יש לה (לא לחזור עליהם): ${JSON.stringify(input.existing.slice(0, 40))}
+
+תני 5 רעיונות לשבוע, מגוונים בין שני החשבונות ובין הפורמטים, ורובם רילס. לכל רעיון:
+- title: כותרת פנימית קצרה, עד 8 מילים.
+- idea: הרעיון במשפט או שניים: מה קורה בסרטון ומה הצופה מקבלת.
+- why: למה זה יעבוד, לפי הנתונים למעלה בלבד.
+- account, niche, format.` }],
+  }));
+  return ideas.slice(0, 5);
+}
+
 // ---------- סקירה שבועית
 
 export async function weeklyStats(weekAgo: string, snapshots: { date: string; account: string; followers: number }[], board: Record<string, number>) {

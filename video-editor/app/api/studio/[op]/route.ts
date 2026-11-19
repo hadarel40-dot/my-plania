@@ -6,7 +6,7 @@ import type { Draft } from "@/lib/studio/config";
 import { driveAccessToken, driveConfigured, driveEmail } from "@/lib/studio/drive";
 import { writeHooks, writeScript } from "@/lib/studio/engine";
 import { projectFromDraft } from "@/lib/studio/handoff";
-import { buildVoice, planToday, researchTrends, suggestFromEdit, weeklyStats, writeReview } from "@/lib/studio/insights";
+import { buildVoice, planToday, planWeek, researchTrends, suggestFromEdit, weeklyStats, writeReview } from "@/lib/studio/insights";
 import { instagramConfigured, loadAccounts } from "@/lib/studio/instagram";
 import { StudioError, getVoice, requireStudioAdmin, todayIL, voiceBlock } from "@/lib/studio/server";
 
@@ -60,6 +60,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
         if (error) throw new StudioError(error.message, 500);
         await supabase.from("studio_drafts").update({ project_id: data.id }).eq("id", draft.id);
         return NextResponse.json({ projectId: data.id });
+      }
+      case "plan-week": {
+        const { focus } = z.object({ focus: z.string().max(800).default("") }).parse(body);
+        const { data: trend } = await supabase.from("studio_trends").select("items").eq("status", "done").order("date", { ascending: false }).limit(1).maybeSingle();
+        const { data: existing } = await supabase.from("studio_items").select("title").order("created_at", { ascending: false }).limit(40);
+        const ideas = await planWeek({ focus, trends: trend?.items ?? [], existing: (existing ?? []).map((e) => e.title) });
+        const { data: inserted, error } = await supabase.from("studio_items").insert(ideas.map((i) => ({
+          title: i.title, account: i.account, niche: i.niche, format: i.format, stage: "idea", notes: `${i.idea}\n\nלמה: ${i.why}`,
+        }))).select("*");
+        if (error) throw new StudioError(error.message, 500);
+        return NextResponse.json({ items: inserted });
       }
       case "trends": {
         const date = todayIL();
