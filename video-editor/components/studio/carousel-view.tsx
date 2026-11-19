@@ -17,12 +17,21 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
   const [busy, setBusy] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const shown = edit ?? c;
+  // תמונות מהדרייב לשקופיות, לפי ההתאמה של "חומרים מהדרייב"
+  const m = draft.data.materials;
+  const photos: Record<number, string> = {};
+  for (const x of m?.matches ?? []) {
+    const n = Number(x.target.match(/שקופית\s*(\d+)/)?.[1]);
+    const f = m?.files.find((ff) => ff.id === x.file_id);
+    if (n && f?.mimeType.startsWith("image/")) photos[n - 1] = `/api/studio/drive-thumb?id=${f.id}&size=1200`;
+  }
+  const photoKey = JSON.stringify(photos);
 
   useEffect(() => {
     let live = true;
-    if (shown) renderAll(shown).then((imgs) => live && setImages(imgs)).catch(() => live && setImages([]));
+    if (shown) renderAll(shown, JSON.parse(photoKey)).then((imgs) => live && setImages(imgs)).catch(() => live && setImages([]));
     return () => { live = false; };
-  }, [shown]);
+  }, [shown, photoKey]);
 
   const regen = async () => {
     setBusy("regen");
@@ -71,7 +80,7 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
               <>
                 <Btn variant="ghost" busy={busy === "regen"} onClick={regen}>לכתוב מחדש</Btn>
                 <Btn variant="line" onClick={() => setEdit(structuredClone(c))}>לתקן בקול שלי</Btn>
-                <Btn busy={busy === "zip"} onClick={async () => { setBusy("zip"); try { await downloadZip(c, draft.idea); } finally { setBusy(""); } }}>להוריד את התמונות</Btn>
+                <Btn busy={busy === "zip"} onClick={async () => { setBusy("zip"); try { await downloadZip(c, draft.idea, photos); } finally { setBusy(""); } }}>להוריד את התמונות</Btn>
               </>
             )}
           </div>

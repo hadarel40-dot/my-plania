@@ -38,10 +38,11 @@ async function urlLoads(url: string) {
 /** חיפוש ברשת לכל נישה, במקביל. מחזיר רק טרנדים עם מקור שנבדק */
 export async function researchTrends(): Promise<{ items: TrendItem[]; dropped: number }> {
   const today = new Date().toISOString().slice(0, 10);
+  const errors: Error[] = [];
   const batches = await Promise.all(NICHES.map(async (niche) => {
     const account = ACCOUNTS.find((a) => a.value === niche.account)!;
     try {
-      const { items } = cleanDeep(await askBrain({
+      const { items } = cleanDeep(await askBrain({ prefer: "claude",
         schema: TrendSchema,
         search: true,
         searchRequired: true,
@@ -63,9 +64,12 @@ export async function researchTrends(): Promise<{ items: TrendItem[]; dropped: n
       return items.slice(0, 5).map((it) => ({ ...it, niche: niche.value, account: niche.account }));
     } catch (e) {
       console.warn("trend search failed", niche.value, (e as Error).message);
+      errors.push(e as Error);
       return [];
     }
   }));
+  // כל החיפושים נכשלו: אומרים למה, במקום "נמצאו 0 טרנדים"
+  if (errors.length === NICHES.length) throw errors[0];
   const candidates = batches.flat();
   const checked = await Promise.all(candidates.map(async (it) => ((await urlLoads(it.source_url)) ? it : null)));
   const items: TrendItem[] = checked.filter((x) => x !== null);
@@ -112,7 +116,7 @@ export type Recommendation = z.infer<typeof TodaySchema>["recommendations"][numb
 
 export async function planToday(input: { trends: TrendItem[]; trendDate: string | null; board: Record<string, number>; planned: unknown[]; waiting: unknown[] }) {
   const performance = await performanceSummary();
-  const { recommendations } = cleanDeep(await askBrain({
+  const { recommendations } = cleanDeep(await askBrain({ prefer: "claude",
     schema: TodaySchema,
     system: "את מנהלת הסושיאל שלה. היא נכנסת לדשבורד ורוצה לדעת מה לצלם היום, איך ולמה זה יעבוד. עברית ישירה וחמה, בלי אימוג'י, בלי מקפים ארוכים, בלי קלישאות.",
     parts: [{ text: `שני חשבונות: @hadarelifergan (אישי: תכנון טיולים ומערכות לעסקים קטנים) ו-@plania.il (Plania: ארגון הבית ותכנון ארוחות).
@@ -156,7 +160,7 @@ const WeekSchema = z.object({
 /** רעיונות לשבוע: מהטרנדים המאומתים, מהביצועים ומה שהיא מקדמת. נכנסים לתור כרעיונות, בלי תאריך */
 export async function planWeek(input: { focus: string; trends: TrendItem[]; existing: string[] }) {
   const performance = await performanceSummary(12);
-  const { ideas } = cleanDeep(await askBrain({
+  const { ideas } = cleanDeep(await askBrain({ prefer: "claude",
     schema: WeekSchema,
     system: "את מנהלת הסושיאל שלה ומתכננת איתה את השבוע. עברית ישירה וחמה, בלי אימוג'י, בלי מקפים ארוכים, בלי קלישאות. אסור להמציא מספרים.",
     parts: [{ text: `שני חשבונות: @hadarelifergan (אישי: תכנון טיולים ומערכות לעסקים קטנים) ו-@plania.il (Plania: ארגון הבית ותכנון ארוחות).
@@ -204,7 +208,7 @@ export async function weeklyStats(weekAgo: string, snapshots: { date: string; ac
 }
 
 export async function writeReview(stats: Record<string, unknown>) {
-  const { body } = cleanDeep(await askBrain({
+  const { body } = cleanDeep(await askBrain({ prefer: "claude",
     schema: z.object({ body: z.string() }),
     system: "את מנהלת סושיאל שמבינה שיווק וכותבת לה סקירה שבועית. עברית ישירה, חמה, פרקטית. בלי אימוג'י ובלי מקפים ארוכים.",
     parts: [{ text: `הנתונים. אלה המספרים היחידים שמותר להשתמש בהם: אל תחשבי מספרים חדשים ואל תמציאי.
@@ -239,7 +243,7 @@ export async function buildVoice(account: Account, current: VoiceProfile | null,
   else note = `החשבון ${account} לא מחובר כאן, אז הפרופיל נבנה רק מהטקסטים שהדבקת.`;
   if (!captions.length && !pasted.trim()) throw new Error(`${note} הדביקי כמה כיתובים שכתבת כדי שיהיה ממה ללמוד.`);
   const samples = [...captions, pasted.trim()].filter(Boolean);
-  const profile = cleanDeep(await askBrain({
+  const profile = cleanDeep(await askBrain({ prefer: "claude",
     schema: VoiceSchema,
     system: "את עורכת תוכן שמנתחת את הקול של יוצרת תוכן ישראלית, כדי שכל טיוטה עתידית תישמע בדיוק כמוה. בלי אימוג'י ובלי מקפים ארוכים בתשובה.",
     parts: [{ text: `${ACCOUNTS.find((a) => a.value === account)!.about}
@@ -268,7 +272,7 @@ export type VoiceSuggestion = z.infer<typeof SuggestSchema>["suggestions"][numbe
 
 /** מה התיקון הידני שלה מלמד על הקול. רק הצעות: שום דבר לא נשמר בפרופיל בלי אישור */
 export async function suggestFromEdit(voice: string, before: string, after: string) {
-  const { suggestions } = cleanDeep(await askBrain({
+  const { suggestions } = cleanDeep(await askBrain({ prefer: "claude",
     schema: SuggestSchema,
     system: "את עוזרת ללמוד את הקול של יוצרת מתוך התיקונים שהיא עושה לטיוטות.",
     parts: [{ text: `פרופיל הקול הנוכחי:
@@ -287,4 +291,45 @@ ${after}
 לא להציע מה שכבר בפרופיל. reason במשפט אחד בעברית, עם הדוגמה מהתיקון. אין מה ללמוד: רשימה ריקה.` }],
   }));
   return suggestions.slice(0, 4);
+}
+
+// ---------- היועצת השיווקית
+
+const AdvisorSchema = z.object({
+  reply: z.string(),
+  ideas: z.array(z.object({
+    title: z.string(),
+    idea: z.string(),
+    why: z.string(),
+    account: z.enum(["hadarelifergan", "plania.il"]),
+    niche: z.enum(["travel", "business", "home", "meals"]),
+    format: z.enum(["reel", "carousel", "story", "image"]),
+  })),
+});
+export type AdvisorIdea = z.infer<typeof AdvisorSchema>["ideas"][number];
+
+/** שיחה עם יועצת שיווק שמכירה את הקול, הלוח, הטרנדים והמספרים האמיתיים. רק עונה ומציעה; לא משנה כלום בעצמה */
+export async function advise(input: { messages: { role: "user" | "assistant"; text: string }[]; voices: string; board: string; trends: TrendItem[] }) {
+  const performance = await performanceSummary(12).catch(() => "לא הצלחתי לקרוא ביצועים.");
+  const history = input.messages.slice(-12).map((m) => `${m.role === "user" ? "היא" : "את"}: ${m.text}`).join("\n\n");
+  return cleanDeep(await askBrain({
+    prefer: "claude",
+    schema: AdvisorSchema,
+    system: `את יועצת השיווק והסושיאל האישית שלה. מבינה שיווק לעומק: רילס, קרוסלות, הוקים, משפך מכירה, בניית קהל, מה גורם לשמירות ושיתופים. עונה כמו מנהלת סושיאל בכירה שמכירה אותה: ישירה, חמה, פרקטית, עם המלצה ברורה ולא סקירה של כל האפשרויות.
+עברית מדוברת, בלי אימוג'י, בלי מקפים ארוכים, בלי קלישאות. תשובה קצרה וממוקדת (עד 180 מילים), אפשר עם רשימה קצרה.
+מספרים רק מהנתונים למטה. אם חסר נתון, אומרים מה חסר.
+ideas: רק כשהיא מבקשת רעיונות או כשרעיון קונקרטי עוזר לתשובה, עד 4. אחרת רשימה ריקה.`,
+    parts: [{ text: `הקול שלה בשני החשבונות:
+${input.voices}
+
+הלוח שלה: ${input.board}
+
+טרנדים מאומתים אחרונים: ${JSON.stringify(input.trends.slice(0, 10).map((t) => ({ niche: t.niche, kind: t.kind, title: t.title, source: t.source_name })))}
+
+ביצועים (שמירות ושיתופים לפני לייקים):
+${performance}
+
+השיחה עד עכשיו:
+${history}` }],
+  }));
 }

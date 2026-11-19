@@ -5,6 +5,7 @@ import { ACCOUNTS, DEFAULT_VOICE, labelOf, type Account, type VoiceProfile } fro
 import { db, formatDate, studioCall } from "@/lib/studio/client";
 import { Btn, Field, Loading, Note, PageHead, Panel, inputCls, toast } from "@/components/studio/ui";
 import { VoiceSuggestions, type Suggestion } from "@/components/studio/voice-suggestions";
+import { Connections } from "@/components/studio/connections";
 
 interface Row { account: Account; profile: Partial<VoiceProfile>; pending: Suggestion[]; built_at: string | null }
 
@@ -20,6 +21,7 @@ export default function VoicePage() {
         {ACCOUNTS.map((a) => <Btn key={a.value} variant={account === a.value ? "solid" : "line"} onClick={() => setAccount(a.value)}>{a.label}</Btn>)}
       </PageHead>
       {!rows ? <Loading /> : <Editor key={account + (row?.built_at ?? "")} account={account} row={row} onSaved={load} />}
+      <div className="mt-6"><Connections /></div>
     </>
   );
 }

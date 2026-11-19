@@ -51,6 +51,8 @@ export interface BrainRequest<T extends z.ZodType> {
   search?: boolean;
   /** בלי חיפוש אין תשובה: לא עונים מהזיכרון של המודל (כשכל פריט חייב מקור) */
   searchRequired?: boolean;
+  /** "claude": כשיש ANTHROPIC_API_KEY, Claude קודם (איכות כתיבה), ו-Gemini רק כגיבוי */
+  prefer?: BrainProvider;
   /** כמה זמן (מ"ש) מותר לכל קריאה ל-Gemini. השרת מוגבל לדקה לבקשה */
   budgetMs?: number;
   /** כמה זמן מותר לכל גרסה של Gemini לפני שעוברים לבאה (ברירת מחדל 25 שניות; צפייה בווידאו צריכה יותר) */
@@ -63,6 +65,15 @@ export class BrainError extends Error {
 }
 
 export async function askBrain<T extends z.ZodType>(req: BrainRequest<T>): Promise<z.infer<T>> {
+  if (req.prefer === "claude" && process.env.ANTHROPIC_API_KEY) {
+    try {
+      return await askClaude(req);
+    } catch (e) {
+      // Claude לא זמין או נכשל: Gemini כגיבוי, אם יש מפתח
+      if (!geminiKeys().length || !(e instanceof BrainError) || e.status === 400) throw e;
+      console.warn("claude failed, falling back to gemini", e.message);
+    }
+  }
   const provider = brainProvider();
   if (!provider) throw new BrainError("העריכה החכמה לא מחוברת (חסר GEMINI_API_KEY)", 404);
   return provider === "gemini" ? askGemini(req) : askClaude(req);
@@ -91,7 +102,7 @@ const GEMINI_MODELS: { model: string; fast: boolean }[] = [
 /** מוסיף לבקשה הגדרת חשיבה מינימלית (בגרסאות 3 ומעלה: רמת חשיבה נמוכה; בישנות: תקציב 0) */
 function withFastThinking(body: unknown, model: string) {
   const b = body as { generationConfig?: Record<string, unknown> };
-  const thinkingConfig = /gemini-2\./.test(model) ? { thinkingBudget: 0 } : { thinkingLevel: "minimal" };
+  const thinkingConfig = /gemini-2\./.test(model) ? { thinkingBudget: 0 } : { thinkingLevel: "low" };
   return { ...b, generationConfig: { ...(b.generationConfig ?? {}), thinkingConfig } };
 }
 

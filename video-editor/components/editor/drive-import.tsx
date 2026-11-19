@@ -19,6 +19,20 @@ async function getToken(): Promise<string | null> {
  * ייבוא מדרייב (למנהלת, כשמוגדר חשבון שירות): הקובץ יורד מדרייב ישר לדפדפן, ונכנס לתור ההעלאה
  * הרגיל של העורך, כמו קובץ מהמכשיר: אותו כיווץ, אותה תצוגה, והמקור באיכות מלאה לייצוא.
  */
+async function importIds(ids: string[], token: string) {
+  for (const id of ids.slice(0, 20)) {
+    try {
+      const meta = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?fields=name,mimeType&supportsAllDrives=true`, { headers: { authorization: `Bearer ${token}` } }).then((r) => r.json());
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media&supportsAllDrives=true`, { headers: { authorization: `Bearer ${token}` } });
+      if (!res.ok) continue;
+      const blob = await res.blob();
+      useUploads.getState().enqueue([new File([blob], meta.name ?? `${id}.mov`, { type: meta.mimeType || blob.type })]);
+    } catch {
+      /* קובץ אחד שנכשל לא עוצר את השאר */
+    }
+  }
+}
+
 export function DriveImport() {
   const [available, setAvailable] = useState(false);
   const [open, setOpen] = useState(false);
@@ -28,7 +42,17 @@ export function DriveImport() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    getToken().then((t) => setAvailable(!!t)).catch(() => setAvailable(false));
+    getToken().then((t) => {
+      setAvailable(!!t);
+      // פתיחה מהסטודיו עם חומרים: ?drive=id1,id2 נכנסים לתור ההעלאה, פעם אחת
+      const ids = new URLSearchParams(window.location.search).get("drive")?.split(",").filter((x) => /^[\w-]{10,}$/.test(x)) ?? [];
+      if (t && ids.length) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("drive");
+        window.history.replaceState(null, "", url.toString());
+        importIds(ids, t);
+      }
+    }).catch(() => setAvailable(false));
     try { setLink(localStorage.getItem("drive-folder") ?? ""); } catch { /* מצב פרטי */ }
   }, []);
   if (!available) return null;

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Anchor, BarChart3, Brain, CalendarDays, Clapperboard, GalleryHorizontal, Home, Lightbulb, Newspaper, Scissors, ScrollText, TrendingUp, type LucideIcon } from "lucide-react";
+import { Anchor, BarChart3, Brain, CalendarDays, Clapperboard, GalleryHorizontal, Home, Library, MessageCircle, Lightbulb, Newspaper, Scissors, ScrollText, TrendingUp, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type NavCounts = Partial<Record<"ideas" | "hooks" | "trends" | "board" | "film" | "scripts" | "carousels", number>>;
@@ -46,6 +46,8 @@ export function StudioNav({ counts }: { counts: NavCounts }) {
   return (
     <nav aria-label="ניווט בסטודיו" className="flex items-end gap-3 overflow-x-auto rounded-2xl border border-[#E2DACD] bg-[#FBF8F2] px-3 py-2 shadow-[0_1px_2px_rgba(31,27,22,0.06)]">
       <TileLink tile={{ href: "/studio", label: "בית", icon: Home, tint: "#ECE7DE" }} active={homeActive} />
+      <TileLink tile={{ href: "/studio/advisor", label: "יועצת", icon: MessageCircle, tint: "#F6E7A6" }} active={path.startsWith("/studio/advisor")} />
+      <TileLink tile={{ href: "/studio/library", label: "ספרייה", icon: Library, tint: "#E2ECDF" }} active={path.startsWith("/studio/library")} />
       {GROUPS.map((g) => (
         <div key={g.label} className="flex shrink-0 flex-col items-center border-r border-[#E2DACD] pr-3">
           <span className="mb-0.5 text-[10px] font-bold tracking-[0.18em] text-[#6F675C]">{g.label}</span>

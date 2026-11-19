@@ -84,8 +84,11 @@ export interface Shot { n: number; frame: string; angle: string; seconds: number
 export interface Check { id: string; label: string; pass: boolean; info?: boolean; detail: string }
 export interface Slide { kind: "cover" | "stake" | "point" | "recap" | "cta"; headline: string; body: string }
 export interface Carousel { slides: Slide[]; caption: string; alt: string; handle: string }
+export interface MaterialFile { id: string; name: string; mimeType: string; duration?: number }
+export interface Materials { files: MaterialFile[]; matches: { target: string; file_id: string; reason: string }[]; missing: string[]; checked_at: string }
 export interface DraftData {
   carousel?: Carousel;
+  materials?: Materials;
   hooks?: Hook[];
   chosen?: number;
   one_idea?: string;

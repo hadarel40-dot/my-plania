@@ -1,8 +1,9 @@
 import "server-only";
 import { z } from "zod";
-import { askBrain } from "@/lib/ai/brain";
+import { askBrain, type BrainPart } from "@/lib/ai/brain";
+import type { DriveFile } from "./drive";
 import { cleanDeep } from "./clean";
-import { ACCOUNTS, NICHES, type Beat, type Carousel, type Check, type Draft, type DraftData, type Hook, type ScreenCard } from "./config";
+import { ACCOUNTS, NICHES, type Beat, type Carousel, type Materials, type Check, type Draft, type DraftData, type Hook, type ScreenCard } from "./config";
 import { scoreHook, words } from "./hookscore";
 
 /**
@@ -87,7 +88,7 @@ ${voice}
 }
 
 export async function writeHooks(draft: Draft, voice: string): Promise<DraftData> {
-  const raw = cleanDeep(await askBrain({
+  const raw = cleanDeep(await askBrain({ prefer: "claude",
     schema: HooksSchema,
     system: "את מנהלת סושיאל שמבינה שיווק, וכותבת הוקים לריל אינסטגרם בעברית מדוברת.",
     parts: [{ text: `${context(draft, voice)}
@@ -191,13 +192,13 @@ caption_first_line: שורת הפתיחה של הכיתוב, עד 12 מילים.
   const system = "את מנהלת סושיאל שמובילה יוצרת מרעיון עד סרטון מוכן. כותבת בעברית מדוברת, כמו שהיא מדברת.";
 
   const started = Date.now();
-  let result = finish(cleanDeep(await askBrain({ schema: ScriptSchema, system, parts: [{ text: prompt("") }] })), hook, draft.mode);
+  let result = finish(cleanDeep(await askBrain({ prefer: "claude", schema: ScriptSchema, system, parts: [{ text: prompt("") }] })), hook, draft.mode);
   const failed = result.checks.filter((c) => !c.pass && !c.info);
   // לשרת יש דקה לבקשה: מתקנים רק אם נשאר זמן, ואחרת הבדיקות שנכשלו מוצגות לה כמו שהן
   if (failed.length && Date.now() - started < 22_000) {
     // ניסיון אחד לתקן, עם רשימת הבדיקות שנכשלו
     const note = failed.map((c) => `${c.label}: ${c.detail}`).join("; ");
-    result = finish(cleanDeep(await askBrain({ schema: ScriptSchema, system, parts: [{ text: prompt(`\nבגרסה הקודמת נכשלו הבדיקות האלה, תקני אותן: ${note}`) }] })), hook, draft.mode);
+    result = finish(cleanDeep(await askBrain({ prefer: "claude", schema: ScriptSchema, system, parts: [{ text: prompt(`\nבגרסה הקודמת נכשלו הבדיקות האלה, תקני אותן: ${note}`) }] })), hook, draft.mode);
   }
   const keep = (draft.data.checks ?? []).filter((c) => c.id === "one_idea" || c.id === "missing");
   return { ...draft.data, chosen: hookIndex, ...result, checks: [...keep, ...result.checks] };
@@ -247,14 +248,58 @@ alt: תיאור קצר של השער, לקוראי מסך.
 רעיון אחד לקרוסלה. מספרים רק מהעובדות, ואחרים נכתבים {{המספר שלך}}. בלי אימוג'י ובלי מקפים ארוכים.${retry}`;
   const system = "את מנהלת סושיאל שכותבת קרוסלות שמחזיקות עד השקופית האחרונה. עברית מדוברת, בקול שלה.";
   const started = Date.now();
-  let raw = cleanDeep(await askBrain({ schema: CarouselSchema, system, parts: [{ text: prompt("") }] }));
+  let raw = cleanDeep(await askBrain({ prefer: "claude", schema: CarouselSchema, system, parts: [{ text: prompt("") }] }));
   let carousel: Carousel = { ...raw, handle };
   let checks = carouselChecks(carousel);
   const failed = checks.filter((c) => !c.pass && !c.info);
   if (failed.length && Date.now() - started < 25_000) {
-    raw = cleanDeep(await askBrain({ schema: CarouselSchema, system, parts: [{ text: prompt(`\nבגרסה הקודמת נכשלו הבדיקות האלה, תקני אותן: ${failed.map((c) => `${c.label}: ${c.detail}`).join("; ")}`) }] }));
+    raw = cleanDeep(await askBrain({ prefer: "claude", schema: CarouselSchema, system, parts: [{ text: prompt(`\nבגרסה הקודמת נכשלו הבדיקות האלה, תקני אותן: ${failed.map((c) => `${c.label}: ${c.detail}`).join("; ")}`) }] }));
     carousel = { ...raw, handle };
     checks = carouselChecks(carousel);
   }
   return { ...draft.data, carousel, checks };
+}
+
+// ---------- חומרים מהדרייב
+
+const MatchSchema = z.object({
+  matches: z.array(z.object({ target: z.string(), file_index: z.number(), reason: z.string() })),
+  missing: z.array(z.string()),
+});
+
+/** מתאים לכל שוט (או שקופית) קובץ מהדרייב, לפי שם, תאריך, תיקייה ותמונה ממוזערת. מה שאין, נכתב כ"חסר לצלם" */
+export async function matchMaterials(draft: Draft, files: DriveFile[], thumbs: (string | null)[]): Promise<Materials> {
+  const d = draft.data;
+  const targets = draft.mode === "carousel"
+    ? (d.carousel?.slides ?? []).map((sl, i) => `שקופית ${i + 1} (${sl.kind}): ${sl.headline}`)
+    : (d.shots ?? []).map((sh) => `שוט ${sh.n}: ${sh.frame} | בלי פנים: ${sh.faceless}`);
+  if (!targets.length) throw new Error("קודם צריך תסריט עם שוטים, או קרוסלה");
+  const list = files.map((f, i) => {
+    const dur = f.videoMediaMetadata?.durationMillis ? `${Math.round(Number(f.videoMediaMetadata.durationMillis) / 1000)} ש׳` : "";
+    return `#${i} ${f.mimeType.startsWith("video/") ? "וידאו" : "תמונה"} | ${f.name}${f.description ? ` | ${f.description}` : ""}${dur ? ` | ${dur}` : ""} | ${(f.createdTime ?? "").slice(0, 10)}`;
+  }).join("\n");
+  const parts: BrainPart[] = [{ text: `הסרטון או הקרוסלה: ${draft.idea}
+
+מה צריך:
+${targets.join("\n")}
+
+הקבצים בדרייב שלה (מספר, סוג, שם, תיקייה, אורך, תאריך):
+${list}
+
+אחרי הטקסט יש תמונות ממוזערות של חלק מהקבצים, כל אחת עם המספר שלה.
+לכל שוט או שקופית, בחרי את הקובץ שהכי מתאים לפי מה שרואים בתמונה ולפי השם. target כתוב בדיוק כמו ברשימה למעלה (למשל "שוט 2" או "שקופית 1"). file_index הוא המספר של הקובץ. reason במשפט קצר: למה הוא מתאים.
+בשקופיות: רק לשער ולשקופיות שתמונה תחזק. לא חובה לכל שקופית.
+אם אין קובץ שבאמת מתאים, לא בוחרים, וכותבים ב-missing מה חסר לצלם, ספציפי. לא ממציאים התאמה.` }];
+  thumbs.forEach((t, i) => { if (t) parts.push({ text: `#${i}` }, { image: t }); });
+  const raw = cleanDeep(await askBrain({ prefer: "claude", schema: MatchSchema, system: "את עורכת וידאו שמכירה את הארכיון של היוצרת ומוצאת לכל שוט את הצילום שמתאים לו.", parts }));
+  const matches = raw.matches
+    .filter((m) => files[m.file_index])
+    .map((m) => ({ target: m.target, file_id: files[m.file_index].id, reason: m.reason }));
+  const used = new Set(matches.map((m) => m.file_id));
+  return {
+    files: files.filter((f) => used.has(f.id)).map((f) => ({ id: f.id, name: f.name, mimeType: f.mimeType, duration: f.videoMediaMetadata?.durationMillis ? Math.round(Number(f.videoMediaMetadata.durationMillis) / 100) / 10 : undefined })),
+    matches,
+    missing: raw.missing,
+    checked_at: new Date().toISOString(),
+  };
 }

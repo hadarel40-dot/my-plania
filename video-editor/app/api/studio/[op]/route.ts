@@ -3,11 +3,11 @@ import { z } from "zod";
 import { BrainError } from "@/lib/ai/brain";
 import { computeMeta } from "@/lib/editor/project-meta";
 import type { Draft } from "@/lib/studio/config";
-import { driveAccessToken, driveConfigured, driveEmail } from "@/lib/studio/drive";
+import { driveAccessToken, driveConfigured, driveEmail, driveThumb, listDriveMedia } from "@/lib/studio/drive";
 import { adminStore, autoDraft, autoIdeas } from "@/lib/studio/auto";
-import { writeCarousel, writeHooks, writeScript } from "@/lib/studio/engine";
+import { matchMaterials, writeCarousel, writeHooks, writeScript } from "@/lib/studio/engine";
 import { projectFromDraft } from "@/lib/studio/handoff";
-import { buildVoice, planToday, planWeek, researchTrends, suggestFromEdit, weeklyStats, writeReview } from "@/lib/studio/insights";
+import { advise, buildVoice, planToday, planWeek, researchTrends, suggestFromEdit, weeklyStats, writeReview } from "@/lib/studio/insights";
 import { instagramConfigured, loadAccounts } from "@/lib/studio/instagram";
 import { StudioError, getVoice, requireStudioAdmin, todayIL, voiceBlock } from "@/lib/studio/server";
 
@@ -53,6 +53,42 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
         const draft = await loadDraft(draftId);
         const voice = voiceBlock(await getVoice(supabase, draft.account), draft.account);
         return NextResponse.json({ draft: await saveDraft(draft.id, await writeCarousel(draft, voice)) });
+      }
+      case "drive-match": {
+        const { draftId, folder } = z.object({ draftId: uuid, folder: z.string().max(300).optional() }).parse(body);
+        if (!driveConfigured()) throw new StudioError("דרייב עוד לא מחובר. ההוראות בעמוד הקול שלי, בחלק של דרייב.", 400);
+        const draft = await loadDraft(draftId);
+        const files = await listDriveMedia(folder, 80);
+        if (!files.length) throw new StudioError("לא מצאתי סרטונים או תמונות בתיקייה. בדקי שהיא משותפת עם חשבון השירות.", 404);
+        const thumbs = await Promise.all(files.map((f, i) => (i < 24 ? driveThumb(f) : Promise.resolve(null))));
+        const materials = await matchMaterials(draft, files, thumbs);
+        return NextResponse.json({ draft: await saveDraft(draft.id, { ...draft.data, materials }) });
+      }
+      case "drive-files": {
+        const { folder } = z.object({ folder: z.string().max(300).optional() }).parse(body);
+        if (!driveConfigured()) return NextResponse.json({ configured: false, files: [] });
+        return NextResponse.json({ configured: true, email: driveEmail(), files: await listDriveMedia(folder, 150) });
+      }
+      case "advisor": {
+        const { messages } = z.object({ messages: z.array(z.object({ role: z.enum(["user", "assistant"]), text: z.string().max(4000) })).min(1).max(30) }).parse(body);
+        const [{ data: items }, { data: trend }] = await Promise.all([
+          supabase.from("studio_items").select("title, stage, planned_date, format, account").neq("stage", "published").order("planned_date", { nullsFirst: false }).limit(60),
+          supabase.from("studio_trends").select("items").eq("status", "done").order("date", { ascending: false }).limit(1).maybeSingle(),
+        ]);
+        const voices = (await Promise.all((["hadarelifergan", "plania.il"] as const).map(async (a) => voiceBlock(await getVoice(supabase, a), a)))).join("\n\n");
+        const result = await advise({ messages, voices, board: JSON.stringify(items ?? []), trends: trend?.items ?? [] });
+        return NextResponse.json(result);
+      }
+      case "status": {
+        return NextResponse.json({
+          ai: process.env.ANTHROPIC_API_KEY ? "claude" : process.env.GEMINI_API_KEY ? "gemini" : null,
+          gemini: !!process.env.GEMINI_API_KEY,
+          instagram: instagramConfigured(),
+          drive: driveConfigured(),
+          driveEmail: driveEmail(),
+          driveFolder: !!process.env.GOOGLE_DRIVE_FOLDER,
+          cron: !!process.env.CRON_SECRET,
+        });
       }
       case "auto": {
         // הכפתור "להכין עכשיו": רעיונות אם חסרים, אחרת טיוטה אחת שמשובצת ביום פנוי

@@ -52,3 +52,49 @@ export async function driveAccessToken(): Promise<string> {
   cached = { token: body.access_token, until: Date.now() + (Number(body.expires_in) || 3600) * 1000 };
   return cached.token;
 }
+
+export interface DriveFile {
+  id: string; name: string; mimeType: string; size?: string; description?: string; createdTime?: string; modifiedTime?: string;
+  thumbnailLink?: string; videoMediaMetadata?: { durationMillis?: string; width?: number; height?: number }; imageMediaMetadata?: { width?: number; height?: number };
+}
+
+/** תיקיית ברירת המחדל: GOOGLE_DRIVE_FOLDER (קישור או מזהה). אפשר להעביר תיקייה אחרת בבקשה */
+export function folderIdFrom(link?: string | null) {
+  const raw = (link || process.env.GOOGLE_DRIVE_FOLDER || "").trim();
+  return raw.match(/folders\/([\w-]+)/)?.[1] ?? raw.match(/[?&]id=([\w-]+)/)?.[1] ?? (raw || null);
+}
+
+/** סרטונים ותמונות בתיקייה (ובתיקיות שבתוכה, רמה אחת), החדשים קודם */
+export async function listDriveMedia(folder?: string | null, limit = 150): Promise<DriveFile[]> {
+  const token = await driveAccessToken();
+  const fields = "files(id,name,mimeType,size,description,createdTime,modifiedTime,thumbnailLink,videoMediaMetadata,imageMediaMetadata)";
+  const list = async (q: string, pageSize = 200) => {
+    const params = new URLSearchParams({ q, pageSize: String(pageSize), orderBy: "modifiedTime desc", fields, supportsAllDrives: "true", includeItemsFromAllDrives: "true" });
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files?${params}`, { headers: { authorization: `Bearer ${token}` }, cache: "no-store" });
+    const body = await res.json();
+    if (!res.ok) throw new Error(`דרייב: ${body?.error?.message ?? res.status}`);
+    return (body.files ?? []) as DriveFile[];
+  };
+  const media = "(mimeType contains 'video/' or mimeType contains 'image/') and trashed = false";
+  const id = folderIdFrom(folder);
+  if (!id) return (await list(media)).slice(0, limit);
+  const direct = await list(`'${id.replace(/'/g, "")}' in parents and ${media}`);
+  const subfolders = await list(`'${id.replace(/'/g, "")}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`, 50);
+  const nested = (await Promise.all(subfolders.slice(0, 20).map((f) => list(`'${f.id}' in parents and ${media}`, 100).then((files) => files.map((x) => ({ ...x, description: [f.name, x.description].filter(Boolean).join(" · ") }))))).catch(() => [])).flat();
+  return [...direct, ...nested].sort((a, b) => (b.modifiedTime ?? "").localeCompare(a.modifiedTime ?? "")).slice(0, limit);
+}
+
+/** תמונה ממוזערת של קובץ, כ-data URL קטן (כדי שהמודל יראה מה יש בו) */
+export async function driveThumb(file: DriveFile): Promise<string | null> {
+  if (!file.thumbnailLink) return null;
+  try {
+    const token = await driveAccessToken();
+    const res = await fetch(file.thumbnailLink.replace(/=s\d+$/, "=s320"), { headers: { authorization: `Bearer ${token}` }, cache: "no-store" });
+    if (!res.ok || !/jpe?g/i.test(res.headers.get("content-type") ?? "")) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length > 400_000) return null;
+    return `data:image/jpeg;base64,${buf.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
