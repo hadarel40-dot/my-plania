@@ -295,7 +295,7 @@ function TopBar({ saveState, cloudSave, account }: {
   return (
     <header className="flex h-12 shrink-0 items-center gap-2 border-b border-zinc-800/70 bg-zinc-950 px-2 sm:gap-3 sm:px-4">
       {account ? (
-        <Link href="/" title="הפרויקטים שלי" className="flex items-center gap-1 rounded px-1 py-0.5 text-zinc-400 hover:bg-zinc-900 hover:text-white">
+        <Link href="/" title="הפרויקטים שלי" className="flex items-center gap-1 rounded px-1 py-0.5 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100">
           <ChevronRight className="size-4" /><Clapperboard className="size-5 text-violet-400" />
         </Link>
       ) : (
@@ -310,7 +310,7 @@ function TopBar({ saveState, cloudSave, account }: {
         {account ? (
           <form action="/auth/signout" method="post" className="flex items-center gap-2">
             <span className="hidden text-[11px] text-zinc-500 md:inline" dir="ltr">{account.email}</span>
-            <button title="התנתקות" aria-label="התנתקות" className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white">
+            <button title="התנתקות" aria-label="התנתקות" className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100">
               <LogOut className="size-3.5" />
             </button>
           </form>
@@ -321,7 +321,7 @@ function TopBar({ saveState, cloudSave, account }: {
           </button>
         )}
         <button onClick={exportJson} title="גיבוי הפרויקט כקובץ JSON" aria-label="גיבוי פרויקט"
-          className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white">
+          className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100">
           <FileJson className="size-4" />
         </button>
         <button onClick={() => setExporting(true)}

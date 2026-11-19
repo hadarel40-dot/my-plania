@@ -50,7 +50,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
         )}
         {valid && state === "sent" && (
           <div className="space-y-2 text-sm leading-relaxed text-zinc-300">
-            <p className="text-base font-medium text-white">הבקשה נשלחה 💜</p>
+            <p className="text-base font-medium text-zinc-100">הבקשה נשלחה 💜</p>
             <p>ברגע שהבקשה תאושר, אפשר יהיה להיכנס עם המייל והסיסמה שבחרת.</p>
             <a href="/login" className="inline-block text-violet-300 underline">לעמוד הכניסה</a>
           </div>

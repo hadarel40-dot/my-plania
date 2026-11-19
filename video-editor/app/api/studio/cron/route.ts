@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase/env";
+import { autoDraft, autoIdeas, cronStore } from "@/lib/studio/auto";
 import { researchTrends } from "@/lib/studio/insights";
 import { todayIL } from "@/lib/studio/server";
 
@@ -8,7 +9,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * מחקר הטרנדים של כל בוקר (Vercel Cron, ראו vercel.json). אין כאן משתמשת מחוברת:
+ * מחקר הטרנדים של כל בוקר, ואחריו התוכן האוטומטי (Vercel Cron, ראו vercel.json). אין כאן משתמשת מחוברת:
  * Vercel שולח את CRON_SECRET, ומסד הנתונים בודק את אותו סוד (שמור אצלו כ-hash) לפני כל כתיבה.
  * רץ פעם אחת ביום לכל היותר.
  */
@@ -18,6 +19,18 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "not allowed" }, { status: 401 });
   }
   const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+
+  // תוכן אוטומטי: ?job=ideas (רעיונות לתור) או ?job=draft (טיוטה אחת ושיבוץ). כל ריצה קצרה
+  const job = new URL(request.url).searchParams.get("job");
+  if (job === "ideas" || job === "draft") {
+    try {
+      const store = cronStore(db, secret);
+      return NextResponse.json(job === "ideas" ? await autoIdeas(store) : await autoDraft(store));
+    } catch (e) {
+      return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    }
+  }
+
   const date = todayIL();
   const call = (p_status: string | null, p_items: unknown = null, p_dropped = 0, p_error: string | null = null) =>
     db.rpc("studio_cron_trends", { p_secret: secret, p_date: date, p_status, p_items, p_dropped, p_error });

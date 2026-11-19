@@ -91,7 +91,7 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
         className="w-full max-w-sm space-y-5 rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 font-semibold"><Film className="size-5 text-violet-400" /> ייצוא סרטון</h2>
-          <button onClick={close} aria-label="סגור" className="rounded p-1 text-zinc-400 hover:bg-zinc-800 hover:text-white"><X className="size-4" /></button>
+          <button onClick={close} aria-label="סגור" className="rounded p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"><X className="size-4" /></button>
         </div>
 
         {phase.kind === "idle" && (

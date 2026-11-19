@@ -7,6 +7,22 @@
     {
       "path": "/api/studio/cron",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/studio/cron?job=ideas",
+      "schedule": "10 5 * * *"
+    },
+    {
+      "path": "/api/studio/cron?job=draft&n=1",
+      "schedule": "15 5 * * *"
+    },
+    {
+      "path": "/api/studio/cron?job=draft&n=2",
+      "schedule": "20 5 * * *"
+    },
+    {
+      "path": "/api/studio/cron?job=draft&n=3",
+      "schedule": "25 5 * * *"
     }
   ]
 }

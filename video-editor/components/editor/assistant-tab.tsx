@@ -76,7 +76,7 @@ export function AssistantTab() {
             )}
             {m.undoable && (
               <button onClick={() => { undo(); useChat.setState((s) => ({ messages: s.messages.map((x, k) => (k === i ? { ...x, undoable: false, done: [...(x.done ?? []), "בוטל"] } : x)) })); }}
-                className="mt-1.5 flex items-center gap-1 rounded-full border border-zinc-600 px-2.5 py-0.5 text-xs text-zinc-300 hover:border-red-400 hover:text-white">
+                className="mt-1.5 flex items-center gap-1 rounded-full border border-zinc-600 px-2.5 py-0.5 text-xs text-zinc-300 hover:border-red-400 hover:text-zinc-100">
                 <Undo2 className="size-3" /> ביטול
               </button>
             )}

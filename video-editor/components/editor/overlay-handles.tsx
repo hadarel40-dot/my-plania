@@ -112,10 +112,10 @@ function CaptionHandle({ layerRef }: { layerRef: React.RefObject<HTMLDivElement 
       <div className={cn("absolute start-0 flex gap-1", y < 0.25 ? "-bottom-8" : "-top-8")} onPointerDown={(e) => e.stopPropagation()}>
         {([["A−", -0.1], ["A+", 0.1]] as const).map(([l, d]) => (
           <button key={l} onClick={(e) => { e.stopPropagation(); resize(d); }} aria-label={d > 0 ? "כתוביות גדולות יותר" : "כתוביות קטנות יותר"}
-            className="grid h-6 min-w-8 place-items-center rounded-full bg-sky-400 px-1.5 text-[11px] font-bold text-zinc-950 shadow">{l}</button>
+            className="grid h-6 min-w-8 place-items-center rounded-full bg-sky-400 px-1.5 text-[11px] font-bold text-white shadow">{l}</button>
         ))}
       </div>
-      <span className="-me-3 grid size-6 place-items-center rounded-full bg-sky-400 text-[11px] font-bold text-zinc-950 shadow">↕</span>
+      <span className="-me-3 grid size-6 place-items-center rounded-full bg-sky-400 text-[11px] font-bold text-white shadow">↕</span>
     </div>
   );
 }

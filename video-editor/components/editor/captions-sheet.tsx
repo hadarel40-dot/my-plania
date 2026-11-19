@@ -100,7 +100,7 @@ function Row({ caption, last, active, onFocus, onWordFix }: {
   const [before, setBefore] = useState(caption.text);
   return (
     <div className={cn("flex items-start gap-2 px-3 py-2", active && "bg-violet-500/10")}>
-      <button onClick={onFocus} className="mt-1.5 shrink-0 font-mono text-[11px] tabular-nums text-zinc-500 hover:text-white" dir="ltr">
+      <button onClick={onFocus} className="mt-1.5 shrink-0 font-mono text-[11px] tabular-nums text-zinc-500 hover:text-zinc-100" dir="ltr">
         {formatTime(caption.start).slice(0, 5)}
       </button>
       <textarea value={caption.text} rows={caption.text.length > 22 ? 2 : 1} dir="auto"
@@ -120,7 +120,7 @@ function Row({ caption, last, active, onFocus, onWordFix }: {
 function IconBtn({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
   return (
     <button onClick={() => { const end = beginGesture(); onClick(); end(); }} title={label} aria-label={label}
-      className="grid size-7 place-items-center rounded hover:bg-zinc-800 hover:text-white">{children}</button>
+      className="grid size-7 place-items-center rounded hover:bg-zinc-800 hover:text-zinc-100">{children}</button>
   );
 }
 
@@ -142,7 +142,7 @@ function Dictionary() {
         {entries.map(([k, v]) => (
           <span key={k} className="flex items-center gap-1 rounded-full bg-zinc-800 px-2 py-0.5">
             {k} ← {v}
-            <button onClick={() => remove(k)} aria-label="מחיקה מהמילון" className="text-zinc-500 hover:text-white">×</button>
+            <button onClick={() => remove(k)} aria-label="מחיקה מהמילון" className="text-zinc-500 hover:text-zinc-100">×</button>
           </span>
         ))}
       </div>

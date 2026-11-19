@@ -198,7 +198,7 @@ function Behind({ clip }: { clip: Clip }) {
     <div className="space-y-3 rounded-xl border border-violet-500/40 bg-violet-500/5 p-3">
       <p className="text-sm font-semibold">🖼️ מה יופיע מאחורי האדם?</p>
       <div className="grid grid-cols-4 gap-1.5">
-        <button onClick={() => setBackdrop(undefined)} className={cn("flex aspect-[3/4] flex-col items-center justify-end rounded-lg border bg-black p-1 text-[10px]", !clip.backdrop ? "border-violet-400 text-white" : "border-zinc-700 text-zinc-400")}>שחור</button>
+        <button onClick={() => setBackdrop(undefined)} className={cn("flex aspect-[3/4] flex-col items-center justify-end rounded-lg border bg-black p-1 text-[10px]", !clip.backdrop ? "border-violet-400 text-zinc-100" : "border-zinc-700 text-zinc-400")}>שחור</button>
         {options.map((a) => (
           <button key={a.id} onClick={() => setBackdrop(a.id)} title={a.name}
             className={cn("flex aspect-[3/4] flex-col items-center justify-end overflow-hidden rounded-lg border bg-zinc-800 bg-cover bg-center p-1 text-[10px]", clip.backdrop === a.id ? "border-violet-400 ring-2 ring-violet-400" : "border-zinc-700")}
@@ -222,7 +222,7 @@ function Behind({ clip }: { clip: Clip }) {
           ))}
           <button onClick={() => move(0, 0, -0.1)} className="h-9 rounded-lg border border-zinc-700 px-3 text-sm hover:border-violet-400">קטן יותר</button>
           <button onClick={() => move(0, 0, 0.1)} className="h-9 rounded-lg border border-zinc-700 px-3 text-sm hover:border-violet-400">גדול יותר</button>
-          <button onClick={() => patchSameSource(clip, () => ({ cutout: undefined }))} className="h-9 rounded-lg px-2 text-xs text-zinc-400 hover:text-white">איפוס</button>
+          <button onClick={() => patchSameSource(clip, () => ({ cutout: undefined }))} className="h-9 rounded-lg px-2 text-xs text-zinc-400 hover:text-zinc-100">איפוס</button>
         </div>
         <p className="text-[11px] text-zinc-500" dir="rtl">גודל: {Math.round(cut.scale * 100)}%</p>
       </div>

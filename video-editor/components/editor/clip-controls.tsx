@@ -96,7 +96,7 @@ export function ClipControls({ clip, isFirst }: { clip: Clip; isFirst: boolean }
           </label>
         ))}
         {clip.adjust && (
-          <button onClick={() => set({ adjust: undefined })} className="mt-1 text-xs text-zinc-500 underline hover:text-white">איפוס</button>
+          <button onClick={() => set({ adjust: undefined })} className="mt-1 text-xs text-zinc-500 underline hover:text-zinc-100">איפוס</button>
         )}
       </Section>
 

@@ -82,7 +82,10 @@ export interface Beat { n: number; role: "hook" | "stakes" | "body" | "payoff" |
 export interface ScreenCard { text: string; start: number; end: number; y: number }
 export interface Shot { n: number; frame: string; angle: string; seconds: number; says?: string; conditions: string; faceless: string }
 export interface Check { id: string; label: string; pass: boolean; info?: boolean; detail: string }
+export interface Slide { kind: "cover" | "stake" | "point" | "recap" | "cta"; headline: string; body: string }
+export interface Carousel { slides: Slide[]; caption: string; alt: string; handle: string }
 export interface DraftData {
+  carousel?: Carousel;
   hooks?: Hook[];
   chosen?: number;
   one_idea?: string;
@@ -93,7 +96,7 @@ export interface DraftData {
   cta?: string;
   checks?: Check[];
 }
-export interface Draft { id: string; idea: string; account: Account; niche: Niche | null; mode: "full" | "short"; facts: string; data: DraftData; project_id: string | null; created_at: string; updated_at: string }
+export interface Draft { id: string; idea: string; account: Account; niche: Niche | null; mode: "full" | "short" | "carousel"; facts: string; data: DraftData; project_id: string | null; created_at: string; updated_at: string }
 
 export interface TrendItem { niche: Niche; account: Account; kind: string; title: string; summary: string; source_name: string; source_url: string; why_relevant: string; reel_idea: string }
 

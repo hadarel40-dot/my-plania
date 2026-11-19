@@ -147,7 +147,7 @@ export function Preview() {
           ) : (
             <div dir="rtl" className="grid h-full place-items-center px-6 text-center text-sm text-zinc-400">
               <EmptyUploadState />
-              <label className={cn("flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-dashed border-zinc-600 px-6 py-8 hover:border-violet-500 hover:text-white active:scale-95 transition", busyUploading && "hidden")}>
+              <label className={cn("flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-dashed border-zinc-600 px-6 py-8 hover:border-violet-500 hover:text-zinc-100 active:scale-95 transition", busyUploading && "hidden")}>
                 <Upload className="size-8 text-violet-400" />
                 <span className="font-medium">העלאת סרטונים</span>
                 <span className="text-xs text-zinc-500">הסרטונים נכנסים לציר הזמן לפי הסדר</span>
@@ -174,7 +174,7 @@ export function Preview() {
           <button
             onClick={() => playerRef.current?.toggle()}
             aria-label={playing ? "השהה" : "נגן"}
-            className="grid size-10 place-items-center rounded-full bg-white text-zinc-950 hover:bg-zinc-200"
+            className="grid size-10 place-items-center rounded-full bg-zinc-100 text-zinc-950 hover:bg-zinc-300"
           >
             {playing ? <Pause className="size-5" /> : <Play className="size-5 translate-x-px" />}
           </button>
@@ -188,7 +188,7 @@ export function Preview() {
               onClick={() => setAspect(a)}
               className={cn(
                 "rounded px-1.5 py-0.5 text-[11px] tabular-nums",
-                a === timeline.aspect ? "bg-zinc-700 text-white" : "text-zinc-500 hover:text-zinc-300",
+                a === timeline.aspect ? "bg-zinc-700 text-zinc-100" : "text-zinc-500 hover:text-zinc-300",
               )}
             >
               {a}
@@ -265,7 +265,7 @@ function TimeLabel({ fps }: { fps: number }) {
 function CtrlBtn({ children, label, onClick }: { children: React.ReactNode; label: string; onClick: () => void }) {
   return (
     <button onClick={onClick} title={label} aria-label={label}
-      className="grid size-8 place-items-center rounded-full text-zinc-400 hover:bg-zinc-800 hover:text-white">
+      className="grid size-8 place-items-center rounded-full text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100">
       {children}
     </button>
   );

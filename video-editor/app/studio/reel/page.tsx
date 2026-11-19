@@ -8,6 +8,7 @@ import { db, formatDate, studioCall } from "@/lib/studio/client";
 import { Btn, Field, Loading, Meter, Note, PageHead, Panel, Select, Tag, inputCls, toast } from "@/components/studio/ui";
 import { SafeZonePreview } from "@/components/studio/safe-zone";
 import { VoiceSuggestions, type Suggestion } from "@/components/studio/voice-suggestions";
+import { CarouselView } from "@/components/studio/carousel-view";
 
 const ROLE: Record<string, string> = { hook: "הוק", stakes: "הסיכון", body: "גוף", payoff: "התמורה", cta: "קריאה לפעולה" };
 
@@ -49,7 +50,7 @@ function ReelStudio() {
         </aside>
         <div className="order-1 min-w-0 space-y-5 lg:order-2">
           {id && drafts && !draft ? <Note tone="bad">הטיוטה לא נמצאה.</Note>
-            : draft ? <DraftView key={draft.id} draft={draft} onChange={upsert} />
+            : draft ? (draft.mode === "carousel" ? <CarouselDraft key={draft.id} draft={draft} onChange={upsert} /> : <DraftView key={draft.id} draft={draft} onChange={upsert} />)
             : id ? <Loading />
             : <IdeaForm params={params} onCreated={(d) => { upsert(d); router.push(`/studio/reel?id=${d.id}`); }} />}
         </div>
@@ -64,7 +65,7 @@ function IdeaForm({ params, onCreated }: { params: URLSearchParams; onCreated: (
   const [idea, setIdea] = useState(params.get("idea") ?? "");
   const [account, setAccount] = useState<Account>(startAccount);
   const [niche, setNiche] = useState<Niche>((NICHES.find((n) => n.value === params.get("niche"))?.value ?? ACCOUNTS.find((a) => a.value === startAccount)!.niches[0]) as Niche);
-  const [mode, setMode] = useState<"full" | "short">("full");
+  const [mode, setMode] = useState<"full" | "short" | "carousel">(params.get("mode") === "carousel" ? "carousel" : "full");
   const [facts, setFacts] = useState("");
   const [busy, setBusy] = useState(false);
   const niches = NICHES.filter((n) => n.account === account);
@@ -78,7 +79,7 @@ function IdeaForm({ params, onCreated }: { params: URLSearchParams; onCreated: (
     try {
       const { data, error } = await db().from("studio_drafts").insert({ idea: idea.trim(), account, niche, mode, facts }).select("*").single();
       if (error) throw new Error(error.message);
-      const { draft } = await studioCall<{ draft: Draft }>("hooks", { draftId: data.id });
+      const { draft } = await studioCall<{ draft: Draft }>(mode === "carousel" ? "carousel" : "hooks", { draftId: data.id });
       onCreated(draft);
     } catch (e) {
       toast((e as Error).message, true);
@@ -96,14 +97,14 @@ function IdeaForm({ params, onCreated }: { params: URLSearchParams; onCreated: (
         <div className="grid gap-3 sm:grid-cols-3">
           <Field label="חשבון"><Select value={account} onChange={setAccount} options={ACCOUNTS} /></Field>
           <Field label="נישה"><Select value={niche} onChange={setNiche} options={niches} /></Field>
-          <Field label="סוג ריל">
-            <Select value={mode} onChange={setMode} options={[{ value: "full", label: "תסריט מלא, 15 עד 45 שניות" }, { value: "short", label: "ריל טקסט קצר, 7 עד 10 שניות" }] as const} />
+          <Field label="פורמט">
+            <Select value={mode} onChange={setMode} options={[{ value: "full", label: "ריל: תסריט מלא, 15 עד 45 שניות" }, { value: "short", label: "ריל טקסט קצר, 7 עד 10 שניות" }, { value: "carousel", label: "קרוסלה, 6 עד 10 שקופיות" }] as const} />
           </Field>
         </div>
         <Field label="מספרים ועובדות אמיתיים" hint="רק מכאן נלקחים מספרים. מה שחסר יסומן {{המספר שלך}}.">
           <textarea rows={2} className={inputCls} value={facts} onChange={(e) => setFacts(e.target.value)} placeholder="למשל: התכנון לוקח לי 10 דקות, פעם זה היה שעה." />
         </Field>
-        <Btn busy={busy} onClick={submit}>{busy ? "כותבת שלושה הוקים..." : "כתבי לי הוקים"}</Btn>
+        <Btn busy={busy} onClick={submit}>{busy ? (mode === "carousel" ? "כותבת את הקרוסלה..." : "כותבת שלושה הוקים...") : mode === "carousel" ? "כתבי לי קרוסלה" : "כתבי לי הוקים"}</Btn>
       </div>
     </Panel>
   );
@@ -301,5 +302,36 @@ function ChecksPanel({ draft }: { draft: Draft }) {
         ))}
       </ul>
     </Panel>
+  );
+}
+
+function CarouselDraft({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => void }) {
+  const [itemId, setItemId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    db().from("studio_items").select("id").eq("draft_id", draft.id).limit(1).then(({ data }) => setItemId(data?.[0]?.id ?? null));
+  }, [draft.id]);
+  const toBoard = async () => {
+    setBusy(true);
+    const c = draft.data.carousel;
+    const { data, error } = await db().from("studio_items").insert({
+      title: draft.idea.slice(0, 80), account: draft.account, niche: draft.niche, format: "carousel", stage: "draft",
+      hook: c?.slides[0]?.headline ?? "", caption: c?.caption ?? "", draft_id: draft.id,
+    }).select("id").single();
+    setBusy(false);
+    if (error) return toast(error.message, true);
+    setItemId(data.id);
+    toast("נשמר בלוח כטיוטה");
+  };
+  return (
+    <>
+      <Panel title={draft.idea} aside={<Tag>קרוסלה</Tag>}>
+        <p className="text-xs text-[#6F675C]">{labelOf(ACCOUNTS, draft.account)} · {labelOf(NICHES, draft.niche)}{draft.facts ? ` · עובדות: ${draft.facts}` : " · לא הוזנו מספרים"}</p>
+      </Panel>
+      <CarouselView draft={draft} onChange={onChange} />
+      <div className="xl:hidden"><ChecksPanel draft={draft} /></div>
+      {itemId ? <Link href="/studio/board" className="inline-block rounded-[5px] border border-[#3E6B4F] px-3 py-2 text-sm font-semibold text-[#3E6B4F]">נמצא בלוח התוכן</Link>
+        : <Btn variant="green" busy={busy} onClick={toBoard}>לשמור בלוח כטיוטה</Btn>}
+    </>
   );
 }

@@ -56,7 +56,7 @@ export function AdminDashboard({ email, links, requests }: { email: string; link
   return (
     <div className="h-dvh overflow-y-auto text-zinc-100">
       <header className="sticky top-0 z-10 flex h-14 items-center gap-3 border-b border-zinc-800 bg-zinc-950/80 px-4 backdrop-blur sm:px-6">
-        <Link href="/" className="flex items-center gap-1 rounded-md px-1 py-1 text-zinc-400 hover:text-white" title="לפרויקטים">
+        <Link href="/" className="flex items-center gap-1 rounded-md px-1 py-1 text-zinc-400 hover:text-zinc-100" title="לפרויקטים">
           <ChevronRight className="size-4" />
         </Link>
         <ShieldCheck className="size-5 text-violet-400" />

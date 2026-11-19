@@ -17,7 +17,7 @@ export function IconButton({ children, label, onClick, active }: { children: Rea
   return (
     <button type="button" onClick={onClick} title={label} aria-label={label}
       className={cn("grid size-7 shrink-0 place-items-center rounded-md transition",
-        active ? "bg-violet-600 text-white" : "text-zinc-400 hover:bg-zinc-800 hover:text-white")}>
+        active ? "bg-violet-600 text-white" : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100")}>
       {children}
     </button>
   );

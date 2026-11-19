@@ -5,26 +5,50 @@
  * וזוהר עדין ברקע. כל העורך משתמש בצבעים האלה, ולכן השינוי כאן חל על כל המסכים יחד.
  */
 @theme {
-  --font-sans: "Rubik", "Heebo", system-ui, sans-serif;
-  --color-zinc-50: #faf9fd;
-  --color-zinc-100: #f2f0f8;
-  --color-zinc-200: #e2dfee;
-  --color-zinc-300: #c9c4dc;
-  --color-zinc-400: #a29cbb;
-  --color-zinc-500: #7a7394;
-  --color-zinc-600: #565071;
-  --color-zinc-700: #3b3552;
-  --color-zinc-800: #2a2540;
-  --color-zinc-900: #1a1729;
-  --color-zinc-950: #110f1c;
-  /* כחול של בחירה → סגול-תכלת רך שמתאים לשאר */
-  --color-blue-400: #93a5ff;
-  --color-blue-500: #7c8cff;
-  --color-blue-600: #6a77f0;
-  --color-violet-300: #d4c4ff;
-  --color-violet-400: #b69cff;
-  --color-violet-500: #9a7bff;
-  --color-violet-600: #8463f5;
+  /* אותו עיצוב כמו סטודיו התוכן: בהיר וחם. הסולם של zinc הפוך (950 = רקע בהיר, 100 = דיו),
+     כך שכל המסכים של העורך מקבלים את הצבעים החדשים מכאן, בלי לגעת בכל רכיב */
+  --font-sans: "Assistant", "Heebo", system-ui, sans-serif;
+  --color-zinc-50: #1a1612;
+  --color-zinc-100: #1f1b16;
+  --color-zinc-200: #2e2923;
+  --color-zinc-300: #4e473e;
+  --color-zinc-400: #6f675c;
+  --color-zinc-500: #8c8375;
+  --color-zinc-600: #b3aa9c;
+  --color-zinc-700: #d6cec1;
+  --color-zinc-800: #e6dfd3;
+  --color-zinc-900: #f6f2ea;
+  --color-zinc-950: #ece7de;
+  /* הדגשה: דיו לכפתורים ובחירה, זהב חם לטקסט מודגש, צהוב חמאה לרקעים */
+  --color-violet-100: #fbf3d2;
+  --color-violet-200: #f6e7a6;
+  --color-violet-300: #7a5f18;
+  --color-violet-400: #6b5418;
+  --color-violet-500: #1f1b16;
+  --color-violet-600: #3a332b;
+  --color-violet-700: #3a332b;
+  --color-violet-800: #f1de8a;
+  --color-violet-900: #f6e7a6;
+  --color-violet-950: #fbf3d2;
+  --color-fuchsia-400: #6b5418;
+  --color-fuchsia-500: #3a332b;
+  --color-fuchsia-600: #1f1b16;
+  --color-blue-200: #f6e7a6;
+  --color-blue-400: #b8901f;
+  --color-blue-500: #c9a227;
+  --color-blue-600: #a8851c;
+  --color-sky-300: #2f5d7a;
+  --color-sky-400: #2f5d7a;
+  /* צבעי מצב שנכתבו לרקע כהה: גרסה כהה שקריאה על רקע בהיר */
+  --color-emerald-200: #2c4f39;
+  --color-emerald-300: #3e6b4f;
+  --color-emerald-400: #3e6b4f;
+  --color-red-200: #8a3324;
+  --color-red-300: #a3402f;
+  --color-red-400: #a3402f;
+  --color-amber-200: #7a5f18;
+  --color-amber-300: #8a6a1f;
+  --color-amber-400: #b8901f;
   --radius-md: 0.6rem;
   --radius-lg: 0.85rem;
   --radius-xl: 1.1rem;
@@ -46,10 +70,10 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(60rem 30rem at 85% -10%, rgb(132 99 245 / 0.16), transparent 60%),
-    radial-gradient(50rem 28rem at 0% 110%, rgb(236 72 153 / 0.10), transparent 60%);
+    radial-gradient(60rem 30rem at 85% -10%, rgb(246 231 166 / 0.25), transparent 60%),
+    radial-gradient(50rem 28rem at 0% 110%, rgb(214 207 195 / 0.5), transparent 60%);
 }
-::selection { background: rgb(154 123 255 / 0.35); }
+::selection { background: rgb(246 231 166 / 0.8); }
 
 body {
   font-family: var(--font-sans);

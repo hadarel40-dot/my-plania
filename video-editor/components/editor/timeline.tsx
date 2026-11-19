@@ -252,7 +252,7 @@ function ClipBlock({ clip, start, index, pps, selected, timeFromClientX }: {
       <Handle side="left" onPointerDown={onEdgeDown("in")} />
       <Handle side="right" onPointerDown={onEdgeDown("out")} />
       {clip.transitionIn && (
-        <span title="מעבר" className="pointer-events-none absolute left-0.5 top-0.5 grid size-4 place-items-center rounded-sm bg-white/90 text-[10px] text-zinc-900">⇄</span>
+        <span title="מעבר" className="pointer-events-none absolute left-0.5 top-0.5 grid size-4 place-items-center rounded-sm bg-white/90 text-[10px] text-zinc-100">⇄</span>
       )}
     </div>
   );

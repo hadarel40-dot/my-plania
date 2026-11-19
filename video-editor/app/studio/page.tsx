@@ -11,7 +11,7 @@ import { Btn, Label, Loading, Note, Panel, Tag, Title, inputCls, toast } from "@
 import { cn } from "@/lib/utils";
 
 interface Rec { title: string; why: string; what_to_shoot: string; action: string; action_label: string; idea: string; account: string; niche: string; impact: string }
-interface Item { id: string; title: string; account: Account; niche: string | null; format: string; stage: Stage; planned_date: string | null; notes: string }
+interface Item { id: string; title: string; account: Account; niche: string | null; format: string; stage: Stage; planned_date: string | null; notes: string; auto: boolean; draft_id: string | null }
 type IgData = { configured: boolean; accounts: ((IgAccount & { ok: true }) | { ok: false; error: string })[] };
 
 const DAYS = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
@@ -26,7 +26,7 @@ function weekStart(dateIso: string, offsetWeeks = 0) {
 export default function HomePage() {
   const today = todayIL();
   const [items, setItems] = useState<Item[] | null>(null);
-  const loadItems = useCallback(() => db().from("studio_items").select("id, title, account, niche, format, stage, planned_date, notes").neq("stage", "published").order("created_at", { ascending: false }).limit(300).then(({ data }) => setItems((data as Item[]) ?? [])), []);
+  const loadItems = useCallback(() => db().from("studio_items").select("id, title, account, niche, format, stage, planned_date, notes, auto, draft_id").neq("stage", "published").order("created_at", { ascending: false }).limit(300).then(({ data }) => setItems((data as Item[]) ?? [])), []);
   useEffect(() => { loadItems(); }, [loadItems]);
 
   return (
@@ -88,6 +88,21 @@ function PoppingOff() {
 function PlanWeek({ onAdded }: { onAdded: () => void }) {
   const [focus, setFocus] = useState("");
   const [busy, setBusy] = useState(false);
+  const [autoBusy, setAutoBusy] = useState(false);
+  // כמו המשימה של הבוקר, בלחיצה: רעיונות אם חסרים, ואז טיוטה אחת שמשובצת ביום פנוי
+  const autoNow = async () => {
+    setAutoBusy(true);
+    try {
+      const ideas = await studioCall<{ added?: number }>("auto", { step: "ideas" });
+      const draft = await studioCall<{ day?: string; title?: string; skipped?: string }>("auto", { step: "draft" });
+      toast(draft.day ? `"${draft.title}" מוכן ומשובץ ל${formatDate(draft.day)}` : draft.skipped ?? (ideas.added ? `נוספו ${ideas.added} רעיונות` : "אין מה להכין כרגע"));
+      onAdded();
+    } catch (e) {
+      toast((e as Error).message, true);
+    } finally {
+      setAutoBusy(false);
+    }
+  };
   const run = async () => {
     setBusy(true);
     try {
@@ -109,8 +124,12 @@ function PlanWeek({ onAdded }: { onAdded: () => void }) {
           <p className="mt-1 text-sm text-[#4E473E]">ספרי לי מה את מקדמת השבוע. אקרא את הביצועים ואת הטרנדים ואביא חמישה רעיונות לבחירה.</p>
           <input className={cn(inputCls, "mt-3")} value={focus} onChange={(e) => setFocus(e.target.value)} placeholder="למשל: השקת התבנית לתכנון טיול, או שבוע של מתכונים מהירים" />
         </div>
-        <Btn busy={busy} onClick={run}>{busy ? "מתכננת..." : "לתכנן את השבוע"}</Btn>
+        <div className="flex flex-wrap gap-2">
+          <Btn busy={busy} onClick={run}>{busy ? "מתכננת..." : "לתכנן את השבוע"}</Btn>
+          <Btn variant="butter" busy={autoBusy} onClick={autoNow}>{autoBusy ? "מכינה טיוטה, עד דקה..." : "להכין טיוטה עכשיו"}</Btn>
+        </div>
       </div>
+      <p className="mt-3 text-[12px] text-[#6F675C]">כל בוקר זה קורה לבד: אחרי מחקר הטרנדים נוספים רעיונות לתור, ושלוש טיוטות מוכנות (תסריט ושוטים, או קרוסלה) משובצות בימים הפנויים. שום דבר לא מתפרסם בלי שתאשרי.</p>
     </Panel>
   );
 }
@@ -118,8 +137,9 @@ function PlanWeek({ onAdded }: { onAdded: () => void }) {
 function ItemChip({ item, onDragStart }: { item: Item; onDragStart: (e: React.DragEvent) => void }) {
   return (
     <div draggable onDragStart={onDragStart} className="cursor-grab rounded-lg border border-[#E2DACD] bg-white/80 px-2 py-1.5 text-[12px] leading-snug shadow-[0_1px_1px_rgba(31,27,22,0.05)] active:cursor-grabbing">
-      <span className="mb-0.5 block text-[9px] font-bold tracking-[0.14em] text-[#6F675C]">{labelOf(FORMATS, item.format)} · {item.account === "plania.il" ? "פלניה" : "אישי"}</span>
-      <span className="line-clamp-3 font-semibold">{item.title}</span>
+      <span className="mb-0.5 block text-[9px] font-bold tracking-[0.14em] text-[#6F675C]">{labelOf(FORMATS, item.format)} · {item.account === "plania.il" ? "פלניה" : "אישי"}{item.auto ? " · אוטומטי" : ""}</span>
+      {item.draft_id ? <Link href={`/studio/reel?id=${item.draft_id}`} className="line-clamp-3 font-semibold hover:underline">{item.title}</Link> : <span className="line-clamp-3 font-semibold">{item.title}</span>}
+      {item.stage === "draft" && <span className="mt-1 inline-block rounded bg-[#F6E7A6] px-1 text-[9px] font-bold">טיוטה מוכנה</span>}
     </div>
   );
 }

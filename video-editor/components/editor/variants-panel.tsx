@@ -118,7 +118,7 @@ export function VariantsPanel() {
         {remixOf && (
           <div className="flex items-center justify-between rounded-md bg-violet-500/10 px-2 py-1.5 text-xs text-violet-200">
             <span className="flex items-center gap-1"><GitBranch className="size-3.5" /> וריאציה על {remixOf.label}</span>
-            <button type="button" onClick={() => setRemixOf(null)} className="text-violet-300 hover:text-white">ביטול</button>
+            <button type="button" onClick={() => setRemixOf(null)} className="text-violet-300 hover:text-zinc-100">ביטול</button>
           </div>
         )}
         <textarea
@@ -186,7 +186,7 @@ function OriginalRow({ clip, source, onRevert }: { clip: Clip; source: MediaAsse
         <p className="text-zinc-500">{clip.activeVariantId ? "וריאציה מוחלת" : "מקור"}</p>
       </div>
       {clip.activeVariantId && (
-        <button onClick={onRevert} className="flex items-center gap-1 rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800 hover:text-white">
+        <button onClick={onRevert} className="flex items-center gap-1 rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100">
           <RotateCcw className="size-3.5" /> חזרה למקור
         </button>
       )}

@@ -39,21 +39,21 @@ export function ProjectList({ email, projects, error, showPassword, hasPassword,
         <form action="/auth/signout" method="post" className="ms-auto flex items-center gap-2 text-xs text-zinc-500">
           <span dir="ltr" className="hidden sm:inline">{email}</span>
           <Link href="/?password=1" title={hasPassword ? "שינוי סיסמה" : "בחירת סיסמה"} aria-label={hasPassword ? "שינוי סיסמה" : "בחירת סיסמה"}
-            className="rounded-md p-1.5 hover:bg-zinc-800 hover:text-white">
+            className="rounded-md p-1.5 hover:bg-zinc-800 hover:text-zinc-100">
             <KeyRound className="size-4" />
           </Link>
           {admin && (
-            <Link href="/admin" title="ניהול" className="relative flex items-center gap-1 rounded-full border border-zinc-700 px-2.5 py-1 text-zinc-300 hover:border-violet-500 hover:text-white">
+            <Link href="/admin" title="ניהול" className="relative flex items-center gap-1 rounded-full border border-zinc-700 px-2.5 py-1 text-zinc-300 hover:border-violet-500 hover:text-zinc-100">
               <ShieldCheck className="size-3.5" /> ניהול
-              {admin.pending > 0 && <span className="absolute -end-1.5 -top-1.5 grid size-4 place-items-center rounded-full bg-amber-400 text-[10px] font-bold text-zinc-950">{admin.pending}</span>}
+              {admin.pending > 0 && <span className="absolute -end-1.5 -top-1.5 grid size-4 place-items-center rounded-full bg-amber-400 text-[10px] font-bold text-white">{admin.pending}</span>}
             </Link>
           )}
           {admin && (
-            <Link href="/studio" title="סטודיו התוכן" className="flex items-center gap-1 rounded-full border border-zinc-700 px-2.5 py-1 text-zinc-300 hover:border-violet-500 hover:text-white">
+            <Link href="/studio" title="סטודיו התוכן" className="flex items-center gap-1 rounded-full border border-zinc-700 px-2.5 py-1 text-zinc-300 hover:border-violet-500 hover:text-zinc-100">
               סטודיו תוכן
             </Link>
           )}
-          <button title="התנתקות" aria-label="התנתקות" className="rounded-md p-1.5 hover:bg-zinc-800 hover:text-white">
+          <button title="התנתקות" aria-label="התנתקות" className="rounded-md p-1.5 hover:bg-zinc-800 hover:text-zinc-100">
             <LogOut className="size-4" />
           </button>
         </form>

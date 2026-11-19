@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { askBrain } from "@/lib/ai/brain";
 import { cleanDeep } from "./clean";
-import { NICHES, type Beat, type Check, type Draft, type DraftData, type Hook, type ScreenCard } from "./config";
+import { ACCOUNTS, NICHES, type Beat, type Carousel, type Check, type Draft, type DraftData, type Hook, type ScreenCard } from "./config";
 import { scoreHook, words } from "./hookscore";
 
 /**
@@ -201,4 +201,60 @@ caption_first_line: שורת הפתיחה של הכיתוב, עד 12 מילים.
   }
   const keep = (draft.data.checks ?? []).filter((c) => c.id === "one_idea" || c.id === "missing");
   return { ...draft.data, chosen: hookIndex, ...result, checks: [...keep, ...result.checks] };
+}
+
+// ---------- קרוסלה (לפי הסקיל ig-carousel)
+
+const CarouselSchema = z.object({
+  slides: z.array(z.object({ kind: z.enum(["cover", "stake", "point", "recap", "cta"]), headline: z.string(), body: z.string() })),
+  caption: z.string(),
+  alt: z.string(),
+});
+
+/** הבדיקות של ig-carousel, בקוד */
+export function carouselChecks(c: Carousel): Check[] {
+  const n = c.slides.length;
+  const cover = c.slides[0];
+  const points = c.slides.filter((x) => x.kind === "point");
+  const ctas = c.slides.filter((x) => x.kind === "cta");
+  const longBody = c.slides.filter((x) => words(x.body).length > 25).map((x, i) => i + 1);
+  const badHead = points.filter((x) => words(x.headline).length < 2 || words(x.headline).length > 7).map((x) => x.headline);
+  const placeholders = [...new Set(JSON.stringify(c).match(/\{\{[^}]+\}\}/g) ?? [])];
+  const checks: Check[] = [
+    { id: "count", label: "6 עד 10 שקופיות", pass: n >= 6 && n <= 10, detail: `${n} שקופיות` },
+    { id: "cover", label: "כותרת השער עד שש מילים", pass: cover?.kind === "cover" && words(cover.headline).length <= 6, detail: cover ? `${words(cover.headline).length} מילים` : "אין שער" },
+    { id: "body", label: "עד 25 מילים בכל שקופית", pass: longBody.length === 0, detail: longBody.length ? `ארוכות מדי: ${longBody.join(", ")}` : "תקין" },
+    { id: "heads", label: "כותרת של 3 עד 7 מילים לכל רעיון", pass: badHead.length === 0, detail: badHead.join(" | ") || "תקין" },
+    { id: "recap", label: "שקופית סיכום שאפשר לצלם ולשלוח", pass: c.slides.some((x) => x.kind === "recap"), detail: c.slides.some((x) => x.kind === "recap") ? "יש" : "חסרה" },
+    { id: "cta", label: "קריאה אחת לפעולה, בסוף", pass: ctas.length === 1 && c.slides[n - 1]?.kind === "cta", detail: `${ctas.length} קריאות` },
+  ];
+  if (placeholders.length) checks.push({ id: "facts", label: "מספרים שחסרים לך", pass: true, info: true, detail: placeholders.join(", ") });
+  return checks;
+}
+
+export async function writeCarousel(draft: Draft, voice: string): Promise<DraftData> {
+  const handle = ACCOUNTS.find((a) => a.value === draft.account)?.label ?? "";
+  const prompt = (retry: string) => `${context(draft, voice)}
+
+כתבי קרוסלה לאינסטגרם, 6 עד 10 שקופיות, בסדר הזה:
+1. cover: השער. headline עד שש מילים, חד וספציפי, body שורה אחת של הבטחה.
+2. stake: למה זה חשוב לצופה, במשפט אחד. גם היא צריכה לעבוד כשער שני, אז לא הקדמה.
+3 והלאה. point: רעיון אחד בכל שקופית. headline של 3 עד 7 מילים, body עד 25 מילים.
+לפני האחרונה. recap: הכל כרשימה קצרה, השקופית שמצלמים ושולחים. body עם שורה לכל נקודה.
+אחרונה. cta: פעולה אחת בלבד (לשמור, להגיב במילה, או לעקוב).
+caption: הכיתוב לפוסט. שורה ראשונה שמושכת להמשיך לקרוא, גוף קצר בקול שלה, קריאה אחת לפעולה, ושלושה האשטגים רלוונטיים בסוף.
+alt: תיאור קצר של השער, לקוראי מסך.
+רעיון אחד לקרוסלה. מספרים רק מהעובדות, ואחרים נכתבים {{המספר שלך}}. בלי אימוג'י ובלי מקפים ארוכים.${retry}`;
+  const system = "את מנהלת סושיאל שכותבת קרוסלות שמחזיקות עד השקופית האחרונה. עברית מדוברת, בקול שלה.";
+  const started = Date.now();
+  let raw = cleanDeep(await askBrain({ schema: CarouselSchema, system, parts: [{ text: prompt("") }] }));
+  let carousel: Carousel = { ...raw, handle };
+  let checks = carouselChecks(carousel);
+  const failed = checks.filter((c) => !c.pass && !c.info);
+  if (failed.length && Date.now() - started < 25_000) {
+    raw = cleanDeep(await askBrain({ schema: CarouselSchema, system, parts: [{ text: prompt(`\nבגרסה הקודמת נכשלו הבדיקות האלה, תקני אותן: ${failed.map((c) => `${c.label}: ${c.detail}`).join("; ")}`) }] }));
+    carousel = { ...raw, handle };
+    checks = carouselChecks(carousel);
+  }
+  return { ...draft.data, carousel, checks };
 }

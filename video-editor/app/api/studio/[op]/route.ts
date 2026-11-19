@@ -4,7 +4,8 @@ import { BrainError } from "@/lib/ai/brain";
 import { computeMeta } from "@/lib/editor/project-meta";
 import type { Draft } from "@/lib/studio/config";
 import { driveAccessToken, driveConfigured, driveEmail } from "@/lib/studio/drive";
-import { writeHooks, writeScript } from "@/lib/studio/engine";
+import { adminStore, autoDraft, autoIdeas } from "@/lib/studio/auto";
+import { writeCarousel, writeHooks, writeScript } from "@/lib/studio/engine";
 import { projectFromDraft } from "@/lib/studio/handoff";
 import { buildVoice, planToday, planWeek, researchTrends, suggestFromEdit, weeklyStats, writeReview } from "@/lib/studio/insights";
 import { instagramConfigured, loadAccounts } from "@/lib/studio/instagram";
@@ -46,6 +47,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
         const draft = await loadDraft(draftId);
         const voice = voiceBlock(await getVoice(supabase, draft.account), draft.account);
         return NextResponse.json({ draft: await saveDraft(draft.id, await writeScript(draft, voice, hookIndex)) });
+      }
+      case "carousel": {
+        const { draftId } = z.object({ draftId: uuid }).parse(body);
+        const draft = await loadDraft(draftId);
+        const voice = voiceBlock(await getVoice(supabase, draft.account), draft.account);
+        return NextResponse.json({ draft: await saveDraft(draft.id, await writeCarousel(draft, voice)) });
+      }
+      case "auto": {
+        // הכפתור "להכין עכשיו": רעיונות אם חסרים, אחרת טיוטה אחת שמשובצת ביום פנוי
+        const { step } = z.object({ step: z.enum(["ideas", "draft"]) }).parse(body);
+        const store = adminStore(supabase);
+        return NextResponse.json(step === "ideas" ? await autoIdeas(store) : await autoDraft(store));
       }
       case "to-editor": {
         const { draftId } = z.object({ draftId: uuid }).parse(body);

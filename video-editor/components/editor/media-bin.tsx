@@ -48,7 +48,7 @@ export function MediaBin() {
         onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
         className={cn("flex-1 space-y-2 overflow-y-auto p-3 transition", dragOver && "bg-blue-500/10 ring-2 ring-inset ring-blue-500")}
       >
-        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-zinc-700 py-4 text-sm text-zinc-300 hover:border-violet-500 hover:text-white md:hidden">
+        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-zinc-700 py-4 text-sm text-zinc-300 hover:border-violet-500 hover:text-zinc-100 md:hidden">
           <Upload className="size-4" /> העלאת סרטונים מהטלפון
           <FileInput onFiles={handleFiles} />
         </label>
@@ -92,7 +92,7 @@ export function MediaBin() {
               </button>
             )}
             <button onClick={() => addToTimeline(a)} title="הוסף לציר הזמן" aria-label="הוסף לציר הזמן"
-              className="self-center rounded p-1 text-zinc-500 hover:bg-zinc-700 hover:text-white md:opacity-0 md:group-hover:opacity-100">
+              className="self-center rounded p-1 text-zinc-500 hover:bg-zinc-700 hover:text-zinc-100 md:opacity-0 md:group-hover:opacity-100">
               <Plus className="size-4" />
             </button>
           </div>

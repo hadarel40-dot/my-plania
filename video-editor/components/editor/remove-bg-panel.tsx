@@ -68,11 +68,11 @@ export function RemoveBgPanel({ sourceId, currentId, onApply, onRestore }: {
       <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6">
         {CHOICES.map((c) => (
           <button key={c.id} onClick={() => setChoice(c.id)} disabled={progress !== null}
-            className={cn("flex flex-col items-center gap-1 rounded-lg border p-1 text-[10px]", choice === c.id ? "border-violet-400 text-white" : "border-zinc-700 text-zinc-400")}>
+            className={cn("flex flex-col items-center gap-1 rounded-lg border p-1 text-[10px]", choice === c.id ? "border-violet-400 text-zinc-100" : "border-zinc-700 text-zinc-400")}>
             <span className="size-7 rounded-md border border-white/10" style={{ background: c.swatch }} />{c.label}
           </button>
         ))}
-        <label className={cn("flex cursor-pointer flex-col items-center gap-1 rounded-lg border p-1 text-[10px]", choice === "image" ? "border-violet-400 text-white" : "border-zinc-700 text-zinc-400")}>
+        <label className={cn("flex cursor-pointer flex-col items-center gap-1 rounded-lg border p-1 text-[10px]", choice === "image" ? "border-violet-400 text-zinc-100" : "border-zinc-700 text-zinc-400")}>
           <span className="grid size-7 place-items-center rounded-md border border-dashed border-zinc-500 bg-cover bg-center" style={image ? { backgroundImage: `url(${image})` } : undefined}>{image ? "" : "🖼️"}</span>
           תמונה
           <input type="file" accept="image/*" className="sr-only" onChange={(e) => {

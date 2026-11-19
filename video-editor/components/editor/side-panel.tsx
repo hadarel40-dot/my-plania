@@ -122,7 +122,7 @@ function TabBar({ tabs, tab, onTab }: { tabs: { id: Tab; label: string; icon: Re
       {tabs.map((t) => (
         <button key={t.id} onClick={() => onTab(t.id)}
           className={cn("flex flex-col items-center justify-center gap-0.5 border-b-2 px-1 py-2 text-[11.5px] transition",
-            t.id === tab ? "border-violet-500 text-white" : "border-transparent text-zinc-500 hover:text-zinc-300")}>
+            t.id === tab ? "border-violet-500 text-zinc-100" : "border-transparent text-zinc-500 hover:text-zinc-300")}>
           {t.icon}{t.label}
         </button>
       ))}
@@ -211,7 +211,7 @@ function CreditNote({ credit }: { credit: string }) {
       <p>לשיר הזה צריך לתת קרדיט. מעתיקים לתיאור הפוסט:</p>
       <p className="mt-1 text-amber-100" dir="ltr">{credit}</p>
       <button onClick={() => navigator.clipboard?.writeText(credit).then(() => setCopied(true))}
-        className="mt-1 underline hover:text-white">{copied ? "הועתק ✓" : "העתקה"}</button>
+        className="mt-1 underline hover:text-zinc-100">{copied ? "הועתק ✓" : "העתקה"}</button>
     </div>
   );
 }

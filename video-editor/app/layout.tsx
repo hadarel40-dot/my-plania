@@ -22,18 +22,19 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#110f1c",
+  themeColor: "#ece7de",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="he" dir="rtl" className="dark">
+    <html lang="he" dir="rtl">
       <head>
         {/* חייב לרוץ לפני כל קוד אחר: ב-iPhone (Safari) אין Symbol.dispose, וכל ספרייה של מנוע
             הייצוא השלימה אותו בשם אחר, ולכן הייצוא נכשל ב-"Object not disposable". כאן כולן מקבלות אותו סמל */}
         <script dangerouslySetInnerHTML={{ __html: DISPOSE_POLYFILL }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="stylesheet" href={FONTS_CSS} />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Bellefair&family=Frank+Ruhl+Libre:wght@500;700;900&display=swap" />
       </head>
       <body>{children}</body>
     </html>

@@ -292,7 +292,7 @@ function HookPicker() {
         ))}
       </div>
       {!hooksBusy && (
-        <button onClick={() => loadHooks(useAutoEditRun.getState().report)} className="mt-1 text-[11px] text-zinc-500 underline hover:text-white">
+        <button onClick={() => loadHooks(useAutoEditRun.getState().report)} className="mt-1 text-[11px] text-zinc-500 underline hover:text-zinc-100">
           {hooks?.length ? "עוד הצעות" : "להציע משפטי פתיחה"}
         </button>
       )}
@@ -311,7 +311,7 @@ function MyStyleLine() {
   return (
     <p className="mb-2 text-[11px] text-zinc-500">
       ⭐ הסגנון שלי: {parts.join(" · ")}{" "}
-      <button onClick={() => { forgetMyStyle(); setStyle({}); }} className="underline hover:text-white">איפוס</button>
+      <button onClick={() => { forgetMyStyle(); setStyle({}); }} className="underline hover:text-zinc-100">איפוס</button>
     </p>
   );
 }
@@ -374,7 +374,7 @@ function TransitionStylePicker() {
         ))}
       </div>
       {hasClips && (
-        <button onClick={() => { const end = beginGesture(); applyTransitionStyle(style); end(); saveIntoChosen(); }} className="mt-1 text-[11px] text-zinc-500 underline hover:text-white">
+        <button onClick={() => { const end = beginGesture(); applyTransitionStyle(style); end(); saveIntoChosen(); }} className="mt-1 text-[11px] text-zinc-500 underline hover:text-zinc-100">
           להחיל עכשיו על כל הקליפים
         </button>
       )}
@@ -571,7 +571,7 @@ function AutoEditButton({ disabled }: { disabled: boolean }) {
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-medium">בחרו גרסה <span className="text-xs font-normal text-zinc-500">· לחיצה מציגה אותה בנגן</span></p>
             <button onClick={undoAutoEdit}
-              className="shrink-0 rounded-full border border-zinc-600 px-3 py-1 text-xs text-zinc-200 hover:border-red-400 hover:text-white">
+              className="shrink-0 rounded-full border border-zinc-600 px-3 py-1 text-xs text-zinc-200 hover:border-red-400 hover:text-zinc-100">
               ↩️ ביטול העריכה
             </button>
           </div>
@@ -602,7 +602,7 @@ function AutoEditButton({ disabled }: { disabled: boolean }) {
           <p className="pt-1 text-zinc-400">מכאן אפשר לשנות כל דבר: לחיצה על טקסט, כתובית או קליפ פותחת את העריכה שלו.</p>
           {before && (
             <button onClick={undoAutoEdit}
-              className="mt-1 text-zinc-400 underline hover:text-white">
+              className="mt-1 text-zinc-400 underline hover:text-zinc-100">
               לא אהבתי, חזרה לסרטון כמו שהיה
             </button>
           )}
@@ -625,7 +625,7 @@ function AutoEditButton({ disabled }: { disabled: boolean }) {
           <p className="pt-1 text-zinc-400">מכאן אפשר לשנות כל דבר: לחיצה על טקסט, כתובית או קליפ פותחת את העריכה שלו.</p>
           {before && (
             <button onClick={undoAutoEdit}
-              className="mt-1 text-zinc-400 underline hover:text-white">
+              className="mt-1 text-zinc-400 underline hover:text-zinc-100">
               לא אהבתי, חזרה לסרטון כמו שהיה
             </button>
           )}
@@ -720,7 +720,7 @@ function TrendsPanel() {
             <div key={t.name} className="rounded-lg bg-zinc-950 p-3 text-sm">
               <p className="font-medium">{t.name}</p>
               <p className="text-xs text-zinc-400">{t.why}</p>
-              <button onClick={() => addToNotes(t.how)} className="mt-1.5 text-xs text-violet-300 underline hover:text-white">
+              <button onClick={() => addToNotes(t.how)} className="mt-1.5 text-xs text-violet-300 underline hover:text-zinc-100">
                 להוסיף להוראות: &quot;{t.how}&quot;
               </button>
             </div>
@@ -728,7 +728,7 @@ function TrendsPanel() {
           <div className="rounded-lg bg-zinc-950 p-3 text-sm">
             <p className="font-medium">הוקים בסגנון של עכשיו</p>
             {trends.hooks.map((h) => (
-              <button key={h} onClick={() => addToNotes(`הוק: ${h}`)} className="mt-1 block text-start text-xs text-zinc-300 hover:text-white">
+              <button key={h} onClick={() => addToNotes(`הוק: ${h}`)} className="mt-1 block text-start text-xs text-zinc-300 hover:text-zinc-100">
                 ➕ {h}
               </button>
             ))}
