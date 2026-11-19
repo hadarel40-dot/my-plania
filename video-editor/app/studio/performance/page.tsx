@@ -30,7 +30,7 @@ export default function PerformancePage() {
       {error && <Note tone="bad">{error}</Note>}
       {data && !data.configured && (
         <Panel title="אינסטגרם עוד לא מחובר">
-          <p className="text-sm leading-relaxed text-[#6F675C]">צריך להגדיר בשרת את INSTAGRAM_ACCESS_TOKENS (טוקן לכל חשבון, עם ההרשאות instagram_business_basic ו-instagram_business_manage_insights). ההוראות ב-README של העורך, בפרק "סטודיו התוכן".</p>
+          <p className="text-sm leading-relaxed text-[#6F675C]">צריך להגדיר ב-Vercel את INSTAGRAM_ACCESS_TOKENS: הטוקן שמפיקים באפליקציה ב-Meta (API setup with Unified login), עם ההרשאה instagram_manage_insights. ההוראות ב-README של העורך, בפרק "סטודיו התוכן".</p>
         </Panel>
       )}
       {acc && !acc.ok && <Note tone="bad">החשבון לא נקרא: {acc.error}</Note>}
@@ -107,7 +107,7 @@ function AccountView({ acc, history }: { acc: IgAccount; history: { date: string
     </section>
     <div className="grid gap-5 lg:grid-cols-3">
       <div className="space-y-5 lg:col-span-2">
-        {!acc.insightsAvailable && <Note tone="bad">לטוקן של החשבון הזה אין הרשאת תובנות (instagram_business_manage_insights), אז אין כאן שמירות, שיתופים וחשיפה. מוצגים רק לייקים ותגובות.</Note>}
+        {!acc.insightsAvailable && <Note tone="bad">לטוקן של החשבון הזה אין הרשאת תובנות (instagram_manage_insights), אז אין כאן שמירות, שיתופים וחשיפה. מוצגים רק לייקים ותגובות.</Note>}
         <Panel title="מה עבד, לפי שמירות ושיתופים">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[560px] text-sm">

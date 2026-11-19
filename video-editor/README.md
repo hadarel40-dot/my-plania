@@ -148,7 +148,7 @@ supabase/migrations/     סכמה לשלב הענן
 1. המיגרציה `supabase/migrations/0006_studio.sql` (טבלאות `studio_*`, RLS למנהלת בלבד).
 2. ב-Vercel → Settings → Environment Variables (ראו `.env.example`):
    - `CRON_SECRET`: אותו ערך שה-hash שלו נשמר ב-`studio_secrets` (שורה `cron`). להחלפה: `update studio_secrets set hash = encode(extensions.digest('<חדש>', 'sha256'), 'hex') where name = 'cron'`.
-   - `INSTAGRAM_ACCESS_TOKENS`: טוקן ארוך-טווח לכל חשבון, מ-Meta for Developers → Instagram API with Instagram Login, עם `instagram_business_basic` ו-`instagram_business_manage_insights`. בלי ההרשאה השנייה אין שמירות ושיתופים, והמסך אומר את זה. טוקן ארוך-טווח פג אחרי 60 יום.
+   - `INSTAGRAM_ACCESS_TOKENS`: מ-Meta for Developers → Use cases → Instagram → **API setup with Unified login** (באפליקציות חדשות זו האפשרות היחידה): טוקן אחד שמכסה את כל החשבונות שאושרו, עם `instagram_basic` ו-`instagram_manage_insights` (עובד דרך `graph.facebook.com`). טוקן ישן של Instagram login (`instagram_business_*`) עובד גם הוא. בלי הרשאת התובנות אין שמירות ושיתופים, והמסך אומר את זה.
    - `GOOGLE_SERVICE_ACCOUNT_JSON`: חשבון שירות ב-Google Cloud עם Drive API פעיל. משתפים את תיקיית הסרטונים עם המייל שלו (צפייה בלבד).
 3. המוח: `GEMINI_API_KEY` (או `ANTHROPIC_API_KEY`) כמו בשאר העורך. החיפוש ברשת צורך מכסה כל בוקר.
 
