@@ -1,5 +1,9 @@
 # my-plania
 
+## שפה
+
+כל ההודעות למשתמשת נכתבות בעברית: סיכומים, הסברים, שאלות ומה שהיא צריכה לעשות.
+
 ## Instagram skills (ig-*)
 
 The voice profile lives in the repo at `.claude/instagram/voice.md`. The ig-* skills look for
