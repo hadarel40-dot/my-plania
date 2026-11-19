@@ -49,6 +49,8 @@ export interface BrainRequest<T extends z.ZodType> {
   schema: T;
   /** חיפוש ברשת (טרנדים) */
   search?: boolean;
+  /** בלי חיפוש אין תשובה: לא עונים מהזיכרון של המודל (כשכל פריט חייב מקור) */
+  searchRequired?: boolean;
   /** כמה זמן (מ"ש) מותר לכל קריאה ל-Gemini. השרת מוגבל לדקה לבקשה */
   budgetMs?: number;
   /** כמה זמן מותר לכל גרסה של Gemini לפני שעוברים לבאה (ברירת מחדל 25 שניות; צפייה בווידאו צריכה יותר) */
@@ -226,7 +228,7 @@ function extractJson(text: string): unknown {
   return JSON.parse(raw.slice(start, end + 1));
 }
 
-async function askGemini<T extends z.ZodType>({ system, parts, schema, search, budgetMs = 52_000, attemptMs }: BrainRequest<T>): Promise<z.infer<T>> {
+async function askGemini<T extends z.ZodType>({ system, parts, schema, search, searchRequired, budgetMs = 52_000, attemptMs }: BrainRequest<T>): Promise<z.infer<T>> {
   const jsonSchema = z.toJSONSchema(schema, { target: "draft-7" });
   const contents = [{ role: "user", parts: toGeminiParts(parts) }];
 
@@ -241,7 +243,7 @@ async function askGemini<T extends z.ZodType>({ system, parts, schema, search, b
       }, 28_000);
     } catch (e) {
       // חיפוש בגוגל לא תמיד כלול במכסה החינמית, ולפעמים איטי: אז עונים מהידע של המודל, בלי חיפוש
-      if (!(e instanceof BrainError) || ![429, 404, 500, 502, 503, 504].includes(e.status)) throw e;
+      if (!(e instanceof BrainError) || ![429, 404, 500, 502, 503, 504].includes(e.status) || searchRequired) throw e;
       return askGemini({ system: `${system}\n\n(Web search is unavailable right now: answer from what you know about recent trends, and prefer patterns that stay popular.)`, parts, schema, budgetMs: 24_000 });
     }
     try {

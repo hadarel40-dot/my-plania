@@ -7,6 +7,7 @@ import { useUploads } from "@/stores/upload-store";
 import { logEvent } from "@/lib/telemetry";
 import { formatTime } from "@/lib/editor/timeline-utils";
 import { cn } from "@/lib/utils";
+import { DriveImport } from "./drive-import";
 
 const UPLOAD_STAGE = { waiting: "ממתין", compress: "מכינים", upload: "מעלה" } as const;
 
@@ -32,10 +33,13 @@ export function MediaBin() {
       <header className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
         <h2 className="flex items-center gap-2 text-sm font-semibold"><Film className="size-4" /> מדיה</h2>
         {/* label ולא כפתור שקורא ל-click(): באייפון זו הדרך האמינה לפתוח את בחירת הקבצים */}
-        <label className="flex cursor-pointer items-center gap-1 rounded-md bg-zinc-800 px-2 py-1 text-xs hover:bg-zinc-700">
-          <Upload className="size-3.5" /> העלאה
-          <FileInput onFiles={handleFiles} />
-        </label>
+        <div className="flex items-center gap-1.5">
+          <DriveImport />
+          <label className="flex cursor-pointer items-center gap-1 rounded-md bg-zinc-800 px-2 py-1 text-xs hover:bg-zinc-700">
+            <Upload className="size-3.5" /> העלאה
+            <FileInput onFiles={handleFiles} />
+          </label>
+        </div>
       </header>
 
       <div

@@ -48,6 +48,11 @@ export function ProjectList({ email, projects, error, showPassword, hasPassword,
               {admin.pending > 0 && <span className="absolute -end-1.5 -top-1.5 grid size-4 place-items-center rounded-full bg-amber-400 text-[10px] font-bold text-zinc-950">{admin.pending}</span>}
             </Link>
           )}
+          {admin && (
+            <Link href="/studio" title="סטודיו התוכן" className="flex items-center gap-1 rounded-full border border-zinc-700 px-2.5 py-1 text-zinc-300 hover:border-violet-500 hover:text-white">
+              סטודיו תוכן
+            </Link>
+          )}
           <button title="התנתקות" aria-label="התנתקות" className="rounded-md p-1.5 hover:bg-zinc-800 hover:text-white">
             <LogOut className="size-4" />
           </button>
