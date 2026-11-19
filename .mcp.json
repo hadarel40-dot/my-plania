@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "chrome-devtools-mcp@latest",
+        "--headless",
+        "--isolated",
+        "--executablePath",
+        "/opt/pw-browsers/chromium",
+        "--chromeArg=--no-sandbox"
+      ]
+    }
+  }
+}
