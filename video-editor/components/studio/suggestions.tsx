@@ -3,13 +3,14 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Heart, ImagePlus, Link2, Sparkles } from "lucide-react";
 import { ACCOUNTS, FORMATS, NICHES, labelOf, type Hook } from "@/lib/studio/config";
+import { templateById } from "@/lib/studio/templates";
 import { db, formatDate, studioCall, todayIL } from "@/lib/studio/client";
 import { Btn, Label, Loading, Note, Panel, Tag, Title, inputCls, toast } from "./ui";
 import { cn } from "@/lib/utils";
 
 export interface Suggestion {
   id: string; title: string; idea: string; why: string; account: string; niche: string | null; format: string;
-  hooks: Hook[]; source: string; source_url: string | null; source_note: string | null; status: string; created_at: string;
+  hooks: Hook[]; source: string; source_url: string | null; source_note: string | null; status: string; created_at: string; template: string | null;
 }
 
 const REASONS = ["לא בקול שלי", "הנושא לא מעניין אותי", "קשה לצלם", "כבר עשיתי דומה", "לא מתאים לקהל"];
@@ -111,7 +112,7 @@ function SuggestionCard({ s, busyDays, onDone }: { s: Suggestion; busyDays: Set<
     try {
       const { data: item, error } = await db().from("studio_items").insert({
         title: s.title, account: s.account, niche: s.niche, format: s.format, stage: "idea", planned_date: date, auto: true,
-        hook: hook?.spoken ?? "", hook_screen: hook?.on_screen ?? "", notes: `${s.idea}\n\nלמה: ${s.why}`,
+        hook: hook?.spoken ?? "", hook_screen: hook?.on_screen ?? "", notes: `${s.idea}\n\nלמה: ${s.why}`, template: s.template,
       }).select("id").single();
       if (error) throw new Error(error.message);
       await Promise.all([
@@ -144,6 +145,7 @@ function SuggestionCard({ s, busyDays, onDone }: { s: Suggestion; busyDays: Set<
         {s.niche && <Tag>{labelOf(NICHES, s.niche)}</Tag>}
         {s.source === "trend" && s.source_url && <a href={s.source_url} target="_blank" rel="noopener noreferrer"><Tag tone="green">מטרנד ↗</Tag></a>}
         {s.source === "inspiration" && <Tag tone="green">מההשראה שלך</Tag>}
+        {templateById(s.template) && <Tag>תבנית: {templateById(s.template)!.name}</Tag>}
       </div>
       <Title size="sm">{s.title}</Title>
       <p className="mt-1 text-sm leading-relaxed">{s.idea}</p>
@@ -169,7 +171,7 @@ function SuggestionCard({ s, busyDays, onDone }: { s: Suggestion; busyDays: Set<
         {mode === "" && (
           <div className="flex flex-wrap gap-2">
             <Btn onClick={() => setMode("save")}>לשמור ולשבץ</Btn>
-            <Btn variant="line" onClick={() => router.push(`/studio/reel?${new URLSearchParams({ idea: s.idea, account: s.account, niche: s.niche ?? "", ...(s.format === "carousel" ? { mode: "carousel" } : {}) })}`)}>לכתוב עכשיו</Btn>
+            <Btn variant="line" onClick={() => router.push(`/studio/reel?${new URLSearchParams({ idea: s.idea, account: s.account, niche: s.niche ?? "", ...(s.format === "carousel" ? { mode: "carousel" } : {}), ...(s.template ? { template: s.template } : {}) })}`)}>לכתוב עכשיו</Btn>
             <Btn variant="ghost" onClick={() => setMode("no")}>לא בשבילי</Btn>
           </div>
         )}

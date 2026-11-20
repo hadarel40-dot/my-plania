@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { askBrain, type BrainPart } from "@/lib/ai/brain";
 import type { DriveFile } from "./drive";
+import { templateBrief, templateById } from "./templates";
 import { cleanDeep } from "./clean";
 import { ACCOUNTS, NICHES, type Beat, type Carousel, type Materials, type Check, type Draft, type DraftData, type Hook, type ScreenCard } from "./config";
 import { scoreHook, words } from "./hookscore";
@@ -84,7 +85,7 @@ ${voice}
 
 נישה: ${NICHES.find((n) => n.value === draft.niche)?.search ?? "לפי הרעיון"}
 הרעיון: ${draft.idea.slice(0, 2000)}
-עובדות ומספרים אמיתיים שהיא נתנה (רק מהם מותר לקחת מספרים): ${draft.facts.slice(0, 3000) || "לא נתנה. כל מספר שצריך יופיע כ-{{המספר שלך}}."}`;
+עובדות ומספרים אמיתיים שהיא נתנה (רק מהם מותר לקחת מספרים): ${draft.facts.slice(0, 3000) || "לא נתנה. כל מספר שצריך יופיע כ-{{המספר שלך}}."}${templateBrief(templateById(draft.data.template))}`;
 }
 
 export async function writeHooks(draft: Draft, voice: string): Promise<DraftData> {
@@ -249,12 +250,13 @@ alt: תיאור קצר של השער, לקוראי מסך.
   const system = "את מנהלת סושיאל שכותבת קרוסלות שמחזיקות עד השקופית האחרונה. עברית מדוברת, בקול שלה.";
   const started = Date.now();
   let raw = cleanDeep(await askBrain({ prefer: "claude", schema: CarouselSchema, system, parts: [{ text: prompt("") }] }));
-  let carousel: Carousel = { ...raw, handle };
+  const style = templateById(draft.data.template)?.style ?? draft.data.carousel?.style ?? "cream";
+  let carousel: Carousel = { ...raw, handle, style };
   let checks = carouselChecks(carousel);
   const failed = checks.filter((c) => !c.pass && !c.info);
   if (failed.length && Date.now() - started < 25_000) {
     raw = cleanDeep(await askBrain({ prefer: "claude", schema: CarouselSchema, system, parts: [{ text: prompt(`\nבגרסה הקודמת נכשלו הבדיקות האלה, תקני אותן: ${failed.map((c) => `${c.label}: ${c.detail}`).join("; ")}`) }] }));
-    carousel = { ...raw, handle };
+    carousel = { ...raw, handle, style };
     checks = carouselChecks(carousel);
   }
   return { ...draft.data, carousel, checks };

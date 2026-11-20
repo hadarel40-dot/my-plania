@@ -55,6 +55,12 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
     } catch (e) { toast((e as Error).message, true); }
     finally { setBusy(""); }
   };
+  const setStyle = async (style: "cream" | "ink" | "butter") => {
+    if (!c) return;
+    const { data, error } = await db().from("studio_drafts").update({ data: { ...draft.data, carousel: { ...c, style } } }).eq("id", draft.id).select("*").single();
+    if (error) return toast(error.message, true);
+    onChange(data as Draft);
+  };
   const setSlide = (i: number, patch: Partial<Slide>) => setEdit((e) => (e ? { ...e, slides: e.slides.map((s, j) => (j === i ? { ...s, ...patch } : s)) } : e));
 
   if (!c) {
@@ -90,6 +96,15 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
             {images.map((src, i) => (
               // eslint-disable-next-line @next/next/no-img-element
               <img key={i} src={src} alt={i === 0 ? c.alt : `שקופית ${i + 1}`} className="h-[300px] w-[240px] shrink-0 rounded-xl border border-[#E2DACD] object-cover shadow-[0_1px_2px_rgba(31,27,22,0.08)]" />
+            ))}
+          </div>
+        )}
+        {!edit && (
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <Label>עיצוב:</Label>
+            {([["cream", "שמנת"], ["ink", "כהה"], ["butter", "צהוב"]] as const).map(([v, l]) => (
+              <button key={v} type="button" onClick={() => setStyle(v)}
+                className={`rounded-lg border px-2.5 py-1 text-[12px] font-semibold ${(c.style ?? "cream") === v ? "border-[#1F1B16] bg-[#1F1B16] text-[#FBF8F2]" : "border-[#E2DACD] bg-white/70"}`}>{l}</button>
             ))}
           </div>
         )}

@@ -83,10 +83,12 @@ export interface ScreenCard { text: string; start: number; end: number; y: numbe
 export interface Shot { n: number; frame: string; angle: string; seconds: number; says?: string; conditions: string; faceless: string }
 export interface Check { id: string; label: string; pass: boolean; info?: boolean; detail: string }
 export interface Slide { kind: "cover" | "stake" | "point" | "recap" | "cta"; headline: string; body: string }
-export interface Carousel { slides: Slide[]; caption: string; alt: string; handle: string }
+export interface Carousel { slides: Slide[]; caption: string; alt: string; handle: string; style?: "cream" | "ink" | "butter" }
 export interface MaterialFile { id: string; name: string; mimeType: string; duration?: number }
 export interface Materials { files: MaterialFile[]; matches: { target: string; file_id: string; reason: string }[]; missing: string[]; checked_at: string }
 export interface DraftData {
+  /** תבנית מוכנה (lib/studio/templates.ts) */
+  template?: string;
   carousel?: Carousel;
   materials?: Materials;
   hooks?: Hook[];

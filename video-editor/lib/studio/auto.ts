@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ACCOUNTS, DEFAULT_VOICE, type Account, type Draft, type DraftData, type Niche, type TrendItem, type VoiceProfile } from "./config";
 import { writeCarousel, writeHooks, writeScript } from "./engine";
 import { scoreHook } from "./hookscore";
+import { templateById } from "./templates";
 import { generateSuggestions, preferencesBlock, type Feedback, type SuggestionOut } from "./insights";
 import { todayIL, voiceBlock } from "./server";
 
@@ -15,7 +16,7 @@ import { todayIL, voiceBlock } from "./server";
 
 export interface AutoItem {
   id: string; title: string; account: Account; niche: Niche | null; format: string; stage: string;
-  planned_date: string | null; notes: string; auto: boolean; draft_id: string | null; created_at: string; hook?: string; hook_screen?: string;
+  planned_date: string | null; notes: string; auto: boolean; draft_id: string | null; created_at: string; hook?: string; hook_screen?: string; template?: string | null;
 }
 export interface AutoContext {
   items: AutoItem[]; voice: Partial<Record<Account, Partial<VoiceProfile>>>; trends: TrendItem[];
@@ -58,8 +59,9 @@ export async function autoDraft(store: AutoStore) {
 
   const account = (ACCOUNTS.some((a) => a.value === item.account) ? item.account : "hadarelifergan") as Account;
   const idea = item.notes ? item.notes.split("\n\nלמה:")[0] : item.title;
-  const mode: Draft["mode"] = item.format === "carousel" ? "carousel" : "full";
-  const base: Draft = { id: "", idea, account, niche: item.niche, mode, facts: "", data: {}, project_id: null, created_at: "", updated_at: "" };
+  const tpl = templateById(item.template);
+  const mode: Draft["mode"] = item.format === "carousel" ? "carousel" : tpl?.mode === "short" ? "short" : "full";
+  const base: Draft = { id: "", idea, account, niche: item.niche, mode, facts: "", data: tpl ? { template: tpl.id } : {}, project_id: null, created_at: "", updated_at: "" };
   const voice = `${voiceFor(ctx, account)}\n\n${preferencesBlock(ctx.feedback)}`;
 
   let data: DraftData;
@@ -68,10 +70,10 @@ export async function autoDraft(store: AutoStore) {
   } else if (item.hook) {
     // ההוק שהיא בחרה בהצעה
     const hook = { formula: "שנבחר", spoken: item.hook, on_screen: item.hook_screen || item.hook, ...scoreHook(item.hook) };
-    data = await writeScript({ ...base, data: { hooks: [hook], chosen: 0 } }, voice, 0);
+    data = await writeScript({ ...base, data: { ...base.data, hooks: [hook], chosen: 0 } }, voice, 0);
   } else {
     const hooks = await writeHooks(base, voice);
-    data = await writeScript({ ...base, data: hooks }, voice, 0);
+    data = await writeScript({ ...base, data: { ...base.data, ...hooks } }, voice, 0);
   }
   const hook = mode === "carousel" ? data.carousel?.slides[0]?.headline ?? "" : data.hooks?.[data.chosen ?? 0]?.spoken ?? "";
   const caption = mode === "carousel" ? data.carousel?.caption ?? "" : data.script?.caption_first_line ?? "";
@@ -84,7 +86,7 @@ export function adminStore(supabase: SupabaseClient): AutoStore {
   return {
     async context() {
       const [{ data: items }, { data: voice }, { data: trend }, { data: feedback }, { data: sugg }, { count }] = await Promise.all([
-        supabase.from("studio_items").select("id, title, account, niche, format, stage, planned_date, notes, auto, draft_id, created_at, hook, hook_screen").order("created_at", { ascending: false }).limit(300),
+        supabase.from("studio_items").select("id, title, account, niche, format, stage, planned_date, notes, auto, draft_id, created_at, hook, hook_screen, template").order("created_at", { ascending: false }).limit(300),
         supabase.from("studio_voice").select("account, profile"),
         supabase.from("studio_trends").select("items").eq("status", "done").order("date", { ascending: false }).limit(1).maybeSingle(),
         supabase.from("studio_feedback").select("kind, text, verdict, reason").order("created_at", { ascending: false }).limit(60),

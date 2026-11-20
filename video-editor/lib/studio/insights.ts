@@ -4,6 +4,7 @@ import { askBrain, type BrainPart } from "@/lib/ai/brain";
 import { cleanDeep } from "./clean";
 import { ACCOUNTS, DEFAULT_VOICE, NICHES, type Account, type Hook, type TrendItem, type VoiceProfile } from "./config";
 import { scoreHook } from "./hookscore";
+import { TEMPLATES } from "./templates";
 import { loadAccount, loadAccounts } from "./instagram";
 import { newsForTrends } from "./news";
 
@@ -350,10 +351,14 @@ const IdeaSuggestSchema = z.object({
     niche: z.enum(["travel", "business", "home", "meals"]),
     format: z.enum(["reel", "carousel", "story", "image"]),
     trend: z.number(),
+    template: z.string(),
     hooks: z.array(HookDraft),
   })),
 });
-export interface SuggestionOut { title: string; idea: string; why: string; account: Account; niche: string; format: string; hooks: Hook[]; source: "studio" | "trend" | "inspiration"; source_url: string | null }
+export interface SuggestionOut { title: string; idea: string; why: string; account: Account; niche: string; format: string; hooks: Hook[]; source: "studio" | "trend" | "inspiration"; source_url: string | null; template: string | null }
+
+const TEMPLATE_LIST = TEMPLATES.map((t) => `${t.id}: ${t.kind === "carousel" ? "קרוסלה" : "ריל"}, ${t.name}`).join("\n");
+const TEMPLATE_RULE = `template: תבנית מוכנה שמתאימה לרעיון, מתוך הרשימה (המזהה בלבד, ריל לרילס וקרוסלה לקרוסלות), או "" אם אף אחת לא מתאימה:\n${TEMPLATE_LIST}`;
 
 const HOOK_RULES = `לכל רעיון שלושה הוקים מנוסחות שונות (Cost Confession, Negative Command, Nobody Tells You, The Receipt, Before And After, The Objection, Contrarian Flip, Time Collapse, Permission, The Callout ועוד). לכל הוק:
 - spoken: 5 עד 12 מילים, בלי ברכה ובלי הקדמה, המילה החשובה בשלוש הראשונות, פונה לצופה כשזה טבעי.
@@ -365,8 +370,9 @@ function finishSuggestions(raw: z.infer<typeof IdeaSuggestSchema>, trends: Trend
   return raw.suggestions.map((x) => {
     const trend = trends[x.trend];
     const hooks: Hook[] = x.hooks.slice(0, 3).map((h) => ({ formula: h.formula, spoken: h.spoken, on_screen: h.on_screen, ...scoreHook(h.spoken, h) })).sort((a, b) => b.score - a.score);
+    const tpl = TEMPLATES.find((t) => t.id === x.template && (t.kind === "carousel") === (x.format === "carousel"));
     return {
-      title: x.title, idea: x.idea, why: x.why, account: x.account, niche: x.niche, format: x.format, hooks,
+      title: x.title, idea: x.idea, why: x.why, account: x.account, niche: x.niche, format: x.format, hooks, template: tpl?.id ?? null,
       source: source === "studio" && trend ? "trend" : source,
       source_url: source === "studio" ? trend?.source_url ?? null : sourceUrl,
     };
@@ -400,6 +406,7 @@ ${input.focus ? `מה היא מקדמת עכשיו (לתת לזה עדיפות):
 - why: למה זה יעבוד, לפי הנתונים למעלה (טרנד מסוים, פוסט שעבד, או משהו שהיא אהבה).
 - trend: מספר הטרנד שההצעה נשענת עליו, או -1.
 - account, niche, format.
+${TEMPLATE_RULE}
 ${HOOK_RULES}` }],
   }));
   return finishSuggestions(raw, input.trends, "studio", null);
@@ -420,6 +427,7 @@ ${preferencesBlock(input.feedback)}
 
 הבינו מה עובד בהשראה (הפורמט, ההוק, המבנה, הצילום), ותני 2 הצעות שלוקחות את זה לעולם שלה. לא מעתיקים: מתאימים לעסק ולקול שלה.
 לכל הצעה: title, idea, why (מה לקחנו מההשראה ולמה זה יעבוד אצלה), trend: -1, account, niche, format.
+${TEMPLATE_RULE}
 ${HOOK_RULES}
 בלי אימוג'י ובלי מקפים ארוכים. אם אי אפשר להבין מההשראה כלום (אין טקסט ואין תמונה), כתבי ב-why מה חסר, ועדיין הציעי לפי ההערה שלה.` }];
   input.images.slice(0, 4).forEach((img) => parts.push({ image: img }));

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Anchor, BarChart3, Brain, CalendarDays, Clapperboard, GalleryHorizontal, Home, Library, MessageCircle, Lightbulb, Newspaper, Scissors, ScrollText, TrendingUp, type LucideIcon } from "lucide-react";
+import { Anchor, BarChart3, Brain, CalendarDays, Clapperboard, GalleryHorizontal, Home, LayoutTemplate, Library, MessageCircle, Lightbulb, Newspaper, Scissors, ScrollText, TrendingUp, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type NavCounts = Partial<Record<"ideas" | "hooks" | "trends" | "board" | "film" | "scripts" | "carousels", number>>;
@@ -15,6 +15,7 @@ const GROUPS: { label: string; tiles: Tile[] }[] = [
     { href: "/studio/board", label: "לוח", icon: CalendarDays, tint: "#E2ECDF", count: "board" },
   ] },
   { label: "יצירה", tiles: [
+    { href: "/studio/templates", label: "תבניות", icon: LayoutTemplate, tint: "#F3DDE3" },
     { href: "/studio/film", label: "צילום", icon: Clapperboard, tint: "#ECE3F3", count: "film" },
     { href: "/studio/reel", label: "תסריטים", icon: ScrollText, tint: "#FBEFC4", count: "scripts" },
     { href: "/studio/carousel", label: "קרוסלות", icon: GalleryHorizontal, tint: "#DDE7F0", count: "carousels" },

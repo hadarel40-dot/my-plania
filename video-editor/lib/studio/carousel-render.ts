@@ -76,14 +76,19 @@ export async function renderSlide(c: Carousel, index: number, images: Record<num
   ctx.direction = "rtl";
   ctx.textAlign = "right";
   ctx.textBaseline = "alphabetic";
-  const bg = slide.kind === "cover" ? BUTTER : slide.kind === "cta" ? INK : CREAM;
-  const fg = slide.kind === "cta" ? CREAM : INK;
+  // שלושה סגנונות: שמנת (שער צהוב, קריאה לפעולה כהה), כהה, וצהוב נועז
+  const style = c.style ?? "cream";
+  const dark = style === "ink" ? slide.kind !== "cover" : slide.kind === "cta";
+  const bg = style === "ink" ? (slide.kind === "cover" ? BUTTER : INK)
+    : style === "butter" ? (slide.kind === "cta" ? INK : BUTTER)
+    : slide.kind === "cover" ? BUTTER : slide.kind === "cta" ? INK : CREAM;
+  const fg = dark ? CREAM : INK;
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
   // מספור, כדי שרואים איפה נגמר
   ctx.font = `800 26px ${SANS}`;
-  ctx.fillStyle = slide.kind === "cta" ? "#CFC6B7" : MUTED;
+  ctx.fillStyle = dark ? "#CFC6B7" : MUTED;
   ctx.textAlign = "left";
   ctx.direction = "ltr";
   ctx.fillText(`${index + 1}/${c.slides.length}`, M, M);
@@ -117,8 +122,8 @@ export async function renderSlide(c: Carousel, index: number, images: Record<num
   } else if (photo && (slide.kind === "point" || slide.kind === "stake")) {
     // שקופית עם תמונה: התמונה למעלה, הטקסט מתחת
     drawCover(ctx, photo, M, M + 50, W - M * 2, 560);
-    const y = block(ctx, slide.headline, (s) => `900 ${s}px ${SERIF}`, 72, M + 640, 230, INK, 1.1);
-    block(ctx, slide.body, (s) => `600 ${s}px ${SANS}`, 38, y + 30, H - y - 30 - M - 60, "#3A332B", 1.35);
+    const y = block(ctx, slide.headline, (s) => `900 ${s}px ${SERIF}`, 72, M + 640, 230, fg, 1.1);
+    block(ctx, slide.body, (s) => `600 ${s}px ${SANS}`, 38, y + 30, H - y - 30 - M - 60, dark ? "#E9E2D6" : "#3A332B", 1.35);
   } else if (slide.kind === "cover") {
     let y = block(ctx, slide.headline, (s) => `900 ${s}px ${SERIF}`, 120, 330, 560, INK, 1.08);
     ctx.fillStyle = INK;
@@ -129,7 +134,7 @@ export async function renderSlide(c: Carousel, index: number, images: Record<num
     const rows = slide.body.split("\n").map((r) => r.replace(/^[-•·\d.\s]+/, "").trim()).filter(Boolean);
     ctx.font = `600 40px ${SANS}`;
     for (const r of rows) {
-      ctx.fillStyle = INK;
+      ctx.fillStyle = fg;
       ctx.beginPath();
       ctx.arc(W - M - 10, y + 52, 9, 0, Math.PI * 2);
       ctx.fill();
@@ -141,13 +146,14 @@ export async function renderSlide(c: Carousel, index: number, images: Record<num
     }
   } else {
     const y = block(ctx, slide.headline, (s) => `900 ${s}px ${SERIF}`, slide.kind === "cta" ? 96 : 84, 280, 460, fg, 1.1);
-    block(ctx, slide.body, (s) => `600 ${s}px ${SANS}`, 44, y + 50, H - y - 50 - M - 90, slide.kind === "cta" ? "#E9E2D6" : "#3A332B", 1.35);
+    if (style === "ink" && slide.kind !== "cta") { ctx.fillStyle = BUTTER; ctx.fillRect(W - M - 120, y + 22, 120, 7); }
+    block(ctx, slide.body, (s) => `600 ${s}px ${SANS}`, 44, y + 50, H - y - 50 - M - 90, dark ? "#E9E2D6" : "#3A332B", 1.35);
   }
 
   // הכינוי בכל שקופית, קטן, בפינה: צילומי מסך מסתובבים בלי ההקשר
   if (c.handle) {
     ctx.font = `700 26px ${SANS}`;
-    ctx.fillStyle = slide.kind === "cta" || (photo && slide.kind === "cover") ? "#FBF8F2" : MUTED;
+    ctx.fillStyle = dark || (photo && slide.kind === "cover") ? "#FBF8F2" : MUTED;
     ctx.textAlign = "left";
     ctx.direction = "ltr";
     ctx.fillText(c.handle, M, photo && slide.kind === "cover" ? H - 50 : H - M + 40);

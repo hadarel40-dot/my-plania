@@ -45,7 +45,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
         const { draftId } = z.object({ draftId: uuid }).parse(body);
         const draft = await loadDraft(draftId);
         const voice = await voiceWithPrefs(draft.account);
-        return NextResponse.json({ draft: await saveDraft(draft.id, await writeHooks(draft, voice)) });
+        const fresh = await writeHooks(draft, voice);
+        // הוקים חדשים: נשמרים התבנית והחומרים, והתסריט הישן יורד
+        return NextResponse.json({ draft: await saveDraft(draft.id, { template: draft.data.template, materials: draft.data.materials, ...fresh }) });
       }
       case "script": {
         const { draftId, hookIndex } = z.object({ draftId: uuid, hookIndex: z.number().int().min(0).max(2) }).parse(body);

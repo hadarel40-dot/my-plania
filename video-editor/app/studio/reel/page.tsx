@@ -10,6 +10,7 @@ import { SafeZonePreview } from "@/components/studio/safe-zone";
 import { VoiceSuggestions, type Suggestion } from "@/components/studio/voice-suggestions";
 import { CarouselView } from "@/components/studio/carousel-view";
 import { MaterialsPanel } from "@/components/studio/materials";
+import { TEMPLATES, templateById } from "@/lib/studio/templates";
 
 const ROLE: Record<string, string> = { hook: "הוק", stakes: "הסיכון", body: "גוף", payoff: "התמורה", cta: "קריאה לפעולה" };
 
@@ -66,7 +67,14 @@ function IdeaForm({ params, onCreated }: { params: URLSearchParams; onCreated: (
   const [idea, setIdea] = useState(params.get("idea") ?? "");
   const [account, setAccount] = useState<Account>(startAccount);
   const [niche, setNiche] = useState<Niche>((NICHES.find((n) => n.value === params.get("niche"))?.value ?? ACCOUNTS.find((a) => a.value === startAccount)!.niches[0]) as Niche);
-  const [mode, setMode] = useState<"full" | "short" | "carousel">(params.get("mode") === "carousel" ? "carousel" : "full");
+  const startTpl = templateById(params.get("template"));
+  const [mode, setMode] = useState<"full" | "short" | "carousel">(startTpl ? (startTpl.kind === "carousel" ? "carousel" : startTpl.mode ?? "full") : params.get("mode") === "carousel" ? "carousel" : "full");
+  const [template, setTemplate] = useState<string>(startTpl?.id ?? "");
+  const tplOptions = TEMPLATES.filter((t) => (mode === "carousel") === (t.kind === "carousel"));
+  useEffect(() => {
+    // תבנית שלא מתאימה לפורמט שנבחר יורדת
+    if (template && !tplOptions.some((t) => t.id === template)) setTemplate("");
+  }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
   const [facts, setFacts] = useState("");
   const [busy, setBusy] = useState(false);
   const niches = NICHES.filter((n) => n.account === account);
@@ -78,7 +86,7 @@ function IdeaForm({ params, onCreated }: { params: URLSearchParams; onCreated: (
     if (idea.trim().length < 8) return toast("כתבי את הרעיון במשפט או שניים", true);
     setBusy(true);
     try {
-      const { data, error } = await db().from("studio_drafts").insert({ idea: idea.trim(), account, niche, mode, facts }).select("*").single();
+      const { data, error } = await db().from("studio_drafts").insert({ idea: idea.trim(), account, niche, mode, facts, data: template ? { template } : {} }).select("*").single();
       if (error) throw new Error(error.message);
       const { draft } = await studioCall<{ draft: Draft }>(mode === "carousel" ? "carousel" : "hooks", { draftId: data.id });
       onCreated(draft);
@@ -102,6 +110,10 @@ function IdeaForm({ params, onCreated }: { params: URLSearchParams; onCreated: (
             <Select value={mode} onChange={setMode} options={[{ value: "full", label: "ריל: תסריט מלא, 15 עד 45 שניות" }, { value: "short", label: "ריל טקסט קצר, 7 עד 10 שניות" }, { value: "carousel", label: "קרוסלה, 6 עד 10 שקופיות" }] as const} />
           </Field>
         </div>
+        <Field label="תבנית" hint={templateById(template)?.why ?? "לא חובה. תבנית נותנת מבנה מוכן שעובד, והתוכן נכתב בקול שלך."}>
+          <Select value={template} onChange={(v) => { setTemplate(v); const t = templateById(v); if (t && t.kind === "reel" && t.mode) setMode(t.mode); }}
+            options={[{ value: "", label: "בלי תבנית" }, ...tplOptions.map((t) => ({ value: t.id, label: `${t.name} (${t.tag})` }))]} />
+        </Field>
         <Field label="מספרים ועובדות אמיתיים" hint="רק מכאן נלקחים מספרים. מה שחסר יסומן {{המספר שלך}}.">
           <textarea rows={2} className={inputCls} value={facts} onChange={(e) => setFacts(e.target.value)} placeholder="למשל: התכנון לוקח לי 10 דקות, פעם זה היה שעה." />
         </Field>
@@ -195,7 +207,7 @@ function DraftView({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => 
   const beats = d.script?.beats ?? [];
   return (
     <>
-      <Panel title={draft.idea} aside={<Tag>{draft.mode === "short" ? "ריל טקסט קצר" : "תסריט מלא"}</Tag>}>
+      <Panel title={draft.idea} aside={<span className="flex gap-1">{templateById(draft.data.template) && <Tag tone="butter">{templateById(draft.data.template)!.name}</Tag>}<Tag>{draft.mode === "short" ? "ריל טקסט קצר" : "תסריט מלא"}</Tag></span>}>
         <p className="text-xs text-[#6F675C]">{labelOf(ACCOUNTS, draft.account)} · {labelOf(NICHES, draft.niche)}{draft.facts ? ` · עובדות: ${draft.facts}` : " · לא הוזנו מספרים"}</p>
       </Panel>
 
@@ -328,7 +340,7 @@ function CarouselDraft({ draft, onChange }: { draft: Draft; onChange: (d: Draft)
   };
   return (
     <>
-      <Panel title={draft.idea} aside={<Tag>קרוסלה</Tag>}>
+      <Panel title={draft.idea} aside={<span className="flex gap-1">{templateById(draft.data.template) && <Tag tone="butter">{templateById(draft.data.template)!.name}</Tag>}<Tag>קרוסלה</Tag></span>}>
         <p className="text-xs text-[#6F675C]">{labelOf(ACCOUNTS, draft.account)} · {labelOf(NICHES, draft.niche)}{draft.facts ? ` · עובדות: ${draft.facts}` : " · לא הוזנו מספרים"}</p>
       </Panel>
       <CarouselView draft={draft} onChange={onChange} />
