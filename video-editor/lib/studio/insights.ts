@@ -7,18 +7,6 @@ import { loadAccount, loadAccounts } from "./instagram";
 
 // ---------- טרנדים
 
-const TrendSchema = z.object({
-  items: z.array(z.object({
-    kind: z.enum(["format", "audio", "topic", "hook"]),
-    title: z.string(),
-    summary: z.string(),
-    source_name: z.string(),
-    source_url: z.string(),
-    why_relevant: z.string(),
-    reel_idea: z.string(),
-  })),
-});
-
 /** טרנד נשאר רק אם הקישור שלו באמת נטען */
 async function urlLoads(url: string) {
   if (!/^https?:\/\/[^\s]+\.[^\s]+/.test(url)) return false;
@@ -35,45 +23,52 @@ async function urlLoads(url: string) {
   }
 }
 
-/** חיפוש ברשת לכל נישה, במקביל. מחזיר רק טרנדים עם מקור שנבדק */
+const TrendAllSchema = z.object({
+  items: z.array(z.object({
+    niche: z.enum(["travel", "business", "home", "meals"]),
+    kind: z.enum(["format", "audio", "topic", "hook"]),
+    title: z.string(),
+    summary: z.string(),
+    source_name: z.string(),
+    source_url: z.string(),
+    why_relevant: z.string(),
+    reel_idea: z.string(),
+  })),
+});
+
+/**
+ * חיפוש אחד ברשת שמכסה את ארבע הנישות (חוסך את המכסה החינמית של Gemini, שארבעה חיפושים
+ * במקביל גמרו). מחזיר רק טרנדים עם מקור שנבדק ונטען.
+ */
 export async function researchTrends(): Promise<{ items: TrendItem[]; dropped: number }> {
   const today = new Date().toISOString().slice(0, 10);
-  const errors: Error[] = [];
-  const batches = await Promise.all(NICHES.map(async (niche) => {
-    const account = ACCOUNTS.find((a) => a.value === niche.account)!;
-    try {
-      const { items } = cleanDeep(await askBrain({ prefer: "claude",
-        schema: TrendSchema,
-        search: true,
-        searchRequired: true,
-        system: "את חוקרת טרנדים לתוכן קצר באינסטגרם עבור יוצרת ישראלית. עונה בעברית. כל פריט חייב מקור אמיתי שמצאת בחיפוש.",
-        parts: [{ text: `התאריך היום: ${today}.
-חפשי ברשת מה עולה עכשיו (ב-14 הימים האחרונים) ברילס של אינסטגרם ובטיקטוק בנישה: ${niche.search}.
-הקהל: ${account.about}
-ארבעה סוגים: פורמטים של רילס (format), אודיו או סאונד טרנדי (audio), נושאים שמדברים עליהם (topic), וסוגי הוקים שחוזרים (hook).
+  const niches = NICHES.map((n) => `- ${n.value}: ${n.search} (לחשבון ${ACCOUNTS.find((a) => a.value === n.account)!.label})`).join("\n");
+  const { items } = cleanDeep(await askBrain({
+    prefer: "claude",
+    schema: TrendAllSchema,
+    search: true,
+    searchRequired: true,
+    system: "את חוקרת טרנדים לתוכן קצר באינסטגרם עבור יוצרת ישראלית. עונה בעברית. כל פריט חייב מקור אמיתי שמצאת בחיפוש.",
+    parts: [{ text: `התאריך היום: ${today}.
+חפשי ברשת מה עולה עכשיו (ב-14 הימים האחרונים) ברילס של אינסטגרם ובטיקטוק, בארבע הנישות האלה:
+${niches}
+
+סוגים: פורמטים של רילס (format), אודיו או סאונד טרנדי (audio), נושאים שמדברים עליהם (topic), וסוגי הוקים שחוזרים (hook).
 עדיפות למקורות ישראליים, ואחריהם מקורות בינלאומיים טובים (כתבות, דוחות טרנדים, פוסטים של יוצרים, עמודי מגמות של הפלטפורמות).
 
 כללים מחייבים:
+- niche: אחת מארבע הנישות למעלה (travel, business, home, meals). עד 3 פריטים לכל נישה, ובסך הכל עד 12.
 - לכל פריט source_url אמיתי ומדויק של העמוד שבו זה מופיע, כפי שמצאת בחיפוש. אין קישור אמיתי: לא מכניסים את הפריט.
 - אסור להמציא מספרים. מספר מופיע רק אם הוא כתוב במקור.
 - אודיו רק אם המקור מציין את שם האודיו.
-- why_relevant: למה זה רלוונטי ל${account.label} ולקהל שלו, במשפט.
+- why_relevant: למה זה רלוונטי לחשבון ולקהל שלו, במשפט.
 - reel_idea: רעיון מוכן לריל שהיא יכולה לצלם השבוע, במשפט או שניים, בקול שלה: ישיר, חם, פרקטי.
-- בלי אימוג'י ובלי מקפים ארוכים. עד 5 פריטים.` }],
-      }));
-      return items.slice(0, 5).map((it) => ({ ...it, niche: niche.value, account: niche.account }));
-    } catch (e) {
-      console.warn("trend search failed", niche.value, (e as Error).message);
-      errors.push(e as Error);
-      return [];
-    }
+- בלי אימוג'י ובלי מקפים ארוכים.` }],
   }));
-  // כל החיפושים נכשלו: אומרים למה, במקום "נמצאו 0 טרנדים"
-  if (errors.length === NICHES.length) throw errors[0];
-  const candidates = batches.flat();
+  const candidates: TrendItem[] = items.slice(0, 12).map((it) => ({ ...it, account: NICHES.find((n) => n.value === it.niche)!.account }));
   const checked = await Promise.all(candidates.map(async (it) => ((await urlLoads(it.source_url)) ? it : null)));
-  const items: TrendItem[] = checked.filter((x) => x !== null);
-  return { items, dropped: candidates.length - items.length };
+  const kept: TrendItem[] = checked.filter((x) => x !== null);
+  return { items: kept, dropped: candidates.length - kept.length };
 }
 
 // ---------- ביצועים, בקיצור, למודל

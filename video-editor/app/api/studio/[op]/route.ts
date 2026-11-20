@@ -212,6 +212,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
     }
   } catch (e) {
     if (e instanceof StudioError) return NextResponse.json({ error: e.message }, { status: e.status });
+    if (e instanceof BrainError && e.status === 429) {
+      return NextResponse.json({ error: "המכסה היומית החינמית של Gemini נגמרה להיום. היא מתחדשת מחר, ואז זה יעבוד שוב. (עם מפתח של Claude אין הגבלה כזו.)", detail: e.detail }, { status: 429 });
+    }
     if (e instanceof BrainError) return NextResponse.json({ error: e.message, detail: e.detail }, { status: e.status });
     if (e instanceof z.ZodError) return NextResponse.json({ error: "קלט לא תקין" }, { status: 400 });
     console.error("studio", op, e);

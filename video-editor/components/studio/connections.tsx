@@ -20,12 +20,12 @@ export function Connections() {
   return (
     <Panel label="הגדרות" title="מה" accent="מחובר">
       <ul className="divide-y divide-[#ECE7DE]">
-        {row(s.ai === "claude", s.ai === "claude" ? "כתיבה: Claude" : s.ai === "gemini" ? "כתיבה: Gemini (חינמי, מוגבל)" : "כתיבה: לא מחובר",
+        {row(s.ai !== null, s.ai === "claude" ? "כתיבה: Claude" : s.ai === "gemini" ? "כתיבה: Gemini (חינמי)" : "כתיבה: לא מחובר",
           s.ai === "claude" ? "התסריטים, הקרוסלות, היועצת והטרנדים נכתבים ב-Claude, ו-Gemini נשאר כגיבוי." : (
-            <>המכסה החינמית של Gemini נגמרת מהר, במיוחד בחיפוש טרנדים. לאיכות גבוהה וללא הגבלה: נכנסים ל-console.anthropic.com, יוצרים API key, ומוסיפים ב-Vercel משתנה בשם <b>ANTHROPIC_API_KEY</b>. התשלום לפי שימוש.</>
+            <>עובד בחינם, עם מכסה יומית שמתחדשת כל יום. הסטודיו בנוי כדי להיכנס בה: חיפוש טרנדים אחד ביום וטיוטה אוטומטית אחת. אם המכסה נגמרת, יופיע הסבר, וזה יחזור לעבוד מחר. אופציונלי, בתשלום לפי שימוש: מפתח מ-console.anthropic.com במשתנה <b>ANTHROPIC_API_KEY</b> ב-Vercel, לכתיבה ב-Claude בלי מכסה.</>
           ))}
         {row(s.instagram, "אינסטגרם", s.instagram ? "מחובר. התוצאות, היועצת וההמלצות משתמשות במספרים האמיתיים." : "חסר INSTAGRAM_ACCESS_TOKENS ב-Vercel.")}
-        {row(s.cron, "הכנה אוטומטית כל בוקר", s.cron ? "פועלת: טרנדים, רעיונות ושלוש טיוטות משובצות." : "חסר CRON_SECRET ב-Vercel.")}
+        {row(s.cron, "הכנה אוטומטית כל בוקר", s.cron ? "פועלת כל בוקר: טרנדים, רעיונות, וטיוטה אחת משובצת ביום פנוי." : "חסר CRON_SECRET ב-Vercel.")}
         {row(s.drive, "דרייב", s.drive ? (
           <>מחובר דרך {s.driveEmail}. {s.driveFolder ? "יש תיקיית ברירת מחדל." : <>כדאי להוסיף ב-Vercel משתנה <b>GOOGLE_DRIVE_FOLDER</b> עם הקישור לתיקיית הסרטונים.</>}</>
         ) : (
