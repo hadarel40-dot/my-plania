@@ -96,7 +96,6 @@ const GEMINI_MODELS: { model: string; fast: boolean }[] = [
   { model: "gemini-3.5-flash-lite", fast: true },
   { model: "gemini-flash-latest", fast: true },
   { model: "gemini-flash-lite-latest", fast: true },
-  { model: "gemini-2.5-flash", fast: true },
 ];
 
 /** מוסיף לבקשה הגדרת חשיבה מינימלית (בגרסאות 3 ומעלה: רמת חשיבה נמוכה; בישנות: תקציב 0) */
@@ -154,6 +153,10 @@ async function geminiCall(body: unknown, budgetMs = 52_000, attemptMs = 25_000):
     }
   }
   if (last) last.detail = tried.join(" | ").slice(0, 600);
+  // אם המכסה היא שעצרה (גם אם השגיאה האחרונה הייתה אחרת), זו הסיבה האמיתית
+  if (tried.some((t) => /: 429 /.test(t) || /quota/i.test(t))) {
+    throw new BrainError("המכסה החינמית של Gemini נגמרה לבינתיים. אפשר לחבר מכסה אישית בחינם (בלשונית חכם), או לנסות שוב מאוחר יותר", 429, tried.join(" | ").slice(0, 600));
+  }
   if (!last && tried.length) throw new BrainError("המכסה החינמית של Gemini נגמרה לבינתיים. אפשר לחבר מכסה אישית בחינם (בלשונית חכם), או לנסות שוב מאוחר יותר", 429, tried.join(" | "));
   throw last ?? new BrainError("Gemini לא ענה בזמן, נסו שוב", 504);
 }

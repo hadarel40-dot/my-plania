@@ -4,10 +4,10 @@ import { BrainError } from "@/lib/ai/brain";
 import { computeMeta } from "@/lib/editor/project-meta";
 import type { Draft } from "@/lib/studio/config";
 import { driveAccessToken, driveConfigured, driveEmail, driveThumb, listDriveMedia } from "@/lib/studio/drive";
-import { adminStore, autoDraft, autoIdeas } from "@/lib/studio/auto";
+import { adminStore, autoDraft, autoSuggest } from "@/lib/studio/auto";
 import { matchMaterials, writeCarousel, writeHooks, writeScript } from "@/lib/studio/engine";
 import { projectFromDraft } from "@/lib/studio/handoff";
-import { advise, buildVoice, planToday, planWeek, researchTrends, suggestFromEdit, weeklyStats, writeReview } from "@/lib/studio/insights";
+import { advise, buildVoice, inspire, planToday, planWeek, preferencesBlock, type Feedback, researchTrends, suggestFromEdit, weeklyStats, writeReview } from "@/lib/studio/insights";
 import { instagramConfigured, loadAccounts } from "@/lib/studio/instagram";
 import { StudioError, getVoice, requireStudioAdmin, todayIL, voiceBlock } from "@/lib/studio/server";
 
@@ -29,6 +29,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
       if (error || !data) throw new StudioError("הטיוטה לא נמצאה", 404);
       return data as Draft;
     };
+    // הקול שלה ומה שהיא אהבה ולא אהבה: כל כתיבה לומדת מהסימונים שלה
+    const voiceWithPrefs = async (account: Draft["account"]) => {
+      const { data: fb } = await supabase.from("studio_feedback").select("kind, text, verdict, reason").order("created_at", { ascending: false }).limit(60);
+      return `${voiceBlock(await getVoice(supabase, account), account)}\n\n${preferencesBlock((fb ?? []) as Feedback[])}`;
+    };
     const saveDraft = async (id: string, data: Draft["data"]) => {
       const { data: saved, error } = await supabase.from("studio_drafts").update({ data }).eq("id", id).select("*").single();
       if (error) throw new StudioError(error.message, 500);
@@ -39,19 +44,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
       case "hooks": {
         const { draftId } = z.object({ draftId: uuid }).parse(body);
         const draft = await loadDraft(draftId);
-        const voice = voiceBlock(await getVoice(supabase, draft.account), draft.account);
+        const voice = await voiceWithPrefs(draft.account);
         return NextResponse.json({ draft: await saveDraft(draft.id, await writeHooks(draft, voice)) });
       }
       case "script": {
         const { draftId, hookIndex } = z.object({ draftId: uuid, hookIndex: z.number().int().min(0).max(2) }).parse(body);
         const draft = await loadDraft(draftId);
-        const voice = voiceBlock(await getVoice(supabase, draft.account), draft.account);
+        const voice = await voiceWithPrefs(draft.account);
         return NextResponse.json({ draft: await saveDraft(draft.id, await writeScript(draft, voice, hookIndex)) });
       }
       case "carousel": {
         const { draftId } = z.object({ draftId: uuid }).parse(body);
         const draft = await loadDraft(draftId);
-        const voice = voiceBlock(await getVoice(supabase, draft.account), draft.account);
+        const voice = await voiceWithPrefs(draft.account);
         return NextResponse.json({ draft: await saveDraft(draft.id, await writeCarousel(draft, voice)) });
       }
       case "drive-match": {
@@ -90,11 +95,55 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
           cron: !!process.env.CRON_SECRET,
         });
       }
+      case "suggest": {
+        // הצעות חדשות (רעיון ושלושה הוקים). focus: מה היא מקדמת עכשיו
+        const { focus, count } = z.object({ focus: z.string().max(800).optional(), count: z.number().int().min(1).max(6).optional() }).parse(body);
+        return NextResponse.json(await autoSuggest(adminStore(supabase), count ?? 5, { force: true, focus }));
+      }
+      case "inspire": {
+        // השראה: קישור (רילס, טיקטוק, כתבה), תמונה, או פריימים מסרטון שהעלתה
+        const { url, note, images } = z.object({
+          url: z.string().url().max(1000).optional(),
+          note: z.string().max(1500).default(""),
+          images: z.array(z.string().max(1_500_000).regex(/^data:image\/jpeg;base64,/)).max(4).default([]),
+        }).parse(body);
+        let pageText = "";
+        const pics = [...images];
+        if (url) {
+          try {
+            const ctrl = new AbortController();
+            const t = setTimeout(() => ctrl.abort(), 8000);
+            const page = await fetch(url, { signal: ctrl.signal, redirect: "follow", headers: { "user-agent": "Mozilla/5.0 (compatible; facebookexternalhit/1.1)" }, cache: "no-store" });
+            clearTimeout(t);
+            const html = (await page.text()).slice(0, 400_000);
+            const meta = (name: string) => html.match(new RegExp(`<meta[^>]+(?:property|name)=["']${name}["'][^>]+content=["']([^"']+)`, "i"))?.[1] ?? "";
+            const unescape = (x: string) => x.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)));
+            pageText = [meta("og:title"), meta("og:description") || meta("description")].map(unescape).filter(Boolean).join("\n").slice(0, 2000);
+            const ogImage = unescape(meta("og:image"));
+            if (ogImage && pics.length < 4) {
+              const img = await fetch(ogImage, { cache: "no-store" });
+              if (img.ok && /jpe?g/i.test(img.headers.get("content-type") ?? "")) {
+                const buf = Buffer.from(await img.arrayBuffer());
+                if (buf.length < 1_200_000) pics.push(`data:image/jpeg;base64,${buf.toString("base64")}`);
+              }
+            }
+          } catch {
+            // אינסטגרם חוסם לפעמים קריאה מבחוץ. ממשיכים עם מה שיש (ההערה והתמונות)
+          }
+        }
+        if (!pageText && !pics.length && !note.trim()) throw new StudioError("לא הצלחתי לקרוא את הקישור. אפשר להוסיף כמה מילים על מה אהבת בו, או צילום מסך ממנו.", 400);
+        const [{ data: feedback }] = await Promise.all([supabase.from("studio_feedback").select("kind, text, verdict, reason").order("created_at", { ascending: false }).limit(60)]);
+        const voices = (await Promise.all((["hadarelifergan", "plania.il"] as const).map(async (a) => voiceBlock(await getVoice(supabase, a), a)))).join("\n\n");
+        const out = await inspire({ url: url ?? null, pageText, note, images: pics, voices, feedback: (feedback ?? []) as Feedback[] });
+        const { data, error } = await supabase.from("studio_suggestions").insert(out.map((x) => ({ ...x, source_note: note || pageText.slice(0, 300) || null }))).select("*");
+        if (error) throw new StudioError(error.message, 500);
+        return NextResponse.json({ suggestions: data, readPage: !!pageText });
+      }
       case "auto": {
         // הכפתור "להכין עכשיו": רעיונות אם חסרים, אחרת טיוטה אחת שמשובצת ביום פנוי
         const { step } = z.object({ step: z.enum(["ideas", "draft"]) }).parse(body);
         const store = adminStore(supabase);
-        return NextResponse.json(step === "ideas" ? await autoIdeas(store) : await autoDraft(store));
+        return NextResponse.json(step === "ideas" ? await autoSuggest(store) : await autoDraft(store));
       }
       case "to-editor": {
         const { draftId } = z.object({ draftId: uuid }).parse(body);

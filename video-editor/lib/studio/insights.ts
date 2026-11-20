@@ -1,74 +1,69 @@
 import "server-only";
 import { z } from "zod";
-import { askBrain } from "@/lib/ai/brain";
+import { askBrain, type BrainPart } from "@/lib/ai/brain";
 import { cleanDeep } from "./clean";
-import { ACCOUNTS, DEFAULT_VOICE, NICHES, type Account, type TrendItem, type VoiceProfile } from "./config";
+import { ACCOUNTS, DEFAULT_VOICE, NICHES, type Account, type Hook, type TrendItem, type VoiceProfile } from "./config";
+import { scoreHook } from "./hookscore";
 import { loadAccount, loadAccounts } from "./instagram";
+import { newsForTrends } from "./news";
 
 // ---------- טרנדים
 
-/** טרנד נשאר רק אם הקישור שלו באמת נטען */
-async function urlLoads(url: string) {
-  if (!/^https?:\/\/[^\s]+\.[^\s]+/.test(url)) return false;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8000);
-  try {
-    const res = await fetch(url, { redirect: "follow", signal: controller.signal, headers: { "user-agent": "Mozilla/5.0 (link check)" }, cache: "no-store" });
-    await res.body?.cancel().catch(() => {});
-    return res.status < 400;
-  } catch {
-    return false;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-const TrendAllSchema = z.object({
+const TrendPickSchema = z.object({
   items: z.array(z.object({
+    article: z.number(),
     niche: z.enum(["travel", "business", "home", "meals"]),
     kind: z.enum(["format", "audio", "topic", "hook"]),
     title: z.string(),
     summary: z.string(),
-    source_name: z.string(),
-    source_url: z.string(),
     why_relevant: z.string(),
     reel_idea: z.string(),
   })),
 });
 
 /**
- * חיפוש אחד ברשת שמכסה את ארבע הנישות (חוסך את המכסה החינמית של Gemini, שארבעה חיפושים
- * במקביל גמרו). מחזיר רק טרנדים עם מקור שנבדק ונטען.
+ * טרנדים מכתבות אמיתיות: חיפוש חינמי בחדשות של גוגל (14 ימים אחרונים), והמודל רק בוחר מה רלוונטי
+ * ומסביר. המקור והקישור נלקחים מהכתבה עצמה, לא מהמודל, ולכן אין מקורות מומצאים.
  */
 export async function researchTrends(): Promise<{ items: TrendItem[]; dropped: number }> {
-  const today = new Date().toISOString().slice(0, 10);
+  const articles = await newsForTrends();
+  if (!articles.length) throw new Error("לא הצלחתי להביא כתבות מהחדשות של גוגל כרגע. נסי שוב בעוד כמה דקות.");
+  const list = articles.map((a, i) => `#${i} [${a.niche}] ${a.title} (${a.source}, ${a.date.slice(5, 16)})`).join("\n");
   const niches = NICHES.map((n) => `- ${n.value}: ${n.search} (לחשבון ${ACCOUNTS.find((a) => a.value === n.account)!.label})`).join("\n");
   const { items } = cleanDeep(await askBrain({
     prefer: "claude",
-    schema: TrendAllSchema,
-    search: true,
-    searchRequired: true,
-    system: "את חוקרת טרנדים לתוכן קצר באינסטגרם עבור יוצרת ישראלית. עונה בעברית. כל פריט חייב מקור אמיתי שמצאת בחיפוש.",
-    parts: [{ text: `התאריך היום: ${today}.
-חפשי ברשת מה עולה עכשיו (ב-14 הימים האחרונים) ברילס של אינסטגרם ובטיקטוק, בארבע הנישות האלה:
+    schema: TrendPickSchema,
+    system: "את חוקרת טרנדים לתוכן קצר באינסטגרם עבור יוצרת ישראלית. עונה בעברית, רק על סמך הכתבות שקיבלת.",
+    parts: [{ text: `אלה כתבות מ-14 הימים האחרונים (מספר, נישת חיפוש, כותרת, מקור, תאריך):
+${list}
+
+הנישות שלה:
 ${niches}
 
-סוגים: פורמטים של רילס (format), אודיו או סאונד טרנדי (audio), נושאים שמדברים עליהם (topic), וסוגי הוקים שחוזרים (hook).
-עדיפות למקורות ישראליים, ואחריהם מקורות בינלאומיים טובים (כתבות, דוחות טרנדים, פוסטים של יוצרים, עמודי מגמות של הפלטפורמות).
-
-כללים מחייבים:
-- niche: אחת מארבע הנישות למעלה (travel, business, home, meals). עד 3 פריטים לכל נישה, ובסך הכל עד 12.
-- לכל פריט source_url אמיתי ומדויק של העמוד שבו זה מופיע, כפי שמצאת בחיפוש. אין קישור אמיתי: לא מכניסים את הפריט.
-- אסור להמציא מספרים. מספר מופיע רק אם הוא כתוב במקור.
-- אודיו רק אם המקור מציין את שם האודיו.
+בחרי עד 12 כתבות שמראות משהו שעולה עכשיו ושאפשר להפוך לתוכן אצלה (פורמט, נושא, סוג הוק, או אודיו אם הכותרת מציינת אותו). עד 3 לכל נישה. כתבה שלא רלוונטית לאף נישה, לא בוחרים.
+לכל פריט:
+- article: מספר הכתבה.
+- niche: travel, business, home או meals.
+- kind: format, audio, topic או hook.
+- title: הטרנד במילים שלך, קצר.
+- summary: מה הכתבה אומרת, רק לפי הכותרת. בלי פרטים שלא כתובים בה, ובלי מספרים שלא כתובים בה.
 - why_relevant: למה זה רלוונטי לחשבון ולקהל שלו, במשפט.
 - reel_idea: רעיון מוכן לריל שהיא יכולה לצלם השבוע, במשפט או שניים, בקול שלה: ישיר, חם, פרקטי.
-- בלי אימוג'י ובלי מקפים ארוכים.` }],
+בלי אימוג'י ובלי מקפים ארוכים.` }],
   }));
-  const candidates: TrendItem[] = items.slice(0, 12).map((it) => ({ ...it, account: NICHES.find((n) => n.value === it.niche)!.account }));
-  const checked = await Promise.all(candidates.map(async (it) => ((await urlLoads(it.source_url)) ? it : null)));
-  const kept: TrendItem[] = checked.filter((x) => x !== null);
-  return { items: kept, dropped: candidates.length - kept.length };
+  const kept: TrendItem[] = items
+    .filter((it) => articles[it.article])
+    .slice(0, 12)
+    .map((it) => {
+      const a = articles[it.article];
+      return {
+        niche: it.niche, kind: it.kind, title: it.title, summary: it.summary, why_relevant: it.why_relevant, reel_idea: it.reel_idea,
+        account: NICHES.find((n) => n.value === it.niche)!.account,
+        source_name: a.source || "Google News",
+        source_url: a.link,
+      };
+    });
+  return { items: kept, dropped: 0 };
 }
 
 // ---------- ביצועים, בקיצור, למודל
@@ -327,4 +322,107 @@ ${performance}
 השיחה עד עכשיו:
 ${history}` }],
   }));
+}
+
+// ---------- הצעות: רעיון והוקים, לפי טרנדים, העסק, הביצועים ומה שהיא אוהבת
+
+export interface Feedback { kind: "idea" | "hook"; text: string; verdict: "like" | "dislike"; reason?: string | null }
+
+/** מה היא אהבה ומה לא, בשביל המודל */
+export function preferencesBlock(feedback: Feedback[]) {
+  const liked = feedback.filter((f) => f.verdict === "like").slice(0, 25);
+  const disliked = feedback.filter((f) => f.verdict === "dislike").slice(0, 25);
+  if (!liked.length && !disliked.length) return "עוד אין לה סימונים של אהבתי ולא אהבתי.";
+  const line = (f: Feedback) => `- (${f.kind === "hook" ? "הוק" : "רעיון"}) ${f.text}${f.reason ? ` | למה: ${f.reason}` : ""}`;
+  return `מה היא אהבה (לכתוב עוד בכיוון הזה):\n${liked.map(line).join("\n") || "- אין עדיין"}\n\nמה היא לא אהבה (להתרחק מזה, ובמיוחד מהסיבות):\n${disliked.map(line).join("\n") || "- אין עדיין"}`;
+}
+
+const HookDraft = z.object({
+  formula: z.string(), spoken: z.string(), on_screen: z.string(), key_word: z.string(),
+  named_entities: z.array(z.string()), stakes_score: z.number(), stakes_reason: z.string(), direct_score: z.number(),
+});
+const IdeaSuggestSchema = z.object({
+  suggestions: z.array(z.object({
+    title: z.string(),
+    idea: z.string(),
+    why: z.string(),
+    account: z.enum(["hadarelifergan", "plania.il"]),
+    niche: z.enum(["travel", "business", "home", "meals"]),
+    format: z.enum(["reel", "carousel", "story", "image"]),
+    trend: z.number(),
+    hooks: z.array(HookDraft),
+  })),
+});
+export interface SuggestionOut { title: string; idea: string; why: string; account: Account; niche: string; format: string; hooks: Hook[]; source: "studio" | "trend" | "inspiration"; source_url: string | null }
+
+const HOOK_RULES = `לכל רעיון שלושה הוקים מנוסחות שונות (Cost Confession, Negative Command, Nobody Tells You, The Receipt, Before And After, The Objection, Contrarian Flip, Time Collapse, Permission, The Callout ועוד). לכל הוק:
+- spoken: 5 עד 12 מילים, בלי ברכה ובלי הקדמה, המילה החשובה בשלוש הראשונות, פונה לצופה כשזה טבעי.
+- on_screen: עד שש מילים. formula: שם הנוסחה באנגלית. key_word: המילה החשובה. named_entities: שמות, מקומות או מחירים בהוק.
+- stakes_score ו-direct_score בין 0 ל-100, stakes_reason במשפט.
+מספר שלא מבוסס על משהו אמיתי נכתב {{המספר שלך}}.`;
+
+function finishSuggestions(raw: z.infer<typeof IdeaSuggestSchema>, trends: TrendItem[], source: SuggestionOut["source"], sourceUrl: string | null): SuggestionOut[] {
+  return raw.suggestions.map((x) => {
+    const trend = trends[x.trend];
+    const hooks: Hook[] = x.hooks.slice(0, 3).map((h) => ({ formula: h.formula, spoken: h.spoken, on_screen: h.on_screen, ...scoreHook(h.spoken, h) })).sort((a, b) => b.score - a.score);
+    return {
+      title: x.title, idea: x.idea, why: x.why, account: x.account, niche: x.niche, format: x.format, hooks,
+      source: source === "studio" && trend ? "trend" : source,
+      source_url: source === "studio" ? trend?.source_url ?? null : sourceUrl,
+    };
+  });
+}
+
+/** חמש הצעות חדשות. היא בוחרת מה לשמור ומה לא */
+export async function generateSuggestions(input: { trends: TrendItem[]; feedback: Feedback[]; existing: string[]; voices: string; count?: number; focus?: string }) {
+  const performance = await performanceSummary(12).catch(() => "לא הצלחתי לקרוא ביצועים.");
+  const raw = cleanDeep(await askBrain({
+    prefer: "claude",
+    schema: IdeaSuggestSchema,
+    system: "את מנהלת הסושיאל שלה. מציעה רעיונות שמתאימים בדיוק לעסק ולקול שלה, נשענים על מה שעולה עכשיו ועל מה שעבד לה, ולומדת ממה שהיא אהבה ולא אהבה. עברית מדוברת, בלי אימוג'י, בלי מקפים ארוכים, בלי קלישאות. אסור להמציא מספרים.",
+    parts: [{ text: `שני חשבונות: @hadarelifergan (אישי: תכנון טיולים ומערכות לעסקים קטנים) ו-@plania.il (Plania: ארגון הבית ותכנון ארוחות).
+
+הקול שלה:
+${input.voices}
+
+${preferencesBlock(input.feedback)}
+
+טרנדים מאומתים (מספר, נישה, טרנד, רעיון):
+${input.trends.slice(0, 12).map((t, i) => `#${i} [${t.niche}] ${t.title}: ${t.reel_idea}`).join("\n") || "אין טרנדים עדכניים."}
+
+ביצועים אחרונים (שמירות ושיתופים לפני לייקים):
+${performance}
+
+${input.focus ? `מה היא מקדמת עכשיו (לתת לזה עדיפות): ${input.focus}\n\n` : ""}כבר הוצע או קיים (לא לחזור): ${JSON.stringify(input.existing.slice(0, 60))}
+
+תני ${input.count ?? 5} הצעות מגוונות: בין שני החשבונות, בין הנישות ובין הפורמטים (רובם רילס, לפחות קרוסלה אחת). לכל הצעה:
+- title: כותרת קצרה, עד 8 מילים. idea: מה קורה בסרטון או בקרוסלה ומה הצופה מקבלת, במשפט או שניים.
+- why: למה זה יעבוד, לפי הנתונים למעלה (טרנד מסוים, פוסט שעבד, או משהו שהיא אהבה).
+- trend: מספר הטרנד שההצעה נשענת עליו, או -1.
+- account, niche, format.
+${HOOK_RULES}` }],
+  }));
+  return finishSuggestions(raw, input.trends, "studio", null);
+}
+
+/** השראה: קישור לסרטון או תמונות ממנו (או שלה), והופכים אותה לרעיון שמתאים לה */
+export async function inspire(input: { url: string | null; pageText: string; note: string; images: string[]; voices: string; feedback: Feedback[] }) {
+  const parts: BrainPart[] = [{ text: `היא שלחה השראה. ${input.url ? `קישור: ${input.url}` : "בלי קישור."}
+${input.pageText ? `מה שמופיע בעמוד (כותרת ותיאור):\n${input.pageText}` : ""}
+${input.note ? `מה היא כתבה: ${input.note}` : ""}
+${input.images.length ? "מצורפות תמונות מההשראה (פריימים מהסרטון או התמונה עצמה)." : ""}
+
+שני חשבונות: @hadarelifergan (אישי: תכנון טיולים ומערכות לעסקים קטנים) ו-@plania.il (Plania: ארגון הבית ותכנון ארוחות).
+הקול שלה:
+${input.voices}
+
+${preferencesBlock(input.feedback)}
+
+הבינו מה עובד בהשראה (הפורמט, ההוק, המבנה, הצילום), ותני 2 הצעות שלוקחות את זה לעולם שלה. לא מעתיקים: מתאימים לעסק ולקול שלה.
+לכל הצעה: title, idea, why (מה לקחנו מההשראה ולמה זה יעבוד אצלה), trend: -1, account, niche, format.
+${HOOK_RULES}
+בלי אימוג'י ובלי מקפים ארוכים. אם אי אפשר להבין מההשראה כלום (אין טקסט ואין תמונה), כתבי ב-why מה חסר, ועדיין הציעי לפי ההערה שלה.` }];
+  input.images.slice(0, 4).forEach((img) => parts.push({ image: img }));
+  const raw = cleanDeep(await askBrain({ prefer: "claude", schema: IdeaSuggestSchema, system: "את מנהלת סושיאל שהופכת השראה לרעיון מקורי שמתאים ליוצרת.", parts }));
+  return finishSuggestions(raw, [], "inspiration", input.url);
 }

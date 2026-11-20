@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase/env";
-import { autoDraft, autoIdeas, cronStore } from "@/lib/studio/auto";
+import { autoDraft, autoSuggest, cronStore } from "@/lib/studio/auto";
 import { researchTrends } from "@/lib/studio/insights";
 import { todayIL } from "@/lib/studio/server";
 
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   if (job === "ideas" || job === "draft") {
     try {
       const store = cronStore(db, secret);
-      return NextResponse.json(job === "ideas" ? await autoIdeas(store) : await autoDraft(store));
+      return NextResponse.json(job === "ideas" ? await autoSuggest(store) : await autoDraft(store));
     } catch (e) {
       return NextResponse.json({ error: (e as Error).message }, { status: 500 });
     }

@@ -7,7 +7,8 @@ import { ACCOUNTS, FORMATS, NICHES, labelOf, type Account, type Stage } from "@/
 import type { IgAccount } from "@/lib/studio/instagram";
 import { usualAndBest } from "@/lib/studio/metrics";
 import { db, formatDate, num, studioCall, todayIL } from "@/lib/studio/client";
-import { Btn, Label, Loading, Note, Panel, Tag, Title, inputCls, toast } from "@/components/studio/ui";
+import { Btn, Label, Loading, Note, Panel, Tag, Title, toast } from "@/components/studio/ui";
+import { Suggestions } from "@/components/studio/suggestions";
 import { cn } from "@/lib/utils";
 
 interface Rec { title: string; why: string; what_to_shoot: string; action: string; action_label: string; idea: string; account: string; niche: string; impact: string }
@@ -32,7 +33,8 @@ export default function HomePage() {
   return (
     <div className="space-y-5">
       <PoppingOff />
-      <PlanWeek onAdded={loadItems} />
+      <Suggestions />
+      <AutoNow onDone={loadItems} />
       <ThisWeek items={items} setItems={setItems} today={today} />
       <Reset today={today} items={items} />
     </div>
@@ -85,30 +87,44 @@ function PoppingOff() {
   );
 }
 
-function PlanWeek({ onAdded }: { onAdded: () => void }) {
-  const [focus, setFocus] = useState("");
+/** פריט בלוח: גוררים ליום (במחשב), או לוחצים ובוחרים יום (בטלפון) */
+function ItemChip({ item, onDragStart, days, onPlace }: { item: Item; onDragStart: (e: React.DragEvent) => void; days: string[]; onPlace: (date: string | null) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div draggable onDragStart={onDragStart} className="cursor-grab rounded-lg border border-[#E2DACD] bg-white/80 px-2 py-1.5 text-[12px] leading-snug shadow-[0_1px_1px_rgba(31,27,22,0.05)] active:cursor-grabbing">
+      <button type="button" onClick={() => setOpen((o) => !o)} className="w-full text-right">
+        <span className="mb-0.5 block text-[9px] font-bold tracking-[0.14em] text-[#6F675C]">{labelOf(FORMATS, item.format)} · {item.account === "plania.il" ? "פלניה" : "אישי"}{item.auto ? " · מהצעה" : ""}</span>
+        <span className="line-clamp-3 font-semibold">{item.title}</span>
+      </button>
+      {item.stage === "draft" && <span className="mt-1 inline-block rounded bg-[#F6E7A6] px-1 text-[9px] font-bold">טיוטה מוכנה</span>}
+      {open && (
+        <div className="mt-1.5 border-t border-[#ECE7DE] pt-1.5">
+          {item.draft_id && <Link href={`/studio/reel?id=${item.draft_id}`} className="mb-1.5 block text-[11px] font-bold underline">לפתוח את הטיוטה</Link>}
+          {!item.draft_id && <Link href={`/studio/reel?${new URLSearchParams({ idea: item.notes ? item.notes.split("\n\nלמה:")[0] : item.title, account: item.account, niche: item.niche ?? "", ...(item.format === "carousel" ? { mode: "carousel" } : {}) })}`} className="mb-1.5 block text-[11px] font-bold underline">לכתוב עכשיו</Link>}
+          <span className="mb-1 block text-[10px] text-[#6F675C]">להעביר ליום:</span>
+          <div className="flex flex-wrap gap-1">
+            {days.map((d) => (
+              <button key={d} type="button" onClick={() => { setOpen(false); onPlace(d); }} className={cn("rounded border px-1 text-[10px]", item.planned_date === d ? "border-[#1F1B16] bg-[#F6E7A6]" : "border-[#E2DACD]")}>
+                {DAYS[new Date(`${d}T12:00:00`).getDay()].slice(0, 3)}
+              </button>
+            ))}
+            {item.planned_date && <button type="button" onClick={() => { setOpen(false); onPlace(null); }} className="rounded border border-dashed border-[#9A9184] px-1 text-[10px]">לתור</button>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** "להכין טיוטה עכשיו": הטיוטה הבאה לרעיון ששמרת ושיבצת, בלי לחכות לבוקר */
+function AutoNow({ onDone }: { onDone: () => void }) {
   const [busy, setBusy] = useState(false);
-  const [autoBusy, setAutoBusy] = useState(false);
-  // כמו המשימה של הבוקר, בלחיצה: רעיונות אם חסרים, ואז טיוטה אחת שמשובצת ביום פנוי
-  const autoNow = async () => {
-    setAutoBusy(true);
-    try {
-      const ideas = await studioCall<{ added?: number }>("auto", { step: "ideas" });
-      const draft = await studioCall<{ day?: string; title?: string; skipped?: string }>("auto", { step: "draft" });
-      toast(draft.day ? `"${draft.title}" מוכן ומשובץ ל${formatDate(draft.day)}` : draft.skipped ?? (ideas.added ? `נוספו ${ideas.added} רעיונות` : "אין מה להכין כרגע"));
-      onAdded();
-    } catch (e) {
-      toast((e as Error).message, true);
-    } finally {
-      setAutoBusy(false);
-    }
-  };
   const run = async () => {
     setBusy(true);
     try {
-      const { items } = await studioCall<{ items: unknown[] }>("plan-week", { focus });
-      toast(`נוספו ${items.length} רעיונות לתור. גררי אותם לימים.`);
-      onAdded();
+      const r = await studioCall<{ day?: string; title?: string; skipped?: string }>("auto", { step: "draft" });
+      toast(r.day ? `"${r.title}" מוכן ל${formatDate(r.day)}` : r.skipped ?? "אין מה להכין");
+      onDone();
     } catch (e) {
       toast((e as Error).message, true);
     } finally {
@@ -116,30 +132,9 @@ function PlanWeek({ onAdded }: { onAdded: () => void }) {
     }
   };
   return (
-    <Panel>
-      <div className="flex flex-wrap items-end gap-4">
-        <div className="min-w-[240px] flex-1">
-          <Label>תכנון</Label>
-          <Title size="lg" accent="השבוע">לייצר את הרעיונות של</Title>
-          <p className="mt-1 text-sm text-[#4E473E]">ספרי לי מה את מקדמת השבוע. אקרא את הביצועים ואת הטרנדים ואביא חמישה רעיונות לבחירה.</p>
-          <input className={cn(inputCls, "mt-3")} value={focus} onChange={(e) => setFocus(e.target.value)} placeholder="למשל: השקת התבנית לתכנון טיול, או שבוע של מתכונים מהירים" />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Btn busy={busy} onClick={run}>{busy ? "מתכננת..." : "לתכנן את השבוע"}</Btn>
-          <Btn variant="butter" busy={autoBusy} onClick={autoNow}>{autoBusy ? "מכינה טיוטה, עד דקה..." : "להכין טיוטה עכשיו"}</Btn>
-        </div>
-      </div>
-      <p className="mt-3 text-[12px] text-[#6F675C]">כל בוקר זה קורה לבד: אחרי מחקר הטרנדים נוספים רעיונות לתור, וטיוטה אחת מוכנה (תסריט ושוטים, או קרוסלה) משובצת ביום הפנוי הבא. רוצה עוד? "להכין טיוטה עכשיו". שום דבר לא מתפרסם בלי שתאשרי.</p>
-    </Panel>
-  );
-}
-
-function ItemChip({ item, onDragStart }: { item: Item; onDragStart: (e: React.DragEvent) => void }) {
-  return (
-    <div draggable onDragStart={onDragStart} className="cursor-grab rounded-lg border border-[#E2DACD] bg-white/80 px-2 py-1.5 text-[12px] leading-snug shadow-[0_1px_1px_rgba(31,27,22,0.05)] active:cursor-grabbing">
-      <span className="mb-0.5 block text-[9px] font-bold tracking-[0.14em] text-[#6F675C]">{labelOf(FORMATS, item.format)} · {item.account === "plania.il" ? "פלניה" : "אישי"}{item.auto ? " · אוטומטי" : ""}</span>
-      {item.draft_id ? <Link href={`/studio/reel?id=${item.draft_id}`} className="line-clamp-3 font-semibold hover:underline">{item.title}</Link> : <span className="line-clamp-3 font-semibold">{item.title}</span>}
-      {item.stage === "draft" && <span className="mt-1 inline-block rounded bg-[#F6E7A6] px-1 text-[9px] font-bold">טיוטה מוכנה</span>}
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-[#E3DDD2] px-4 py-3">
+      <p className="text-[13px] text-[#4E473E]">רעיון ששמרת ושיבצת מקבל טיוטה מוכנה לבד בבוקר: תסריט ושוטים עם ההוק שבחרת, או קרוסלה.</p>
+      <Btn variant="butter" busy={busy} onClick={run}>{busy ? "מכינה, עד דקה..." : "להכין טיוטה עכשיו"}</Btn>
     </div>
   );
 }
@@ -176,7 +171,7 @@ function ThisWeek({ items, setItems, today }: { items: Item[] | null; setItems: 
       <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
         <div>
           <Title size="lg" accent="הזה">השבוע</Title>
-          <p className="text-[12px] text-[#4E473E]">{range} · גוררים כל דבר ליום</p>
+          <p className="text-[12px] text-[#4E473E]">{range} · גוררים ליום, או לוחצים על פריט ובוחרים יום</p>
         </div>
         <div className="flex items-center gap-1.5">
           <button type="button" aria-label="השבוע הקודם" onClick={() => setOffset((o) => o - 1)} className="grid size-8 place-items-center rounded-[5px] border border-[#1F1B16] bg-[#FBF8F2]"><ChevronRight className="size-4" /></button>
@@ -190,8 +185,8 @@ function ThisWeek({ items, setItems, today }: { items: Item[] | null; setItems: 
           <div {...drop(null)} className={cn("rounded-xl border border-dashed border-[#CFC6B7] bg-[#ECE7DE] p-2", over === "queue" && "border-[#1F1B16] bg-[#F6E7A6]/50")}>
             <Label className="mb-1.5">בתור · {queue.length}</Label>
             <div className="max-h-[320px] space-y-1.5 overflow-y-auto">
-              {queue.slice(0, 30).map((i) => <ItemChip key={i.id} item={i} onDragStart={drag(i.id)} />)}
-              {queue.length === 0 && <p className="text-[11px] text-[#6F675C]">התור ריק. "לתכנן את השבוע" ימלא אותו.</p>}
+              {queue.slice(0, 30).map((i) => <ItemChip key={i.id} item={i} onDragStart={drag(i.id)} days={days} onPlace={(d) => place(i.id, d)} />)}
+              {queue.length === 0 && <p className="text-[11px] text-[#6F675C]">התור ריק. שומרים הצעה "בלי תאריך" והיא מגיעה לכאן.</p>}
             </div>
           </div>
           {days.map((d, idx) => {
@@ -202,8 +197,8 @@ function ThisWeek({ items, setItems, today }: { items: Item[] | null; setItems: 
                 <p className="text-[10px] font-bold tracking-[0.14em] text-[#6F675C]">{DAYS[idx]}{isToday ? " · היום" : ""}</p>
                 <p className="s-serif mb-1.5 text-sm">{formatDate(d)}</p>
                 <div className="space-y-1.5">
-                  {list.map((i) => <ItemChip key={i.id} item={i} onDragStart={drag(i.id)} />)}
-                  {list.length === 0 && <p className="rounded-lg border border-dashed border-[#E2DACD] py-3 text-center text-[10px] text-[#9A9184]">גוררים לכאן</p>}
+                  {list.map((i) => <ItemChip key={i.id} item={i} onDragStart={drag(i.id)} days={days} onPlace={(d) => place(i.id, d)} />)}
+                  {list.length === 0 && <p className="rounded-lg border border-dashed border-[#E2DACD] py-3 text-center text-[10px] text-[#9A9184]">ריק</p>}
                 </div>
               </div>
             );
@@ -212,7 +207,7 @@ function ThisWeek({ items, setItems, today }: { items: Item[] | null; setItems: 
       )}
       <Link href="/studio/ideas" className="mt-3 flex items-center gap-2 rounded-xl bg-[#ECE7DE] px-3 py-2 text-[12px] font-bold">
         <Lightbulb className="size-4" /> מאגר הרעיונות · {(items ?? []).filter((i) => i.stage === "idea").length}
-        <span className="font-normal text-[#6F675C]">לפתוח, ואז לגרור רעיונות ליום</span>
+        <span className="font-normal text-[#6F675C]">כל הרעיונות וההשראות</span>
       </Link>
     </section>
   );

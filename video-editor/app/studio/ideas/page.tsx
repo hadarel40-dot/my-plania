@@ -5,7 +5,8 @@ import { useEffect, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { ACCOUNTS, NICHES, labelOf, type Account, type Niche } from "@/lib/studio/config";
 import { db, formatDate } from "@/lib/studio/client";
-import { Btn, Loading, Note, PageHead, Panel, Select, Tag, inputCls, toast } from "@/components/studio/ui";
+import { Btn, Label, Loading, Note, PageHead, Panel, Select, Tag, inputCls, toast } from "@/components/studio/ui";
+import { Suggestions } from "@/components/studio/suggestions";
 
 interface Item { id: string; title: string; account: Account; niche: Niche | null; notes: string; created_at: string; planned_date: string | null; format: string; auto: boolean }
 
@@ -34,7 +35,9 @@ export default function IdeasPage() {
 
   return (
     <>
-      <PageHead label="תכנון" title="מאגר" accent="הרעיונות" sub="כל רעיון שעוד לא נכתב. מכאן שולחים לסטודיו לכתיבת ריל, או גוררים ליום בעמוד הבית." />
+      <PageHead label="תכנון" title="מאגר" accent="הרעיונות" sub="הצעות מהסטודיו, השראות שהבאת, ורעיונות ששמרת. מכאן שומרים ומשבצים ביום, או כותבים ריל או קרוסלה." />
+      <div className="mb-8"><Suggestions /></div>
+      <Label className="mb-2">רעיונות ששמרת</Label>
       <Panel className="mb-5">
         <div className="flex flex-wrap items-end gap-2">
           <input className={`${inputCls} min-w-[220px] flex-1`} value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="רעיון חדש, במשפט" />
