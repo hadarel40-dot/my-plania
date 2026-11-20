@@ -6,7 +6,7 @@ import { NICHES, TREND_KINDS, labelOf, type TrendItem } from "@/lib/studio/confi
 import { db, formatDate, studioCall } from "@/lib/studio/client";
 import { Btn, Loading, Note, PageHead, Panel, Tag, toast } from "@/components/studio/ui";
 
-interface Report { date: string; status: string; items: TrendItem[]; dropped: number; error: string | null }
+interface Report { date: string; status: string; items: TrendItem[]; dropped: number; error: string | null; updated_at: string }
 
 export default function TrendsPage() {
   const router = useRouter();
@@ -52,7 +52,12 @@ export default function TrendsPage() {
       {!reports ? <Loading /> : !report ? <Note>עוד אין דוח. לחצי "לחפש עכשיו", או חכי לבוקר.</Note> : (
         <>
           {report.status === "running" && <Note>החיפוש רץ עכשיו.</Note>}
-          {report.status === "failed" && <Note tone="bad">החיפוש נכשל: {report.error}</Note>}
+          {report.status === "failed" && (
+            <Note tone="bad">
+              החיפוש האחרון ({new Intl.DateTimeFormat("he-IL", { timeZone: "Asia/Jerusalem", hour: "2-digit", minute: "2-digit" }).format(new Date(report.updated_at))}) נכשל: {report.error}
+              <br />זו הודעה שמורה מהחיפוש הקודם. "לחפש עכשיו" מריץ חיפוש חדש.
+            </Note>
+          )}
           {report.dropped > 0 && <p className="mb-3 text-xs text-[#6F675C]">{report.dropped} טרנדים נפסלו בדוח הזה כי הקישור שלהם לא נטען.</p>}
           {items.length === 0 ? <Note>אין טרנדים עם מקור מאומת בסינון הזה.</Note> : (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
