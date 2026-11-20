@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { ACCOUNTS, labelOf, type Draft } from "@/lib/studio/config";
-import { db, studioCall } from "@/lib/studio/client";
+import { db, editorHref, studioCall } from "@/lib/studio/client";
 import { Btn, Label, Loading, Note, PageHead, Panel, Tag, toast } from "@/components/studio/ui";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +21,7 @@ export default function FilmPage() {
   const toggle = (k: string) => setShot((s) => { const n = { ...s, [k]: !s[k] }; try { localStorage.setItem("studio-shots", JSON.stringify(n)); } catch { /* מצב פרטי */ } return n; });
   const toEditor = async (d: Draft) => {
     setBusy(d.id);
-    try { router.push(`/p/${(await studioCall<{ projectId: string }>("to-editor", { draftId: d.id })).projectId}`); }
+    try { router.push(editorHref((await studioCall<{ projectId: string }>("to-editor", { draftId: d.id })).projectId, d.data.template)); }
     catch (e) { toast((e as Error).message, true); setBusy(""); }
   };
 

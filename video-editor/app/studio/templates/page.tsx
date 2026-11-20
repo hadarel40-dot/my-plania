@@ -45,6 +45,7 @@ function TemplateCard({ t }: { t: Template }) {
       <p className="mb-3 text-[12px] text-[#6F675C]"><b>לדוגמה: </b>{t.example}</p>
       <div className="mb-3 flex flex-wrap gap-1">{t.niches.map((n) => <Tag key={n}>{labelOf(NICHES, n)}</Tag>)}</div>
       <Link href={href} className="mt-auto inline-flex justify-center rounded-[5px] bg-[#1F1B16] px-3.5 py-2 text-[13px] font-bold text-[#FBF8F2]">להשתמש בתבנית</Link>
+      <p className="mt-1.5 text-center text-[11px] text-[#6F675C]">{t.kind === "carousel" ? "אפשר לכתוב עם AI או לבנות לבד בעורך הקרוסלות" : "התבנית נמצאת גם בעורך הווידאו, בלשונית החכמה"}</p>
     </Panel>
   );
 }

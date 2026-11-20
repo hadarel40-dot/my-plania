@@ -639,20 +639,37 @@ function AutoEditButton({ disabled }: { disabled: boolean }) {
 
 function TemplatePicker({ disabled }: { disabled: boolean }) {
   const [applied, setApplied] = useState<string | null>(null);
+  // פרויקט שנפתח מטיוטה בסטודיו: התבנית שנבחרה שם מסומנת כאן כהמלצה
+  const [recommended, setRecommended] = useState<string | null>(null);
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("template");
+    if (id && TEMPLATES.some((t) => t.id === id)) setRecommended(id);
+  }, []);
+  const rec = TEMPLATES.find((t) => t.id === recommended);
   return (
     <>
+      {rec && (
+        <p className="mb-1 rounded-lg bg-violet-500/10 p-2 text-xs text-zinc-300">
+          התבנית מהטיוטה: <b>{rec.label}</b>. {disabled ? "מעלים סרטון, ואז לוחצים עליה." : "לחיצה עליה מחילה את הכתוביות, הצבעים והאפקטים."}
+        </p>
+      )}
+      {[{ title: "", list: TEMPLATES.filter((t) => !t.id.startsWith("st-")) }, { title: "מסטודיו התוכן", list: TEMPLATES.filter((t) => t.id.startsWith("st-")) }].map((g) => (
+      <div key={g.title}>
+      {g.title && <p className="mt-3 text-xs font-semibold text-zinc-400">{g.title}</p>}
       <div className="mt-2 grid grid-cols-2 gap-2">
-        {TEMPLATES.map((t) => (
+        {g.list.map((t) => (
           <button key={t.id} disabled={disabled}
             onClick={() => { useEditor.getState().applyTemplate(t.id); setApplied(t.label); }}
             className={cn("rounded-lg border bg-zinc-950 p-2.5 text-start transition hover:border-violet-500 disabled:opacity-50",
-              applied === t.label ? "border-violet-500" : "border-zinc-800")}>
-            <span className="text-xl">{t.emoji}</span>
+              applied === t.label || (!applied && t.id === recommended) ? "border-violet-500" : "border-zinc-800")}>
+            {t.emoji && <span className="text-xl">{t.emoji}</span>}
             <span className="mt-1 block text-sm font-medium">{t.label}</span>
             <span className="block text-[11px] leading-snug text-zinc-500">{t.description}</span>
           </button>
         ))}
       </div>
+      </div>
+      ))}
       {applied && (
         <p className="mt-1.5 text-xs text-emerald-300">
           התבנית &quot;{applied}&quot; הוחלה. לחיצה על טקסט בסרטון או בציר הזמן משנה אותו.

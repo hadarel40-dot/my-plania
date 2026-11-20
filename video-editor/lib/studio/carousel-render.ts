@@ -48,6 +48,8 @@ function loadImage(src: string) {
   if (!imageCache.has(src)) {
     imageCache.set(src, new Promise((resolve) => {
       const img = new Image();
+      // תמונות מהאחסון מגיעות מדומיין אחר: בלי זה הקנבס "מתלכלך" ואי אפשר לייצא PNG
+      img.crossOrigin = "anonymous";
       img.onload = () => resolve(img);
       img.onerror = () => resolve(null);
       img.src = src;

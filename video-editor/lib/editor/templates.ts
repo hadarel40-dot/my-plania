@@ -3,6 +3,7 @@ import { presetById } from "./overlay-presets";
 import { CLIP_STYLES } from "./clip-styles";
 import type { SfxId } from "./sfx";
 import { uid } from "./timeline-utils";
+import { STUDIO_REEL_TEMPLATES } from "./studio-templates";
 
 /**
  * תבנית לרילס: מה מוסיפים לסרטון בלחיצה אחת. כל התבניות בנויות מהטקסטים,
@@ -23,7 +24,7 @@ export interface ReelTemplate {
 
 type At = number | "mid" | "end";
 
-export const TEMPLATES: ReelTemplate[] = [
+const BASE_TEMPLATES: ReelTemplate[] = [
   {
     id: "talking",
     label: "רילס דיבור",
@@ -79,6 +80,9 @@ export const TEMPLATES: ReelTemplate[] = [
     sfx: [{ id: "boom", at: 0 }, { id: "pop", at: 1.5 }, { id: "notify", at: -2.5 }],
   },
 ];
+
+/** התבניות של העורך, ואחריהן התבניות של סטודיו התוכן */
+export const TEMPLATES: ReelTemplate[] = [...BASE_TEMPLATES, ...STUDIO_REEL_TEMPLATES];
 
 /** מה התבנית מוסיפה לסרטון באורך duration */
 export function resolveTemplate(t: ReelTemplate, duration: number) {

@@ -4,13 +4,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { Check, X } from "lucide-react";
 import { ACCOUNTS, CHECK_LABELS, NICHES, labelOf, type Account, type Draft, type Hook, type Niche } from "@/lib/studio/config";
-import { db, formatDate, studioCall } from "@/lib/studio/client";
+import { db, editorHref, formatDate, studioCall } from "@/lib/studio/client";
 import { Btn, Field, Loading, Meter, Note, PageHead, Panel, Select, Tag, inputCls, toast } from "@/components/studio/ui";
 import { SafeZonePreview } from "@/components/studio/safe-zone";
 import { VoiceSuggestions, type Suggestion } from "@/components/studio/voice-suggestions";
 import { CarouselView } from "@/components/studio/carousel-view";
 import { MaterialsPanel } from "@/components/studio/materials";
 import { TEMPLATES, templateById } from "@/lib/studio/templates";
+import { blankCarousel } from "@/lib/studio/carousel-blank";
 
 const ROLE: Record<string, string> = { hook: "הוק", stakes: "הסיכון", body: "גוף", payoff: "התמורה", cta: "קריאה לפעולה" };
 
@@ -97,6 +98,23 @@ function IdeaForm({ params, onCreated }: { params: URLSearchParams; onCreated: (
     }
   };
 
+  // קרוסלה מהתבנית בלי AI: שלד של שקופיות לפי המבנה, והיא כותבת בעצמה בעורך
+  const blank = async () => {
+    if (idea.trim().length < 3) return toast("כתבי במשפט על מה הקרוסלה, זה יהיה השער", true);
+    setBusy(true);
+    try {
+      const tpl = templateById(template);
+      const carousel = blankCarousel(idea, account, tpl);
+      const { data, error } = await db().from("studio_drafts").insert({ idea: idea.trim(), account, niche, mode: "carousel", facts, data: { ...(tpl ? { template: tpl.id } : {}), carousel } }).select("*").single();
+      if (error) throw new Error(error.message);
+      onCreated(data as Draft);
+    } catch (e) {
+      toast((e as Error).message, true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <Panel title="מה הרעיון?">
       <div className="space-y-4">
@@ -117,7 +135,11 @@ function IdeaForm({ params, onCreated }: { params: URLSearchParams; onCreated: (
         <Field label="מספרים ועובדות אמיתיים" hint="רק מכאן נלקחים מספרים. מה שחסר יסומן {{המספר שלך}}.">
           <textarea rows={2} className={inputCls} value={facts} onChange={(e) => setFacts(e.target.value)} placeholder="למשל: התכנון לוקח לי 10 דקות, פעם זה היה שעה." />
         </Field>
-        <Btn busy={busy} onClick={submit}>{busy ? (mode === "carousel" ? "כותבת את הקרוסלה..." : "כותבת שלושה הוקים...") : mode === "carousel" ? "כתבי לי קרוסלה" : "כתבי לי הוקים"}</Btn>
+        <div className="flex flex-wrap gap-2">
+          <Btn busy={busy} onClick={submit}>{busy ? (mode === "carousel" ? "כותבת את הקרוסלה..." : "כותבת שלושה הוקים...") : mode === "carousel" ? "כתבי לי קרוסלה" : "כתבי לי הוקים"}</Btn>
+          {mode === "carousel" && <Btn variant="line" disabled={busy} onClick={blank}>{template ? "לבנות לבד מהתבנית" : "לבנות לבד"}</Btn>}
+        </div>
+        {mode === "carousel" && <p className="text-[11px] text-[#6F675C]">"לבנות לבד" פותח את עורך הקרוסלות עם השקופיות של התבנית, בלי AI, ואת כותבת בעצמך.</p>}
       </div>
     </Panel>
   );
@@ -201,7 +223,7 @@ function DraftView({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => 
   });
   const toEditor = () => run("editor", async () => {
     const { projectId } = await studioCall<{ projectId: string }>("to-editor", { draftId: draft.id });
-    router.push(`/p/${projectId}`);
+    router.push(editorHref(projectId, draft.data.template));
   });
 
   const beats = d.script?.beats ?? [];

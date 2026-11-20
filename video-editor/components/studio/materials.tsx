@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { HardDrive } from "lucide-react";
 import type { Draft } from "@/lib/studio/config";
-import { studioCall } from "@/lib/studio/client";
+import { editorHref, studioCall } from "@/lib/studio/client";
 import { Btn, Label, Note, Panel, Tag, toast } from "./ui";
 
 /** חומרים מהדרייב: לכל שוט או שקופית, הקובץ שמתאים לו. ופתיחה בעורך כשהקליפים כבר בפנים */
@@ -22,7 +22,8 @@ export function MaterialsPanel({ draft, onChange }: { draft: Draft; onChange: (d
     try {
       const { projectId } = await studioCall<{ projectId: string }>("to-editor", { draftId: draft.id });
       const videos = (m?.files ?? []).filter((f) => f.mimeType.startsWith("video/") || f.mimeType.startsWith("image/")).map((f) => f.id);
-      router.push(`/p/${projectId}${videos.length ? `?drive=${videos.join(",")}` : ""}`);
+      const href = editorHref(projectId, draft.data.template);
+      router.push(videos.length ? `${href}${href.includes("?") ? "&" : "?"}drive=${videos.join(",")}` : href);
     } catch (e) {
       toast((e as Error).message, true);
       setBusy("");

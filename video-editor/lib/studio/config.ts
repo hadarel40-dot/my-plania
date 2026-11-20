@@ -82,7 +82,9 @@ export interface Beat { n: number; role: "hook" | "stakes" | "body" | "payoff" |
 export interface ScreenCard { text: string; start: number; end: number; y: number }
 export interface Shot { n: number; frame: string; angle: string; seconds: number; says?: string; conditions: string; faceless: string }
 export interface Check { id: string; label: string; pass: boolean; info?: boolean; detail: string }
-export interface Slide { kind: "cover" | "stake" | "point" | "recap" | "cta"; headline: string; body: string }
+/** תמונה לשקופית: קובץ שהעלתה (Supabase Storage) או קובץ מהדרייב */
+export type SlideImage = { kind: "storage"; path: string } | { kind: "drive"; id: string };
+export interface Slide { kind: "cover" | "stake" | "point" | "recap" | "cta"; headline: string; body: string; image?: SlideImage }
 export interface Carousel { slides: Slide[]; caption: string; alt: string; handle: string; style?: "cream" | "ink" | "butter" }
 export interface MaterialFile { id: string; name: string; mimeType: string; duration?: number }
 export interface Materials { files: MaterialFile[]; matches: { target: string; file_id: string; reason: string }[]; missing: string[]; checked_at: string }

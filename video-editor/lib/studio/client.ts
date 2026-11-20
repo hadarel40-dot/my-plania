@@ -27,3 +27,8 @@ export function formatDate(value?: string | null) {
 }
 
 export const num = (v: unknown) => (v === null || v === undefined || Number.isNaN(Number(v)) ? "אין נתון" : Number(v).toLocaleString("he-IL"));
+
+/** כתובת הפרויקט בעורך, עם התבנית של הטיוטה (אם יש) כדי שהעורך ימליץ עליה */
+export function editorHref(projectId: string, template?: string | null) {
+  return template && !template.startsWith("car-") ? `/p/${projectId}?template=st-${template}` : `/p/${projectId}`;
+}
