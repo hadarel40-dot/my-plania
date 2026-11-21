@@ -26,7 +26,7 @@ export default async function StudioLayout({ children }: { children: React.React
     supabase.from("studio_trends").select("items").eq("date", today).maybeSingle(),
     supabase.from("studio_items").select("id", { count: "exact", head: true }).gte("planned_date", today).neq("stage", "published"),
   ]);
-  const rows = (drafts.data ?? []) as { data: { hooks?: unknown[]; shots?: unknown[] }; project_id: string | null; mode: string }[];
+  const rows = (drafts.data ?? []) as { data: { hooks?: unknown[]; shots?: unknown[]; variants?: unknown[]; chosen_variant?: string }; project_id: string | null; mode: string }[];
   const counts: NavCounts = {
     ideas: ideas.count ?? 0,
     hooks: rows.reduce((n, d) => n + (d.data?.hooks?.length ?? 0), 0),
@@ -35,6 +35,7 @@ export default async function StudioLayout({ children }: { children: React.React
     film: rows.filter((d) => d.data?.shots?.length && !d.project_id).length,
     scripts: rows.filter((d) => d.mode !== "carousel").length,
     carousels: rows.filter((d) => d.mode === "carousel").length,
+    pick: rows.filter((d) => (d.data?.variants?.length ?? 0) > 1 && !d.data?.chosen_variant).length,
   };
 
   return (

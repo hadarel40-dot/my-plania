@@ -42,37 +42,57 @@ function slidePhoto(name) {
 
 const q = (s) => `'${String(s ?? "").replace(/'/g, "''")}'`;
 const sql = ["-- נוצר אוטומטית ע\"י publish.mjs: טיוטות לשבוע " + plan.week, "begin;"];
+const photoCache = new Map();
+async function photo(name) {
+  if (!photoCache.has(name)) photoCache.set(name, await upload(slidePhoto(name), `${base}/photos/${name}.jpg`, "image/jpeg"));
+  return photoCache.get(name);
+}
+
 for (const post of plan.posts) {
   const data = { content_type: post.content_type, weekly: plan.week };
-  // וידאו רק לרילס (קרוסלות הן תמונות בלבד)
-  const mp4 = path.join(out, `${post.id}.mp4`);
-  if (fs.existsSync(mp4)) {
-    const video = await upload(mp4, `${base}/${post.id}.mp4`, "video/mp4");
-    const cover = await upload(path.join(out, `${post.id}-cover.jpg`), `${base}/${post.id}-cover.jpg`, "image/jpeg");
-    const seconds = Number(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", mp4]).toString().trim());
-    data.video = { path: video, cover, seconds: Math.round(seconds * 10) / 10 };
-  }
-  let mode = post.montage ? "short" : "full";
-  if (post.format === "carousel") {
-    mode = "carousel";
-    const slides = [];
-    for (const s of post.slides) {
-      const slide = { kind: s.kind, headline: s.headline, body: s.body };
-      if (s.photo) slide.image = { kind: "storage", path: await upload(slidePhoto(s.photo), `${base}/photos/${s.photo}.jpg`, "image/jpeg") };
-      slides.push(slide);
+  const vs = post.variants?.length ? post.variants : [{ id: "A", label: "גרסה A" }];
+  const variants = [];
+  for (const v of vs) {
+    const vid = `${post.id}-${v.id}`;
+    const variant = { id: v.id, label: v.label ?? `גרסה ${v.id}` };
+    const mp4 = path.join(out, `${vid}.mp4`);
+    if (fs.existsSync(mp4)) {
+      // ריל: הסרטון של הגרסה
+      const seconds = Number(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", mp4]).toString().trim());
+      variant.video = {
+        path: await upload(mp4, `${base}/${vid}.mp4`, "video/mp4"),
+        cover: await upload(path.join(out, `${vid}-cover.jpg`), `${base}/${vid}-cover.jpg`, "image/jpeg"),
+        seconds: Math.round(seconds * 10) / 10,
+      };
+    } else {
+      // קרוסלה: השקופיות של הגרסה, עם התמונות באחסון (לעריכה בעורך הקרוסלות)
+      let slides = v.slides ?? post.slides;
+      if (v.cover) slides = slides.map((sl, i) => (i === 0 ? { ...sl, ...v.cover } : sl));
+      const out2 = [];
+      for (const sl of slides) out2.push({ kind: sl.kind, headline: sl.headline, body: sl.body, ...(sl.photo ? { image: { kind: "storage", path: await photo(sl.photo) } } : {}) });
+      variant.carousel = { slides: out2, caption: post.caption, alt: post.alt, handle: "@plania.il", style: "photo" };
     }
-    data.carousel = { slides, caption: post.caption, alt: post.alt, handle: "@plania.il", style: "photo" };
-  } else {
-    data.caption = post.caption;
-    // הכרטיסים על המסך, לעריכה בעורך הווידאו
-    const per = post.montage ? 1.6 : 2.6; // כמו ב-render.mjs
-    data.cards = post.slides.map((s, i) => ({ text: [s.headline, s.body].filter(Boolean).join(" "), start: Math.round(i * per * 10) / 10, end: Math.round((i + 1) * per * 10) / 10, y: 700 }));
+    variants.push(variant);
+    console.log("uploaded", vid);
   }
-  const notes = `${post.idea}\n\nסוג תוכן: ${post.content_type}. נוצר בתהליך השבועי (${plan.week}).`;
-  sql.push(`with d as (insert into public.studio_drafts (idea, account, niche, mode, facts, data) values (${q(post.title)}, 'plania.il', ${q(NICHE[post.content_type])}, ${q(mode)}, '', ${q(JSON.stringify(data))}::jsonb) returning id)
+  data.variants = variants;
+  // עד שהיא בוחרת, הטיוטה מציגה את גרסה A
+  if (variants[0].video) data.video = variants[0].video;
+  if (variants[0].carousel) data.carousel = variants[0].carousel;
+  if (post.format !== "carousel") {
+    data.caption = post.caption;
+    const per = post.montage ? 1.6 : 2.6; // כמו ב-render.mjs
+    data.cards = post.slides.map((sl, i) => ({ text: [sl.headline, sl.body].filter(Boolean).join(" "), start: Math.round(i * per * 10) / 10, end: Math.round((i + 1) * per * 10) / 10, y: 700 }));
+  }
+  const mode = post.format === "carousel" ? "carousel" : post.montage ? "short" : "full";
+  const notes = `${post.idea}\n\nסוג תוכן: ${post.content_type}. ${variants.length} גרסאות לבחירה במסך "לבחירה". נוצר בתהליך השבועי (${plan.week}).`;
+  // אם הפוסט כבר בלוח (אותה כותרת ואותו יום), מצרפים אליו את הטיוטה. אחרת יוצרים פריט חדש
+  sql.push(`with d as (insert into public.studio_drafts (idea, account, niche, mode, facts, data) values (${q(post.title)}, 'plania.il', ${q(NICHE[post.content_type])}, ${q(mode)}, '', ${q(JSON.stringify(data))}::jsonb) returning id),
+u as (update public.studio_items i set draft_id = d.id, content_type = ${q(post.content_type)}, notes = ${q(notes)}, caption = ${q(post.caption)}, hook = ${q(post.slides[0].headline)}
+      from d where i.account = 'plania.il' and i.title = ${q(post.title)} and i.planned_date = ${q(post.date)}::date and i.draft_id is null returning i.id)
 insert into public.studio_items (title, account, niche, format, stage, planned_date, hook, caption, notes, draft_id, auto, content_type)
-select ${q(post.title)}, 'plania.il', ${q(NICHE[post.content_type])}, ${q(post.format)}, 'draft', ${q(post.date)}::date, ${q(post.slides[0].headline)}, ${q(post.caption)}, ${q(notes)}, d.id, false, ${q(post.content_type)} from d;`);
-  console.log("uploaded", post.id);
+select ${q(post.title)}, 'plania.il', ${q(NICHE[post.content_type])}, ${q(post.format)}, 'draft', ${q(post.date)}::date, ${q(post.slides[0].headline)}, ${q(post.caption)}, ${q(notes)}, d.id, false, ${q(post.content_type)} from d
+where not exists (select 1 from u);`);
 }
 sql.push("commit;");
 for (const f of fs.readdirSync(out)) if (f.startsWith("_")) fs.unlinkSync(path.join(out, f));

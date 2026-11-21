@@ -1,10 +1,10 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Anchor, BarChart3, Brain, CalendarDays, Clapperboard, GalleryHorizontal, Home, LayoutTemplate, Library, MessageCircle, Lightbulb, Newspaper, Scissors, ScrollText, TrendingUp, type LucideIcon } from "lucide-react";
+import { Anchor, BarChart3, CheckSquare, Brain, CalendarDays, Clapperboard, GalleryHorizontal, Home, LayoutTemplate, Library, MessageCircle, Lightbulb, Newspaper, Scissors, ScrollText, TrendingUp, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type NavCounts = Partial<Record<"ideas" | "hooks" | "trends" | "board" | "film" | "scripts" | "carousels", number>>;
+export type NavCounts = Partial<Record<"ideas" | "hooks" | "trends" | "board" | "film" | "scripts" | "carousels" | "pick", number>>;
 
 interface Tile { href: string; label: string; icon: LucideIcon; tint: string; count?: keyof NavCounts }
 const GROUPS: { label: string; tiles: Tile[] }[] = [
@@ -13,6 +13,7 @@ const GROUPS: { label: string; tiles: Tile[] }[] = [
     { href: "/studio/hooks", label: "הוקים", icon: Anchor, tint: "#F4E1D2", count: "hooks" },
     { href: "/studio/trends", label: "טרנדים", icon: TrendingUp, tint: "#DDE7F0", count: "trends" },
     { href: "/studio/board", label: "לוח", icon: CalendarDays, tint: "#E2ECDF", count: "board" },
+    { href: "/studio/pick", label: "לבחירה", icon: CheckSquare, tint: "#F6E7A6", count: "pick" },
   ] },
   { label: "יצירה", tiles: [
     { href: "/studio/templates", label: "תבניות", icon: LayoutTemplate, tint: "#F3DDE3" },

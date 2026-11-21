@@ -100,7 +100,13 @@ export type ContentType = (typeof CONTENT_TYPES)[number]["value"];
 /** סרטון מוכן שהתהליך השבועי יצר (ריל, או קרוסלה מונפשת) */
 export interface ReadyVideo { path: string; cover?: string; seconds?: number }
 
+/** גרסה אחת של פוסט (ריל או קרוסלה). היא בוחרת אחת ומשאירה הערה על כל גרסה */
+export interface Variant { id: string; label: string; video?: ReadyVideo; carousel?: Carousel; comment?: string }
+
 export interface DraftData {
+  /** כמה גרסאות לבחירה, והגרסה שנבחרה */
+  variants?: Variant[];
+  chosen_variant?: string;
   /** סרטון מוכן לעלייה */
   video?: ReadyVideo;
   /** כיתוב לריל מוכן (לקרוסלה הכיתוב בתוך carousel) */

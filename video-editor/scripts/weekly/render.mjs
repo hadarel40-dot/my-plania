@@ -20,10 +20,11 @@ if (!weekDir || !photoDir || !clipDir) { console.error("usage: node render.mjs <
 const plan = JSON.parse(fs.readFileSync(path.join(weekDir, "plan.json"), "utf8"));
 const out = path.resolve(weekDir, "out");
 fs.mkdirSync(out, { recursive: true });
-const fontsCss = fs.readFileSync(path.join(HERE, "fonts/fonts.css"), "utf8").replace(/url\((f\d\.ttf)\)/g, (_, f) => `url(file://${path.join(HERE, "fonts", f)})`);
+const fontsCss = ".lat{font-family:'Assistant'!important;font-weight:700}.b .lat,.body .lat{font-size:.7em}\n" + fs.readFileSync(path.join(HERE, "fonts/fonts.css"), "utf8").replace(/url\((f\d\.ttf)\)/g, (_, f) => `url(file://${path.join(HERE, "fonts", f)})`);
 
 const PINK = "#F7C9D6";
-const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+// מילים באנגלית (Plania) בגופן הרגיל: בגופן כתב היד הן יוצאות באותיות גדולות
+const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/[A-Za-z][A-Za-z.]*/g, (m) => `<span class="lat">${m}</span>`);
 const photoUrl = (p) => (p ? `file://${path.resolve(photoDir, `${p}.jpg`)}` : "");
 
 /** HTML של שקופית. layer: all (קרוסלה), bg (רק תמונה), text (רק טקסט על רקע שקוף) */
@@ -61,7 +62,9 @@ function html(slide, i, n, { w, h, layer, safe }) {
  * הכותרת בתיבות ורודות לכל שורה (טקסט כהה), שורת ההמשך בכתב יד לבן עם צל.
  * shown: כמה מילים כבר הופיעו. מילים שעוד לא הופיעו שקופות, כדי שהשורות לא יזוזו.
  */
-function reelText(slide, shown) {
+function reelText(slide, shown, style = "chips") {
+  if (style === "lines") return reelLines(slide, shown);
+  if (style === "pop") return reelPop(slide, shown);
   const hw = slide.headline.split(/\s+/).filter(Boolean);
   const bw = (slide.body || "").split(/\s+/).filter(Boolean);
   let k = 0;
@@ -78,6 +81,34 @@ function reelText(slide, shown) {
     .off{visibility:hidden}
   </style></head><body><div class="wrap"><div class="head">${head}</div>${body ? `<div class="body">${body}</div>` : ""}</div></body></html>`;
 }
+/** שורה אחרי שורה: הכותרת נכנסת שלמה, ואחריה שורת ההמשך. טקסט לבן גדול עם צל, בלי תיבות */
+function reelLines(slide, shown) {
+  const units = [slide.headline, slide.body].filter(Boolean);
+  return `<!doctype html><html dir="rtl"><head><meta charset="utf-8"><style>
+    ${fontsCss}
+    html,body{margin:0;width:1080px;height:1920px;background:transparent;overflow:hidden}
+    .wrap{position:absolute;left:120px;right:120px;top:900px;text-align:center}
+    .h{font-family:'Assistant';font-weight:800;font-size:104px;line-height:1.08;color:#fff;text-shadow:0 3px 4px rgba(0,0,0,.6),0 6px 30px rgba(0,0,0,.5)}
+    .b{margin-top:22px;font-family:'Assistant';font-weight:600;font-size:64px;line-height:1.15;color:${PINK};text-shadow:0 2px 4px rgba(0,0,0,.6),0 4px 22px rgba(0,0,0,.5)}
+    .off{visibility:hidden}
+  </style></head><body><div class="wrap">${units.map((u, i) => `<div class="${i ? "b" : "h"}${i < shown ? "" : " off"}">${esc(u)}</div>`).join("")}</div></body></html>`;
+}
+
+/** מילה אחת בכל פעם, גדולה במרכז: כל מילה מחליפה את הקודמת */
+function reelPop(slide, shown) {
+  const words = (slide.headline + " " + (slide.body || "")).split(/\s+/).filter(Boolean);
+  const hwN = slide.headline.split(/\s+/).filter(Boolean).length;
+  const w = words[Math.max(0, shown - 1)] ?? "";
+  const isHead = shown <= hwN;
+  return `<!doctype html><html dir="rtl"><head><meta charset="utf-8"><style>
+    ${fontsCss}
+    html,body{margin:0;width:1080px;height:1920px;background:transparent;overflow:hidden}
+    .w{position:absolute;left:100px;right:100px;top:860px;text-align:center;font-family:'Assistant';font-weight:800;font-size:${isHead ? 150 : 120}px;line-height:1;
+       color:${isHead ? "#fff" : PINK};-webkit-text-stroke:${isHead ? `3px ${PINK}` : "0"};text-shadow:0 4px 6px rgba(0,0,0,.55),0 8px 34px rgba(0,0,0,.45)}
+  </style></head><body><div class="w">${esc(w)}</div></body></html>`;
+}
+
+const unitCount = (s, style) => (style === "lines" ? [s.headline, s.body].filter(Boolean).length : wordCount(s));
 const wordCount = (s) => (s.headline + " " + (s.body || "")).split(/\s+/).filter(Boolean).length;
 
 const run = (args) => execFileSync("ffmpeg", ["-y", "-loglevel", "error", ...args], { stdio: "inherit" });
@@ -94,7 +125,14 @@ async function shot(htmlStr, file, w, h, transparent) {
   await page.screenshot({ path: file, omitBackground: transparent, type: file.endsWith(".png") ? "png" : "jpeg", ...(file.endsWith(".jpg") ? { quality: 92 } : {}) });
 }
 
-for (const post of plan.posts) {
+// גרסאות: כל פוסט יוצא בכמה גרסאות (variants), והיא בוחרת בדשבורד.
+// גרסה יכולה להחליף סגנון כתוביות (caption_style), את השער (cover) או את כל השקופיות (slides).
+const jobs = plan.posts.flatMap((post) => (post.variants?.length ? post.variants : [{ id: "A" }]).map((v) => {
+  let slides = v.slides ?? post.slides;
+  if (v.cover) slides = slides.map((sl, i) => (i === 0 ? { ...sl, ...v.cover } : sl));
+  return { ...post, id: `${post.id}-${v.id}`, slides, captionStyle: v.caption_style ?? "chips" };
+}));
+for (const post of jobs) {
   const dir = path.join(out, post.id);
   fs.mkdirSync(dir, { recursive: true });
   const n = post.slides.length;
@@ -123,12 +161,12 @@ for (const post of plan.posts) {
     const seg = path.join(dir, `seg${i}.mp4`);
     const d = per + (i === n - 1 ? 1.2 : 0);
     // מילה אחרי מילה: תמונת שכבה לכל מצב, ומופיעה בזמן שלה
-    const words = wordCount(s);
-    const step = Math.min(0.22, (d * 0.6) / words);
+    const words = unitCount(s, post.captionStyle);
+    const step = post.captionStyle === "lines" ? Math.min(0.7, (d * 0.5) / words) : post.captionStyle === "pop" ? (d * 0.85) / words : Math.min(0.22, (d * 0.6) / words);
     const layers = [];
     for (let w = 1; w <= words; w++) {
       const f = path.join(dir, `fg${i}_${w}.png`);
-      await shot(reelText(s, w), f, 1080, 1920, true);
+      await shot(reelText(s, w, post.captionStyle), f, 1080, 1920, true);
       layers.push(f);
     }
     const t0 = 0.15;
