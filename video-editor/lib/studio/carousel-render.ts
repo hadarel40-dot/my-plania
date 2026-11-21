@@ -14,6 +14,8 @@ const BUTTER = "#F6E7A6";
 const MUTED = "#6F675C";
 const SERIF = '"Frank Ruhl Libre", "David Libre", Georgia, serif';
 const SANS = '"Assistant", "Heebo", Arial, sans-serif';
+const HAND = '"Amatic SC", "Assistant", cursive';
+const PINK = "#F7C9D6";
 const KIND: Record<Slide["kind"], string> = { cover: "", stake: "למה זה חשוב", point: "", recap: "בקיצור", cta: "ועכשיו" };
 
 function wrap(ctx: CanvasRenderingContext2D, text: string, max: number) {
@@ -68,8 +70,9 @@ function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: numb
 /** images: מספר שקופית -> כתובת תמונה (מהדרייב) */
 export async function renderSlide(c: Carousel, index: number, images: Record<number, string> = {}): Promise<HTMLCanvasElement> {
   if (document.fonts) {
-    await Promise.all([document.fonts.load(`900 80px ${SERIF}`), document.fonts.load(`600 40px ${SANS}`), document.fonts.load(`800 26px ${SANS}`)]).catch(() => {});
+    await Promise.all([document.fonts.load(`900 80px ${SERIF}`), document.fonts.load(`600 40px ${SANS}`), document.fonts.load(`800 26px ${SANS}`), document.fonts.load(`700 60px ${HAND}`)]).catch(() => {});
   }
+  if ((c.style ?? "cream") === "photo") return renderPhotoSlide(c, index, images);
   const slide = c.slides[index];
   const canvas = document.createElement("canvas");
   canvas.width = W;
@@ -160,6 +163,67 @@ export async function renderSlide(c: Carousel, index: number, images: Record<num
     ctx.direction = "ltr";
     ctx.fillText(c.handle, M, photo && slide.kind === "cover" ? H - 50 : H - M + 40);
   }
+  return canvas;
+}
+
+/**
+ * הסגנון שלה (כמו בתהליך השבועי): תמונה אישית על כל המסגרת, מוחשכת,
+ * כותרת מודגשת בוורוד בהיר ושורת המשך בכתב יד לבן. שקופית בלי תמונה מקבלת רקע כהה חם.
+ */
+async function renderPhotoSlide(c: Carousel, index: number, images: Record<number, string>): Promise<HTMLCanvasElement> {
+  const slide = c.slides[index];
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d")!;
+  const photo = images[index] ? await loadImage(images[index]) : null;
+  if (photo) {
+    drawCover(ctx, photo, 0, 0, W, H);
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "rgba(20,16,12,0.25)");
+    g.addColorStop(1, "rgba(20,16,12,0.62)");
+    ctx.fillStyle = g;
+  } else {
+    ctx.fillStyle = "#2A2622";
+  }
+  ctx.fillRect(0, 0, W, H);
+  ctx.direction = "rtl";
+  ctx.textAlign = "right";
+  ctx.shadowColor = "rgba(0,0,0,0.45)";
+  ctx.shadowBlur = 18;
+  const P = 100;
+  const centered = slide.kind === "cover" || slide.kind === "cta";
+  const headSize = slide.kind === "cover" ? 112 : 84;
+  // מודדים קודם כדי למקם: שער וקריאה לפעולה במרכז, השאר בתחתית
+  ctx.font = `800 ${headSize}px ${SANS}`;
+  const head = wrap(ctx, slide.headline, W - P * 2);
+  const recap = slide.kind === "recap";
+  const rows = recap ? slide.body.split("\n").map((r) => r.replace(/^[-•·\d.\s]+/, "").trim()).filter(Boolean) : [];
+  ctx.font = recap ? `600 52px ${SANS}` : `700 80px ${HAND}`;
+  const body = recap ? rows : slide.body ? wrap(ctx, slide.body, W - P * 2) : [];
+  const bodyLH = recap ? 78 : 84;
+  const total = head.length * headSize * 1.05 + (body.length ? 22 + body.length * bodyLH : 0);
+  let y = centered ? (H - total) / 2 : H - P - 60 - total;
+  ctx.fillStyle = PINK;
+  ctx.font = `800 ${headSize}px ${SANS}`;
+  for (const l of head) { y += headSize * 1.05; ctx.fillText(l, W - P, y - headSize * 0.2); }
+  if (body.length) {
+    y += 22;
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = recap ? `600 52px ${SANS}` : `700 80px ${HAND}`;
+    for (const l of body) {
+      y += bodyLH;
+      if (recap) { ctx.save(); ctx.fillStyle = PINK; ctx.beginPath(); ctx.arc(W - P - 10, y - 18, 8, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+      ctx.fillText(l, W - P - (recap ? 40 : 0), y - 14);
+    }
+  }
+  ctx.shadowBlur = 0;
+  ctx.font = `800 30px ${SANS}`;
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.textAlign = "left";
+  ctx.direction = "ltr";
+  if (slide.kind !== "cover") ctx.fillText(`${index + 1}/${c.slides.length}`, P, 100);
+  if (c.handle) ctx.fillText(c.handle, P, H - 60);
   return canvas;
 }
 

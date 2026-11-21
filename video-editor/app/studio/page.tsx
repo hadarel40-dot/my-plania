@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Lightbulb } from "lucide-react";
-import { ACCOUNTS, FORMATS, NICHES, labelOf, type Account, type Stage } from "@/lib/studio/config";
+import { CONTENT_TYPES, ACCOUNTS, FORMATS, NICHES, labelOf, type Account, type Stage } from "@/lib/studio/config";
 import type { IgAccount } from "@/lib/studio/instagram";
 import { usualAndBest } from "@/lib/studio/metrics";
 import { db, formatDate, num, studioCall, todayIL } from "@/lib/studio/client";
@@ -12,7 +12,7 @@ import { Suggestions } from "@/components/studio/suggestions";
 import { cn } from "@/lib/utils";
 
 interface Rec { title: string; why: string; what_to_shoot: string; action: string; action_label: string; idea: string; account: string; niche: string; impact: string }
-interface Item { id: string; title: string; account: Account; niche: string | null; format: string; stage: Stage; planned_date: string | null; notes: string; auto: boolean; draft_id: string | null }
+interface Item { id: string; title: string; account: Account; niche: string | null; format: string; stage: Stage; planned_date: string | null; notes: string; auto: boolean; draft_id: string | null; content_type?: string | null }
 type IgData = { configured: boolean; accounts: ((IgAccount & { ok: true }) | { ok: false; error: string })[] };
 
 const DAYS = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
@@ -27,7 +27,7 @@ function weekStart(dateIso: string, offsetWeeks = 0) {
 export default function HomePage() {
   const today = todayIL();
   const [items, setItems] = useState<Item[] | null>(null);
-  const loadItems = useCallback(() => db().from("studio_items").select("id, title, account, niche, format, stage, planned_date, notes, auto, draft_id").neq("stage", "published").order("created_at", { ascending: false }).limit(300).then(({ data }) => setItems((data as Item[]) ?? [])), []);
+  const loadItems = useCallback(() => db().from("studio_items").select("*").neq("stage", "published").order("created_at", { ascending: false }).limit(300).then(({ data }) => setItems((data as Item[]) ?? [])), []);
   useEffect(() => { loadItems(); }, [loadItems]);
 
   return (
@@ -93,7 +93,7 @@ function ItemChip({ item, onDragStart, days, onPlace }: { item: Item; onDragStar
   return (
     <div draggable onDragStart={onDragStart} className="cursor-grab rounded-lg border border-[#E2DACD] bg-white/80 px-2 py-1.5 text-[12px] leading-snug shadow-[0_1px_1px_rgba(31,27,22,0.05)] active:cursor-grabbing">
       <button type="button" onClick={() => setOpen((o) => !o)} className="w-full text-right">
-        <span className="mb-0.5 block text-[9px] font-bold tracking-[0.14em] text-[#6F675C]">{labelOf(FORMATS, item.format)} · {item.account === "plania.il" ? "פלניה" : "אישי"}{item.auto ? " · מהצעה" : ""}</span>
+        <span className="mb-0.5 block text-[9px] font-bold tracking-[0.14em] text-[#6F675C]">{labelOf(FORMATS, item.format)} · {item.account === "plania.il" ? "פלניה" : "אישי"}{item.content_type ? ` · ${labelOf(CONTENT_TYPES, item.content_type)}` : item.auto ? " · מהצעה" : ""}</span>
         <span className="line-clamp-3 font-semibold">{item.title}</span>
       </button>
       {item.stage === "draft" && <span className="mt-1 inline-block rounded bg-[#F6E7A6] px-1 text-[9px] font-bold">טיוטה מוכנה</span>}

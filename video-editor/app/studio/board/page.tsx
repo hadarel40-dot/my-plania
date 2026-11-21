@@ -2,14 +2,14 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
-import { ACCOUNTS, FORMATS, NICHES, STAGES, labelOf, type Account, type Stage } from "@/lib/studio/config";
+import { CONTENT_TYPES, ACCOUNTS, FORMATS, NICHES, STAGES, labelOf, type Account, type Stage } from "@/lib/studio/config";
 import { db, formatDate, studioCall } from "@/lib/studio/client";
 import { Btn, Field, Loading, PageHead, Select, Tag, inputCls, toast } from "@/components/studio/ui";
 import { VoiceSuggestions, type Suggestion } from "@/components/studio/voice-suggestions";
 
 interface Item {
   id?: string; title: string; account: Account; niche: string | null; format: string; stage: Stage; planned_date: string | null;
-  hook: string; caption: string; notes: string; draft_id: string | null; ig_permalink: string;
+  hook: string; caption: string; notes: string; draft_id: string | null; ig_permalink: string; content_type?: string | null;
 }
 
 const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -64,7 +64,7 @@ export default function BoardPage() {
                     <li key={item.id} className="rounded-lg border border-[#E2DACD] bg-[#FBF8F2] p-2.5">
                       <button type="button" className="w-full text-right" onClick={() => setEditing(item)}>
                         <span className="block text-sm font-semibold leading-snug">{item.title}</span>
-                        <span className="mt-1 flex flex-wrap gap-1"><Tag>{labelOf(FORMATS, item.format)}</Tag><Tag tone={item.account === "plania.il" ? "green" : "wine"}>{labelOf(ACCOUNTS, item.account)}</Tag></span>
+                        <span className="mt-1 flex flex-wrap gap-1"><Tag>{labelOf(FORMATS, item.format)}</Tag>{item.content_type && <Tag tone="butter">{labelOf(CONTENT_TYPES, item.content_type)}</Tag>}<Tag tone={item.account === "plania.il" ? "green" : "wine"}>{labelOf(ACCOUNTS, item.account)}</Tag></span>
                         <span className="mt-1 block text-[11px] text-[#6F675C]">{item.planned_date ? formatDate(item.planned_date) : "בלי תאריך"}</span>
                       </button>
                       <select aria-label="שלב" value={item.stage} onChange={(e) => move(item, e.target.value as Stage)} className="mt-2 w-full rounded-lg border border-[#DDD4C6] bg-white/70 px-1.5 py-1 text-xs">

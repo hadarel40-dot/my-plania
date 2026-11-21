@@ -93,7 +93,7 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
     } catch (e) { toast((e as Error).message, true); }
     finally { setBusy(""); }
   };
-  const setStyle = async (style: "cream" | "ink" | "butter") => {
+  const setStyle = async (style: NonNullable<Carousel["style"]>) => {
     if (edit) return setEdit({ ...edit, style });
     if (!c) return;
     try { await persist({ ...c, style }); } catch (e) { toast((e as Error).message, true); }
@@ -139,7 +139,7 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
         )}
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
           <Label>עיצוב:</Label>
-          {([["cream", "שמנת"], ["ink", "כהה"], ["butter", "צהוב"]] as const).map(([v, l]) => (
+          {([["photo", "תמונה"], ["cream", "שמנת"], ["ink", "כהה"], ["butter", "צהוב"]] as const).map(([v, l]) => (
             <button key={v} type="button" onClick={() => setStyle(v)}
               className={`rounded-lg border px-2.5 py-1 text-[12px] font-semibold ${style === v ? "border-[#1F1B16] bg-[#1F1B16] text-[#FBF8F2]" : "border-[#E2DACD] bg-white/70"}`}>{l}</button>
           ))}

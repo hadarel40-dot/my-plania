@@ -39,7 +39,7 @@ export default async function StudioLayout({ children }: { children: React.React
 
   return (
     <div className="studio fixed inset-0 overflow-y-auto bg-[#D6CFC3] text-[#1F1B16] [color-scheme:light]">
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Bellefair&family=Frank+Ruhl+Libre:wght@500;700;900&display=swap" precedence="default" />
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Amatic+SC:wght@700&family=Bellefair&family=Frank+Ruhl+Libre:wght@500;700;900&display=swap" precedence="default" />
       <div className="mx-auto max-w-[1220px] px-2 py-3 md:px-6 md:py-8">
         <div className="rounded-[26px] border border-[#CFC7B9] bg-[#ECE7DE] px-3 pb-8 pt-5 shadow-[0_12px_40px_-12px_rgba(31,27,22,0.35)] md:px-8">
           <header className="mb-4 flex flex-wrap items-center justify-between gap-3">

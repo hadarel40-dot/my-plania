@@ -85,10 +85,27 @@ export interface Check { id: string; label: string; pass: boolean; info?: boolea
 /** תמונה לשקופית: קובץ שהעלתה (Supabase Storage) או קובץ מהדרייב */
 export type SlideImage = { kind: "storage"; path: string } | { kind: "drive"; id: string };
 export interface Slide { kind: "cover" | "stake" | "point" | "recap" | "cta"; headline: string; body: string; image?: SlideImage }
-export interface Carousel { slides: Slide[]; caption: string; alt: string; handle: string; style?: "cream" | "ink" | "butter" }
+export interface Carousel { slides: Slide[]; caption: string; alt: string; handle: string; style?: "cream" | "ink" | "butter" | "photo" }
 export interface MaterialFile { id: string; name: string; mimeType: string; duration?: number }
 export interface Materials { files: MaterialFile[]; matches: { target: string; file_id: string; reason: string }[]; missing: string[]; checked_at: string }
+/** ארבעת סוגי התוכן */
+export const CONTENT_TYPES = [
+  { value: "story", label: "סיפור אישי" },
+  { value: "viral", label: "ויראלי" },
+  { value: "value", label: "ערך" },
+  { value: "trust", label: "אמון והוכחה" },
+] as const;
+export type ContentType = (typeof CONTENT_TYPES)[number]["value"];
+
+/** סרטון מוכן שהתהליך השבועי יצר (ריל, או קרוסלה מונפשת) */
+export interface ReadyVideo { path: string; cover?: string; seconds?: number }
+
 export interface DraftData {
+  /** סרטון מוכן לעלייה */
+  video?: ReadyVideo;
+  /** כיתוב לריל מוכן (לקרוסלה הכיתוב בתוך carousel) */
+  caption?: string;
+  content_type?: ContentType;
   /** תבנית מוכנה (lib/studio/templates.ts) */
   template?: string;
   carousel?: Carousel;

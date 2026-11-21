@@ -9,6 +9,7 @@ import { Btn, Field, Loading, Meter, Note, PageHead, Panel, Select, Tag, inputCl
 import { SafeZonePreview } from "@/components/studio/safe-zone";
 import { VoiceSuggestions, type Suggestion } from "@/components/studio/voice-suggestions";
 import { CarouselView } from "@/components/studio/carousel-view";
+import { ReadyVideo } from "@/components/studio/ready-video";
 import { MaterialsPanel } from "@/components/studio/materials";
 import { TEMPLATES, templateById } from "@/lib/studio/templates";
 import { blankCarousel } from "@/lib/studio/carousel-blank";
@@ -232,8 +233,9 @@ function DraftView({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => 
       <Panel title={draft.idea} aside={<span className="flex gap-1">{templateById(draft.data.template) && <Tag tone="butter">{templateById(draft.data.template)!.name}</Tag>}<Tag>{draft.mode === "short" ? "ריל טקסט קצר" : "תסריט מלא"}</Tag></span>}>
         <p className="text-xs text-[#6F675C]">{labelOf(ACCOUNTS, draft.account)} · {labelOf(NICHES, draft.niche)}{draft.facts ? ` · עובדות: ${draft.facts}` : " · לא הוזנו מספרים"}</p>
       </Panel>
+      <ReadyVideo draft={draft} />
 
-      <Panel title="שלושה הוקים" aside={<Btn variant="ghost" busy={busy === "hooks"} onClick={rehook}>הוקים חדשים</Btn>}>
+      {(!d.video || !!d.hooks?.length) && <Panel title="שלושה הוקים" aside={<Btn variant="ghost" busy={busy === "hooks"} onClick={rehook}>הוקים חדשים</Btn>}>
         {d.hooks?.length ? (
           <>
             <div className="grid gap-3 md:grid-cols-3">{d.hooks.map((h, i) => <HookCard key={i} hook={h} chosen={pick === i} onPick={() => setPick(i)} />)}</div>
@@ -243,7 +245,7 @@ function DraftView({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => 
             </div>
           </>
         ) : <Note>אין הוקים עדיין. <button className="underline" onClick={rehook}>לכתוב עכשיו</button></Note>}
-      </Panel>
+      </Panel>}
 
       {beats.length > 0 && d.script && (
         <>
@@ -365,6 +367,7 @@ function CarouselDraft({ draft, onChange }: { draft: Draft; onChange: (d: Draft)
       <Panel title={draft.idea} aside={<span className="flex gap-1">{templateById(draft.data.template) && <Tag tone="butter">{templateById(draft.data.template)!.name}</Tag>}<Tag>קרוסלה</Tag></span>}>
         <p className="text-xs text-[#6F675C]">{labelOf(ACCOUNTS, draft.account)} · {labelOf(NICHES, draft.niche)}{draft.facts ? ` · עובדות: ${draft.facts}` : " · לא הוזנו מספרים"}</p>
       </Panel>
+      <ReadyVideo draft={draft} title="הקרוסלה" accent="המונפשת" />
       <CarouselView draft={draft} onChange={onChange} />
       {draft.data.carousel && <MaterialsPanel draft={draft} onChange={onChange} />}
       <div className="xl:hidden"><ChecksPanel draft={draft} /></div>

@@ -34,7 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: DISPOSE_POLYFILL }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="stylesheet" href={FONTS_CSS} />
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Bellefair&family=Frank+Ruhl+Libre:wght@500;700;900&display=swap" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Amatic+SC:wght@700&family=Bellefair&family=Frank+Ruhl+Libre:wght@500;700;900&display=swap" />
       </head>
       <body>{children}</body>
     </html>
