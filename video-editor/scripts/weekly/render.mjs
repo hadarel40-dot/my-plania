@@ -117,8 +117,9 @@ for (const post of plan.posts) {
   const per = post.montage ? 1.6 : 2.6; // שניות לכרטיס
   const fps = 30;
   for (const [i, s] of post.slides.entries()) {
-    if (!s.clip) throw new Error(`${post.id}: כרטיס ${i + 1} בלי קטע וידאו`);
-    const clip = path.resolve(clipDir, `${s.clip}.mov`);
+    // כמה קטעים קצרים לכל כרטיס (clips), או קטע אחד (clip)
+    const cuts = s.clips ?? (s.clip ? [{ clip: s.clip, start: s.start ?? 0 }] : []);
+    if (!cuts.length) throw new Error(`${post.id}: כרטיס ${i + 1} בלי קטע וידאו`);
     const seg = path.join(dir, `seg${i}.mp4`);
     const d = per + (i === n - 1 ? 1.2 : 0);
     // מילה אחרי מילה: תמונת שכבה לכל מצב, ומופיעה בזמן שלה
@@ -131,19 +132,26 @@ for (const post of plan.posts) {
       layers.push(f);
     }
     const t0 = 0.15;
-    let fc = `[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=${fps},tpad=stop_mode=clone:stop_duration=${d},setsar=1[v0];`;
+    // הקטעים נחתכים ומחוברים בחיתוך חד, ורק אז הכתוביות עולות מעליהם
+    const cutLen = d / cuts.length;
+    let fc = "";
+    cuts.forEach((_, c) => {
+      fc += `[${c}:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=${fps},tpad=stop_mode=clone:stop_duration=${cutLen.toFixed(2)},trim=duration=${cutLen.toFixed(2)},setpts=PTS-STARTPTS,setsar=1[c${c}];`;
+    });
+    fc += `${cuts.map((_, c) => `[c${c}]`).join("")}concat=n=${cuts.length}:v=1:a=0[v0];`;
+    const L = cuts.length; // אינדקס הקלט הראשון של שכבות הכתוביות
     layers.forEach((_, w) => {
       const from = (t0 + w * step).toFixed(2);
       const to = w === layers.length - 1 ? d.toFixed(2) : (t0 + (w + 1) * step).toFixed(2);
-      fc += `[v${w}][${w + 1}:v]overlay=0:0:enable='between(t,${from},${to})'[v${w + 1}];`;
+      fc += `[v${w}][${w + L}:v]overlay=0:0:enable='between(t,${from},${to})'[v${w + 1}];`;
     });
     fc += `[v${layers.length}]format=yuv420p[out]`;
-    run(["-ss", String(s.start ?? 0), "-i", clip, ...layers.flatMap((f) => ["-loop", "1", "-i", f]), "-filter_complex", fc,
+    run([...cuts.flatMap((c) => ["-ss", String(c.start ?? 0), "-i", path.resolve(clipDir, `${c.clip}.mov`)]), ...layers.flatMap((f) => ["-loop", "1", "-i", f]), "-filter_complex", fc,
       "-map", "[out]", "-an", "-t", String(d), "-r", String(fps), "-c:v", "libx264", "-preset", "medium", "-crf", "19", seg]);
     segs.push({ file: seg, d });
   }
   // מעבר רך בין השקופיות
-  const xf = post.montage ? 0.15 : 0.3;
+  const xf = 0.12;
   const inputs = segs.flatMap((s) => ["-i", s.file]);
   let chain = "", last = "[0:v]", offset = 0;
   segs.slice(1).forEach((s, k) => {
