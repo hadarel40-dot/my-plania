@@ -3,6 +3,7 @@
  * לא מפרסם כלום. שלב הפריטים הוא "טיוטה" עד שהיא מאשרת.
  *
  * שימוש: node publish.mjs <תיקיית השבוע> <תיקיית תמונות jpg> <טוקן העלאה>
+ * (רילס: מה-render.mjs נוצר MP4 מקטעי וידאו. קרוסלות: רק תמונות.)
  * הטוקן: מחרוזת אקראית; הגיבוב שלה נשמר קודם ב-studio_secrets (name = 'upload') דרך המסד.
  * הפלט: <תיקיית השבוע>/publish.sql להרצה במסד.
  */
@@ -42,10 +43,15 @@ function slidePhoto(name) {
 const q = (s) => `'${String(s ?? "").replace(/'/g, "''")}'`;
 const sql = ["-- נוצר אוטומטית ע\"י publish.mjs: טיוטות לשבוע " + plan.week, "begin;"];
 for (const post of plan.posts) {
-  const video = await upload(path.join(out, `${post.id}.mp4`), `${base}/${post.id}.mp4`, "video/mp4");
-  const cover = await upload(path.join(out, `${post.id}-cover.jpg`), `${base}/${post.id}-cover.jpg`, "image/jpeg");
-  const seconds = Number(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path.join(out, `${post.id}.mp4`)]).toString().trim());
-  const data = { content_type: post.content_type, video: { path: video, cover, seconds: Math.round(seconds * 10) / 10 }, weekly: plan.week };
+  const data = { content_type: post.content_type, weekly: plan.week };
+  // וידאו רק לרילס (קרוסלות הן תמונות בלבד)
+  const mp4 = path.join(out, `${post.id}.mp4`);
+  if (fs.existsSync(mp4)) {
+    const video = await upload(mp4, `${base}/${post.id}.mp4`, "video/mp4");
+    const cover = await upload(path.join(out, `${post.id}-cover.jpg`), `${base}/${post.id}-cover.jpg`, "image/jpeg");
+    const seconds = Number(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", mp4]).toString().trim());
+    data.video = { path: video, cover, seconds: Math.round(seconds * 10) / 10 };
+  }
   let mode = post.montage ? "short" : "full";
   if (post.format === "carousel") {
     mode = "carousel";

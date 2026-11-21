@@ -1,8 +1,9 @@
 /**
  * מייצר את התוכן השבועי מתוך plan.json:
  * - קרוסלה: PNG לכל שקופית (1080x1350) בסגנון שלה: תמונה מוחשכת, כותרת ורודה, שורה בכתב יד לבן
- * - ריל / קרוסלה מונפשת: MP4 אנכי (1080x1920), תמונה עם זום איטי, הטקסט נכנס בתנועה, מעבר רך בין שקופיות
- * שימוש: node render.mjs <תיקיית השבוע> <תיקיית תמונות jpg>
+ * - ריל: MP4 אנכי (1080x1920) רק מקטעי וידאו שלה (clip + start לכל כרטיס), הטקסט נכנס בתנועה, מעבר רך.
+ *   אף פעם לא תמונות שעוברות כמו מצגת (המשוב שלה). כל שקופית בקרוסלה חייבת תמונה.
+ * שימוש: node render.mjs <תיקיית השבוע> <תיקיית תמונות jpg> <תיקיית סרטונים>
  * בלי מוזיקה: מוסיפים צליל טרנדי באינסטגרם.
  */
 import { createRequire } from "node:module";
@@ -14,8 +15,8 @@ import { fileURLToPath } from "node:url";
 // playwright מותקן גלובלית בסביבה, ו-import רגיל לא מוצא אותו
 const { chromium } = createRequire(import.meta.url)("playwright");
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const [weekDir, photoDir] = process.argv.slice(2);
-if (!weekDir || !photoDir) { console.error("usage: node render.mjs <weekDir> <photoDir>"); process.exit(1); }
+const [weekDir, photoDir, clipDir] = process.argv.slice(2);
+if (!weekDir || !photoDir || !clipDir) { console.error("usage: node render.mjs <weekDir> <photoDir> <clipDir>"); process.exit(1); }
 const plan = JSON.parse(fs.readFileSync(path.join(weekDir, "plan.json"), "utf8"));
 const out = path.resolve(weekDir, "out");
 fs.mkdirSync(out, { recursive: true });
@@ -79,35 +80,41 @@ for (const post of plan.posts) {
     for (const [i, s] of post.slides.entries()) await shot(html(s, i, n, { w: 1080, h: 1350, layer: "all" }), path.join(dir, `${String(i + 1).padStart(2, "0")}.png`), 1080, 1350, false);
   }
 
-  // וידאו: כל פוסט יוצא גם כריל (רילס, וקרוסלה מונפשת)
+  // קרוסלה: כל שקופית על תמונה
+  if (post.format === "carousel") {
+    const bare = post.slides.findIndex((s) => !s.photo);
+    if (bare >= 0) throw new Error(`${post.id}: שקופית ${bare + 1} בלי תמונה`);
+    console.log("done", post.id);
+    continue;
+  }
+
+  // ריל: רק מקטעי וידאו
   const segs = [];
-  const per = post.montage ? 1.6 : 2.6; // שניות לשקופית
+  const per = post.montage ? 1.6 : 2.6; // שניות לכרטיס
   const fps = 30;
   for (const [i, s] of post.slides.entries()) {
-    const bg = path.join(dir, `bg${i}.jpg`), fg = path.join(dir, `fg${i}.png`), seg = path.join(dir, `seg${i}.mp4`);
-    await shot(html(s, i, n, { w: 1080, h: 1920, layer: "bg", safe: true }), bg, 1080, 1920, false);
+    if (!s.clip) throw new Error(`${post.id}: כרטיס ${i + 1} בלי קטע וידאו`);
+    const clip = path.resolve(clipDir, `${s.clip}.mov`);
+    const fg = path.join(dir, `fg${i}.png`), seg = path.join(dir, `seg${i}.mp4`);
     await shot(html(s, i, n, { w: 1080, h: 1920, layer: "text", safe: true }), fg, 1080, 1920, true);
     const d = per + (i === n - 1 ? 1.2 : 0);
-    const frames = Math.round(d * fps);
-    const zin = i % 2 === 0; // זום פנימה והחוצה לסירוגין
-    const z = zin ? `1+0.08*on/${frames}` : `1.08-0.08*on/${frames}`;
-    // רקע: זום איטי והחשכה. טקסט: נכנס מלמטה עם שקיפות
-    run(["-loop", "1", "-i", bg, "-loop", "1", "-i", fg, "-filter_complex",
-      `[0:v]scale=2160:3840,zoompan=z='${z}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${frames}:s=1080x1920:fps=${fps},eq=brightness=-0.10:saturation=0.95,` +
-      `drawbox=c=black@0.28:t=fill[b];` +
-      `[1:v]format=rgba,fade=t=in:st=0.15:d=0.45:alpha=1[t];` +
-      `[b][t]overlay=x=0:y='if(lt(t,0.6),40*(1-t/0.6),0)':format=auto,format=yuv420p[v]`,
-      "-map", "[v]", "-t", String(d), "-r", String(fps), "-c:v", "libx264", "-preset", "medium", "-crf", "19", seg]);
+    // הקטע: חיתוך למילוי המסך האנכי, הכהיה קלה, ואם הוא קצר מדי הפריים האחרון מוחזק
+    run(["-ss", String(s.start ?? 0), "-i", clip, "-loop", "1", "-i", fg, "-filter_complex",
+      `[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=${fps},tpad=stop_mode=clone:stop_duration=${d},` +
+      `eq=brightness=-0.06:saturation=0.97,drawbox=c=black@0.30:t=fill,setsar=1[b];` +
+      `[1:v]format=rgba,fade=t=in:st=0.1:d=0.4:alpha=1[t];` +
+      `[b][t]overlay=x=0:y='if(lt(t,0.5),40*(1-t/0.5),0)':format=auto,format=yuv420p[v]`,
+      "-map", "[v]", "-an", "-t", String(d), "-r", String(fps), "-c:v", "libx264", "-preset", "medium", "-crf", "19", seg]);
     segs.push({ file: seg, d });
   }
   // מעבר רך בין השקופיות
-  const xf = post.montage ? 0.25 : 0.45;
+  const xf = post.montage ? 0.15 : 0.3;
   const inputs = segs.flatMap((s) => ["-i", s.file]);
   let chain = "", last = "[0:v]", offset = 0;
   segs.slice(1).forEach((s, k) => {
     offset += segs[k].d - xf;
     const lab = `[x${k}]`;
-    chain += `${last}[${k + 1}:v]xfade=transition=${post.montage ? "fade" : "smoothleft"}:duration=${xf}:offset=${offset.toFixed(2)}${lab};`;
+    chain += `${last}[${k + 1}:v]xfade=transition=fade:duration=${xf}:offset=${offset.toFixed(2)}${lab};`;
     last = lab;
   });
   const video = path.join(out, `${post.id}.mp4`);
