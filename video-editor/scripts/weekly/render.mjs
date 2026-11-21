@@ -56,6 +56,30 @@ function html(slide, i, n, { w, h, layer, safe }) {
   </style></head><body><div class="s">${shade}${text}</div></body></html>`;
 }
 
+/**
+ * כתוביות לריל (שונות מהקרוסלות): כל מילה קופצת בתורה.
+ * הכותרת בתיבות ורודות לכל שורה (טקסט כהה), שורת ההמשך בכתב יד לבן עם צל.
+ * shown: כמה מילים כבר הופיעו. מילים שעוד לא הופיעו שקופות, כדי שהשורות לא יזוזו.
+ */
+function reelText(slide, shown) {
+  const hw = slide.headline.split(/\s+/).filter(Boolean);
+  const bw = (slide.body || "").split(/\s+/).filter(Boolean);
+  let k = 0;
+  const word = (w, cls) => `<span class="${cls}${k++ < shown ? "" : " off"}">${esc(w)}</span>`;
+  const head = hw.map((w) => word(w, "hw")).join(" ");
+  const body = bw.map((w) => word(w, "bw")).join(" ");
+  return `<!doctype html><html dir="rtl"><head><meta charset="utf-8"><style>
+    ${fontsCss}
+    html,body{margin:0;width:1080px;height:1920px;background:transparent;overflow:hidden}
+    .wrap{position:absolute;left:130px;right:130px;top:980px;text-align:center}
+    .head{font-family:'Assistant';font-weight:800;font-size:92px;line-height:1.32}
+    .hw{background:${PINK};color:#2A2622;padding:2px 18px 10px;border-radius:18px;box-decoration-break:clone;-webkit-box-decoration-break:clone;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+    .body{margin-top:26px;font-family:'Amatic SC';font-weight:700;font-size:96px;line-height:1.05;color:#fff;text-shadow:0 2px 3px rgba(0,0,0,.55),0 4px 22px rgba(0,0,0,.45)}
+    .off{visibility:hidden}
+  </style></head><body><div class="wrap"><div class="head">${head}</div>${body ? `<div class="body">${body}</div>` : ""}</div></body></html>`;
+}
+const wordCount = (s) => (s.headline + " " + (s.body || "")).split(/\s+/).filter(Boolean).length;
+
 const run = (args) => execFileSync("ffmpeg", ["-y", "-loglevel", "error", ...args], { stdio: "inherit" });
 
 const browser = await chromium.launch();
@@ -95,16 +119,27 @@ for (const post of plan.posts) {
   for (const [i, s] of post.slides.entries()) {
     if (!s.clip) throw new Error(`${post.id}: כרטיס ${i + 1} בלי קטע וידאו`);
     const clip = path.resolve(clipDir, `${s.clip}.mov`);
-    const fg = path.join(dir, `fg${i}.png`), seg = path.join(dir, `seg${i}.mp4`);
-    await shot(html(s, i, n, { w: 1080, h: 1920, layer: "text", safe: true }), fg, 1080, 1920, true);
+    const seg = path.join(dir, `seg${i}.mp4`);
     const d = per + (i === n - 1 ? 1.2 : 0);
-    // הקטע: חיתוך למילוי המסך האנכי, הכהיה קלה, ואם הוא קצר מדי הפריים האחרון מוחזק
-    run(["-ss", String(s.start ?? 0), "-i", clip, "-loop", "1", "-i", fg, "-filter_complex",
-      `[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=${fps},tpad=stop_mode=clone:stop_duration=${d},` +
-      `eq=brightness=-0.06:saturation=0.97,drawbox=c=black@0.30:t=fill,setsar=1[b];` +
-      `[1:v]format=rgba,fade=t=in:st=0.1:d=0.4:alpha=1[t];` +
-      `[b][t]overlay=x=0:y='if(lt(t,0.5),40*(1-t/0.5),0)':format=auto,format=yuv420p[v]`,
-      "-map", "[v]", "-an", "-t", String(d), "-r", String(fps), "-c:v", "libx264", "-preset", "medium", "-crf", "19", seg]);
+    // מילה אחרי מילה: תמונת שכבה לכל מצב, ומופיעה בזמן שלה
+    const words = wordCount(s);
+    const step = Math.min(0.22, (d * 0.6) / words);
+    const layers = [];
+    for (let w = 1; w <= words; w++) {
+      const f = path.join(dir, `fg${i}_${w}.png`);
+      await shot(reelText(s, w), f, 1080, 1920, true);
+      layers.push(f);
+    }
+    const t0 = 0.15;
+    let fc = `[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=${fps},tpad=stop_mode=clone:stop_duration=${d},setsar=1[v0];`;
+    layers.forEach((_, w) => {
+      const from = (t0 + w * step).toFixed(2);
+      const to = w === layers.length - 1 ? d.toFixed(2) : (t0 + (w + 1) * step).toFixed(2);
+      fc += `[v${w}][${w + 1}:v]overlay=0:0:enable='between(t,${from},${to})'[v${w + 1}];`;
+    });
+    fc += `[v${layers.length}]format=yuv420p[out]`;
+    run(["-ss", String(s.start ?? 0), "-i", clip, ...layers.flatMap((f) => ["-loop", "1", "-i", f]), "-filter_complex", fc,
+      "-map", "[out]", "-an", "-t", String(d), "-r", String(fps), "-c:v", "libx264", "-preset", "medium", "-crf", "19", seg]);
     segs.push({ file: seg, d });
   }
   // מעבר רך בין השקופיות
