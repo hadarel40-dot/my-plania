@@ -6,6 +6,7 @@ import { CONTENT_TYPES, ACCOUNTS, FORMATS, NICHES, STAGES, labelOf, type Account
 import { db, formatDate, studioCall } from "@/lib/studio/client";
 import { Btn, Field, Loading, PageHead, Select, Tag, inputCls, toast } from "@/components/studio/ui";
 import { VoiceSuggestions, type Suggestion } from "@/components/studio/voice-suggestions";
+import { WeekGrid } from "@/components/studio/week-grid";
 
 interface Item {
   id?: string; title: string; account: Account; niche: string | null; format: string; stage: Stage; planned_date: string | null;
@@ -43,6 +44,7 @@ export default function BoardPage() {
           <Plus className="size-4" /> פריט חדש
         </Btn>
       </PageHead>
+      <div className="mb-6"><WeekGrid account={account} /></div>
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="flex items-center border border-[#E2DACD]">
           <button type="button" aria-label="החודש הקודם" className="p-2 hover:bg-[#FBF8F2]" onClick={() => setMonth((m) => shiftMonth(m, -1))}><ChevronRight className="size-4" /></button>

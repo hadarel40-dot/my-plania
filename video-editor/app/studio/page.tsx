@@ -9,6 +9,7 @@ import { usualAndBest } from "@/lib/studio/metrics";
 import { db, formatDate, num, studioCall, todayIL } from "@/lib/studio/client";
 import { Btn, Label, Loading, Note, Panel, Tag, Title, toast } from "@/components/studio/ui";
 import { Suggestions } from "@/components/studio/suggestions";
+import { WeekGrid } from "@/components/studio/week-grid";
 import { cn } from "@/lib/utils";
 
 interface Rec { title: string; why: string; what_to_shoot: string; action: string; action_label: string; idea: string; account: string; niche: string; impact: string }
@@ -32,6 +33,7 @@ export default function HomePage() {
 
   return (
     <div className="space-y-5">
+      <WeekGrid />
       <PoppingOff />
       <Suggestions />
       <AutoNow onDone={loadItems} />
