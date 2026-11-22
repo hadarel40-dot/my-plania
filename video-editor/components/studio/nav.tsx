@@ -24,7 +24,6 @@ const GROUPS: Group[] = [
     { href: "/studio/reel", label: "כתיבת ריל", count: "scripts" },
     { href: "/studio/film", label: "רשימת צילום", count: "film" },
     { href: "/studio/carousel", label: "קרוסלות", count: "carousels" },
-    { href: "/", label: "עורך הווידאו" },
   ] },
   { key: "results", label: "תוצאות", href: "/studio/performance", subs: [
     { href: "/studio/performance", label: "ביצועים" },

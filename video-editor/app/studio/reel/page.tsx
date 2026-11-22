@@ -133,7 +133,7 @@ function IdeaForm({ params, onCreated }: { params: URLSearchParams; onCreated: (
           <Select value={template} onChange={(v) => { setTemplate(v); const t = templateById(v); if (t && t.kind === "reel" && t.mode) setMode(t.mode); }}
             options={[{ value: "", label: "בלי תבנית" }, ...tplOptions.map((t) => ({ value: t.id, label: `${t.name} (${t.tag})` }))]} />
         </Field>
-        <Field label="מספרים ועובדות אמיתיים" hint="רק מכאן נלקחים מספרים. מה שחסר יסומן {{המספר שלך}}.">
+        <Field label="מספרים ועובדות אמיתיים" hint='רק מכאן נלקחים מספרים. מה שחסר יסומן "המספר שלך", ותשלימי אותו בעצמך.'>
           <textarea rows={2} className={inputCls} value={facts} onChange={(e) => setFacts(e.target.value)} placeholder="למשל: התכנון לוקח לי 10 דקות, פעם זה היה שעה." />
         </Field>
         <div className="flex flex-wrap gap-2">

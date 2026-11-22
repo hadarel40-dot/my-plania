@@ -148,10 +148,10 @@ function finish(raw: z.infer<typeof ScriptSchema>, hook: Hook, mode: Draft["mode
     { id: "beats", label: "כל ביט עד 4 שניות, הפריים משתנה", pass: longBeats.length === 0, detail: longBeats.length ? `ביטים ארוכים: ${longBeats.join(", ")}` : "תקין" },
     { id: "cards", label: "עד שש מילים לכרטיס", pass: cards.every((c) => words(c.text).length <= 6), detail: cards.filter((c) => words(c.text).length > 6).map((c) => c.text).join(" | ") || "תקין" },
     { id: "echo", label: "השורה האחרונה מהדהדת מילה מההוק", pass: !!echo, detail: echo ? `"${echo}"` : "אין מילה חוזרת" },
-    { id: "cta", label: "קריאה אחת לפעולה, בסוף", pass: ctas.length === 1 && last?.role === "cta", detail: `${ctas.length} קריאות` },
+    { id: "cta", label: "קריאה אחת לפעולה, בסוף", pass: ctas.length === 1 && last?.role === "cta", detail: ctas.length === 1 ? "קריאה אחת" : ctas.length === 0 ? "אין קריאה לפעולה" : `${ctas.length} קריאות` },
     { id: "safe", label: "טקסט בתוך האזור הבטוח", pass: true, detail: "בין y=230 ל-1440, 230 פיקסלים פנויים מימין" },
   ];
-  if (placeholders.length) checks.push({ id: "facts", label: "מספרים שחסרים לך", pass: true, info: true, detail: placeholders.join(", ") });
+  if (placeholders.length) checks.push({ id: "facts", label: "מספרים שחסרים לך", pass: true, info: true, detail: `יש ${placeholders.length === 1 ? "מקום אחד" : `${placeholders.length} מקומות`} שמחכים למספר אמיתי שלך. בטקסט כתוב שם "המספר שלך"` });
 
   return {
     script: { beats, total_seconds: total, total_words: beats.reduce((s, b) => s + b.words, 0), echo_word: echo ?? "", caption_first_line: raw.caption_first_line },
@@ -228,9 +228,9 @@ export function carouselChecks(c: Carousel): Check[] {
     { id: "body", label: "עד 25 מילים בכל שקופית", pass: longBody.length === 0, detail: longBody.length ? `ארוכות מדי: ${longBody.join(", ")}` : "תקין" },
     { id: "heads", label: "כותרת של 3 עד 7 מילים לכל רעיון", pass: badHead.length === 0, detail: badHead.join(" | ") || "תקין" },
     { id: "recap", label: "שקופית סיכום שאפשר לצלם ולשלוח", pass: c.slides.some((x) => x.kind === "recap"), detail: c.slides.some((x) => x.kind === "recap") ? "יש" : "חסרה" },
-    { id: "cta", label: "קריאה אחת לפעולה, בסוף", pass: ctas.length === 1 && c.slides[n - 1]?.kind === "cta", detail: `${ctas.length} קריאות` },
+    { id: "cta", label: "קריאה אחת לפעולה, בסוף", pass: ctas.length === 1 && c.slides[n - 1]?.kind === "cta", detail: ctas.length === 1 ? "קריאה אחת" : ctas.length === 0 ? "אין קריאה לפעולה" : `${ctas.length} קריאות` },
   ];
-  if (placeholders.length) checks.push({ id: "facts", label: "מספרים שחסרים לך", pass: true, info: true, detail: placeholders.join(", ") });
+  if (placeholders.length) checks.push({ id: "facts", label: "מספרים שחסרים לך", pass: true, info: true, detail: `יש ${placeholders.length === 1 ? "מקום אחד" : `${placeholders.length} מקומות`} שמחכים למספר אמיתי שלך. בטקסט כתוב שם "המספר שלך"` });
   return checks;
 }
 

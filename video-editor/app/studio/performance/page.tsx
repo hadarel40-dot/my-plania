@@ -13,11 +13,25 @@ export default function PerformancePage() {
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
   const [pick, setPick] = useState(0);
+  const [cachedAt, setCachedAt] = useState<string | null>(null);
+  // התוצאה האחרונה נשמרת בדפדפן ומוצגת מיד, והרענון רץ ברקע
   const load = async () => {
     setBusy(true);
-    try { setData(await studioCall<Data>("instagram")); setError(""); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+    try {
+      const fresh = await studioCall<Data>("instagram");
+      setData(fresh); setError(""); setCachedAt(null);
+      try { localStorage.setItem("studio-ig-cache", JSON.stringify({ at: new Date().toISOString(), data: fresh })); } catch { /* מצב פרטי */ }
+    } catch (e) {
+      setError(`לא הצלחתי לקרוא מאינסטגרם עכשיו: ${(e as Error).message}`);
+    } finally { setBusy(false); }
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    try {
+      const c = JSON.parse(localStorage.getItem("studio-ig-cache") ?? "null");
+      if (c?.data) { setData(c.data); setCachedAt(c.at); }
+    } catch { /* אין שמור */ }
+    load();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const acc = data?.accounts[pick];
 
   return (
@@ -26,7 +40,8 @@ export default function PerformancePage() {
         {data && data.accounts.length > 1 && data.accounts.map((a, i) => a.ok && <Btn key={a.profile.username} variant={pick === i ? "solid" : "line"} onClick={() => setPick(i)}>@{a.profile.username}</Btn>)}
         <Btn variant="line" busy={busy} onClick={load}>רענון</Btn>
       </PageHead>
-      {busy && !data && <Loading>קוראת מאינסטגרם...</Loading>}
+      {busy && !data && <Loading>קוראת מאינסטגרם... (עד חצי דקה)</Loading>}
+      {cachedAt && <p className="mb-3 text-[12px] text-[#6F675C]">{busy ? "מתעדכן... " : ""}מוצגים הנתונים מ-{new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(new Date(cachedAt))}.</p>}
       {error && <Note tone="bad">{error}</Note>}
       {data && !data.configured && (
         <Panel title="אינסטגרם עוד לא מחובר">
@@ -82,6 +97,9 @@ function AccountView({ acc, history }: { acc: IgAccount; history: { date: string
   }).reduce((s, p) => s + (metric(p) ?? 0), 0));
   const best = lastWeek > 0 && earlier.every((v) => lastWeek > v);
   const recent = [...acc.media].sort((a, b) => b.timestamp.localeCompare(a.timestamp)).slice(0, 6);
+  // מה הכי נשלח השבוע: שליחות ביחס להגעה, האות שאינסטגרם נותנת לו הכי הרבה משקל להפצה לא-עוקבים
+  const sharesRate = (p: IgAccount["media"][number]) => ((p.insights?.reach ?? 0) > 0 ? (p.insights?.shares ?? 0) / p.insights!.reach! : 0);
+  const topShared = acc.insightsAvailable ? acc.media.filter((p) => p.timestamp >= weekAgo && (p.insights?.shares ?? 0) > 0).sort((a, b) => sharesRate(b) - sharesRate(a))[0] : undefined;
 
   return (
     <>
@@ -92,7 +110,9 @@ function AccountView({ acc, history }: { acc: IgAccount; history: { date: string
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <StatTile label={m?.metricLabel === "לייקים" ? "הלייקים הרגילים שלך" : "החשיפה הרגילה שלך"} value={m ? num(m.usual) : "אין נתון"} />
         <StatTile label="הכי טוב עכשיו" value={m?.best ? num(m.bestValue) : "אין נתון"} chip={m?.ratio && m.ratio >= 1.5 ? `פי ${m.ratio} מהרגיל` : undefined} hint={m?.best ? (m.best.caption ?? "").split("\n")[0].slice(0, 40) : "אין פוסטים בשבועיים האחרונים"} />
-        <StatTile label="עודכן" value={formatDate(new Date().toISOString())} hint="נשמר בכל כניסה לעמוד" />
+        <StatTile label="הכי נשלח השבוע" value={!acc.insightsAvailable ? "אין הרשאה" : topShared ? `${num(topShared.insights?.shares)} שליחות` : "אין שליחות השבוע"}
+          chip={topShared ? `${(sharesRate(topShared) * 100).toFixed(1)} לכל 100 שהגיעו` : undefined}
+          hint={topShared ? (topShared.caption ?? "").split("\n")[0].slice(0, 40) : "שליחה בהודעה היא האות החזק ביותר להגעה לאנשים חדשים"} />
       </div>
       <Panel label="רילס אחרונים" className="mt-3">
         <ul className="divide-y divide-[#ECE7DE]">

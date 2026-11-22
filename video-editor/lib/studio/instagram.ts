@@ -25,7 +25,8 @@ const tokens = () => (process.env.INSTAGRAM_ACCESS_TOKENS ?? "").split(",").map(
 export const instagramConfigured = () => tokens().length > 0;
 
 async function igGet<T>(url: string): Promise<T> {
-  const res = await fetch(url, { cache: "no-store" });
+  // לא מחכים לנצח לבקשה אחת
+  const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(10_000) }).catch((e) => { throw new Error(e?.name === "TimeoutError" ? "אינסטגרם לא ענה בזמן" : "אין חיבור לאינסטגרם"); });
   const body = await res.json().catch(() => ({}));
   if (!res.ok || body?.error) throw new Error(body?.error?.message ?? `Instagram ${res.status}`);
   return body as T;
@@ -48,16 +49,17 @@ async function loadProfile(host: string, igId: string | null, token: string, lim
   let available = insights;
   let insightsError = "";
   if (insights) {
-    // ההרשאה לתובנות חסרה: עוצרים בסירוב הראשון ואומרים את זה
-    for (const post of media) {
-      if (!available) break;
-      try {
-        post.insights = await insightsFor(host, post, token);
-      } catch (e) {
-        post.insights = null;
-        const msg = (e as Error).message;
-        if (/permission|scope|oauth|authoriz/i.test(msg)) { available = false; insightsError = msg; }
-      }
+    // במקביל, בקבוצות של 8 (קודם היה אחד אחרי השני, והדף נתקע). ההרשאה חסרה: עוצרים ואומרים את זה
+    for (let i = 0; i < media.length && available; i += 8) {
+      await Promise.all(media.slice(i, i + 8).map(async (post) => {
+        try {
+          post.insights = await insightsFor(host, post, token);
+        } catch (e) {
+          post.insights = null;
+          const msg = (e as Error).message;
+          if (/permission|scope|oauth|authoriz/i.test(msg)) { available = false; insightsError = msg; }
+        }
+      }));
     }
   }
   return { profile, media, insightsAvailable: available, insightsError };

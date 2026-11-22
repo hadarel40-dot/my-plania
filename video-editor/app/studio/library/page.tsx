@@ -69,7 +69,7 @@ export default function LibraryPage() {
           {section("reels") && (
             <Group title="תסריטים לרילס" count={reels.length}>
               {reels.slice(0, tab === "all" ? 9 : 200).map((d) => (
-                <Row key={d.id} href={`/studio/reel?id=${d.id}`} title={d.idea} meta={`${labelOf(ACCOUNTS, d.account)} · ${d.data.script?.total_seconds ?? "?"} שניות · ${formatDate(d.updated_at)}`}
+                <Row key={d.id} href={`/studio/reel?id=${d.id}`} title={d.idea} meta={`${labelOf(ACCOUNTS, d.account)} · ${d.data.script?.total_seconds ? `${d.data.script.total_seconds} שניות · ` : d.data.video?.seconds ? `${d.data.video.seconds} שניות · ` : ""}${formatDate(d.updated_at)}`}
                   tags={[...(d.data.hooks?.[d.data.chosen ?? 0] ? [`הוק ${d.data.hooks[d.data.chosen ?? 0].score}`] : []), ...(d.data.materials ? ["יש חומרים"] : []), ...(d.project_id ? ["בעורך"] : [])]} />
               ))}
             </Group>

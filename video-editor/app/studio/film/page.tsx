@@ -34,7 +34,7 @@ export default function FilmPage() {
             const shots = d.data.shots ?? [];
             const doneCount = shots.filter((s) => shot[`${d.id}-${s.n}`]).length;
             return (
-              <Panel key={d.id} label={`${labelOf(ACCOUNTS, d.account)} · ${d.data.script?.total_seconds ?? "?"} שניות · 9:16`} title={d.idea.slice(0, 90)}
+              <Panel key={d.id} label={`${labelOf(ACCOUNTS, d.account)} · ${d.data.script?.total_seconds ? `${d.data.script.total_seconds} שניות · ` : d.data.video?.seconds ? `${d.data.video.seconds} שניות · ` : ""}9:16`} title={d.idea.slice(0, 90)}
                 aside={<Tag tone={doneCount === shots.length ? "green" : undefined}>{doneCount}/{shots.length} צולמו</Tag>}>
                 <ol className="divide-y divide-[#ECE7DE]">
                   {shots.map((s) => {
