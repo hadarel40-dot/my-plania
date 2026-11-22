@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import UploadReelPage from "./_own-video-page";
+import UploadReelPage from "@/components/reel/own-video-page";
 
 export const Route = createFileRoute("/_authed/own-video")({
   component: UploadReelPage,
