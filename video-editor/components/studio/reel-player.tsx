@@ -9,7 +9,7 @@ import { db } from "@/lib/studio/client";
 import { REEL_COLORS, REEL_FONTS, REEL_STYLES, buildReelTimeline, styleForVariant, type CaptionStyleId, type ReelDesign } from "@/lib/studio/reel-timeline";
 import { canShareFiles, shareToInstagram } from "@/lib/studio/share";
 import { MEDIA_BUCKET } from "@/lib/supabase/env";
-import { Btn, Loading, Panel, Tag, toast } from "./ui";
+import { Btn, Panel, Tag, inputCls, toast } from "./ui";
 import { ShareHint } from "./share-hint";
 import { cn } from "@/lib/utils";
 
@@ -125,14 +125,14 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
         <div className="min-w-0 space-y-5">
           <div>
             <p className="mb-2 text-[13px] font-bold text-[#5E1D1D]">בוחרים גרסה</p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-1.5 md:gap-2">
               {REEL_STYLES.map((st) => {
                 const on = style === st.id;
                 return (
                   <button key={st.id} type="button" onClick={() => chooseStyle(st.variant)} aria-pressed={on}
                     className={cn("overflow-hidden rounded-2xl border-2 text-right transition", on ? "border-[#5E1D1D] shadow-[0_10px_20px_-14px_rgba(94,29,29,0.9)]" : "border-[#E3D9CC] hover:border-[#B5848E]")}>
                     <StylePreview id={st.id} design={design} />
-                    <span className={cn("block px-2 py-1.5 text-[11px] font-bold leading-tight", on ? "bg-[#5E1D1D] text-[#FAF6F1]" : "bg-white text-[#2A2622]")}>{st.variant} · {st.label}</span>
+                    <span className={cn("block px-1.5 py-1.5 text-[10px] font-bold leading-tight md:text-[11px]", on ? "bg-[#5E1D1D] text-[#FAF6F1]" : "bg-white text-[#2A2622]")}>{st.variant} · {st.label}</span>
                   </button>
                 );
               })}
@@ -146,26 +146,46 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
               <span className="text-xl leading-none">{showDesign ? "−" : "+"}</span>
             </button>
             {showDesign && (
-              <div className="space-y-4 border-t border-[#E3D9CC] px-4 py-4">
-                <Row label="גופן">
-                  {REEL_FONTS.map((f) => (
-                    <Chip key={f.id} on={(design.font ?? "assistant") === f.id} onClick={() => setD({ font: f.id })}>
-                      <span style={{ fontFamily: `"${f.family}"` }} className="text-[15px]">{f.label}</span>
-                    </Chip>
-                  ))}
-                </Row>
-                <Row label="צבע הטקסט"><Swatches value={design.main ?? "#FFFFFF"} onPick={(c) => setD({ main: c })} /></Row>
-                <Row label="צבע ההדגשה"><Swatches value={design.accent ?? "#F7C9D6"} onPick={(c) => setD({ accent: c })} /></Row>
-                <Row label="גודל">
-                  {([["s", "קטן"], ["m", "רגיל"], ["l", "גדול"]] as const).map(([v, l]) => <Chip key={v} on={(design.size ?? "m") === v} onClick={() => setD({ size: v })}>{l}</Chip>)}
-                </Row>
-                <Row label="מיקום">
-                  {([["top", "למעלה"], ["middle", "באמצע"], ["bottom", "למטה"]] as const).map(([v, l]) => <Chip key={v} on={(design.place ?? "middle") === v} onClick={() => setD({ place: v })}>{l}</Chip>)}
-                </Row>
+              <div className="space-y-5 border-t border-[#E3D9CC] px-4 py-4">
+                <Group title="כותרת ראשית">
+                  <Row label="גופן">{REEL_FONTS.map((f) => <FontChip key={f.id} f={f} on={(design.headFont ?? design.font ?? (style === "editorial" ? "frank" : "assistant")) === f.id} onClick={() => setD({ headFont: f.id })} />)}</Row>
+                  <Row label="צבע"><Swatches value={design.main ?? "#FFFFFF"} onPick={(c) => setD({ main: c })} /></Row>
+                </Group>
+                <Group title="כותרת משנית">
+                  <Row label="גופן">{REEL_FONTS.map((f) => <FontChip key={f.id} f={f} on={(design.bodyFont ?? design.font ?? "assistant") === f.id} onClick={() => setD({ bodyFont: f.id })} />)}</Row>
+                  <Row label="צבע"><Swatches value={design.body ?? design.accent ?? "#F7C9D6"} onPick={(c) => setD({ body: c })} /></Row>
+                </Group>
+                <Group title="משחקי אותיות">
+                  <Row label="מילה מודגשת">
+                    <Chip on={design.emphasis ?? style === "editorial"} onClick={() => setD({ emphasis: true })}>עם</Chip>
+                    <Chip on={!(design.emphasis ?? style === "editorial")} onClick={() => setD({ emphasis: false })}>בלי</Chip>
+                  </Row>
+                  {(design.emphasis ?? style === "editorial") && (
+                    <Row label="הגופן של המילה המודגשת">{REEL_FONTS.map((f) => <FontChip key={f.id} f={f} on={(design.emFont ?? (style === "editorial" ? "gveret" : design.headFont ?? design.font ?? "assistant")) === f.id} onClick={() => setD({ emFont: f.id })} />)}</Row>
+                  )}
+                  <Row label="צבע ההדגשה"><Swatches value={design.accent ?? "#F7C9D6"} onPick={(c) => setD({ accent: c })} /></Row>
+                  <Row label="ירידות שורה">
+                    {([["few", "מעט"], [undefined, "רגיל"], ["many", "הרבה"]] as const).map(([v, l]) => <Chip key={l} on={design.breaks === v} onClick={() => setD({ breaks: v })}>{l}</Chip>)}
+                  </Row>
+                  <Row label="איך האותיות נכנסות">
+                    {([[undefined, "כמו בגרסה"], ["calm", "רגוע"], ["bounce", "קופץ"], ["type", "מכונת כתיבה"], ["zoom", "זום"]] as const).map(([v, l]) => <Chip key={l} on={design.play === v} onClick={() => setD({ play: v })}>{l}</Chip>)}
+                  </Row>
+                  <p className="text-[11px] text-[#9A8C85]">כדי לבחור בעצמך איזו מילה מודגשת, שמים אותה בין כוכביות בטקסט, למשל: ככה *באמת* עורכים.</p>
+                </Group>
+                <Group title="גודל ומיקום">
+                  <Row label="גודל">
+                    {([["s", "קטן"], ["m", "רגיל"], ["l", "גדול"]] as const).map(([v, l]) => <Chip key={v} on={(design.size ?? "m") === v} onClick={() => setD({ size: v })}>{l}</Chip>)}
+                  </Row>
+                  <Row label="מיקום">
+                    {([["top", "למעלה"], ["middle", "באמצע"], ["bottom", "למטה"]] as const).map(([v, l]) => <Chip key={v} on={(design.place ?? "middle") === v} onClick={() => setD({ place: v })}>{l}</Chip>)}
+                  </Row>
+                </Group>
                 {changed && <button type="button" onClick={() => setD(null)} className="text-[13px] font-bold text-[#5E1D1D] underline underline-offset-4">לחזור לעיצוב המקורי</button>}
               </div>
             )}
           </div>
+
+          <TextsEditor draft={draft} onChange={onChange} />
 
           <div className="space-y-2">
             <Btn busy={busy === "send"} onClick={send} className="min-h-[48px] w-full text-[15px]">{busy === "send" ? `מכינה את הקובץ ${progress}%` : canShareFiles() ? "לשלוח לאינסטגרם" : "להוריד ולשלוח"}</Btn>
@@ -196,6 +216,59 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
         </div>
       </div>
     </Panel>
+  );
+}
+
+function Group({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-3 rounded-xl bg-[#FAF6F1] p-3">
+      <p className="text-[13px] font-black text-[#5E1D1D]">{title}</p>
+      {children}
+    </section>
+  );
+}
+
+function FontChip({ f, on, onClick }: { f: { id: string; label: string; family: string }; on: boolean; onClick: () => void }) {
+  return <Chip on={on} onClick={onClick}><span style={{ fontFamily: `"${f.family}"` }} className="text-[15px]">{f.label}</span></Chip>;
+}
+
+/** לשנות את הטקסטים: כותרת ראשית ומשנית לכל כרטיס. נשמר בריל, ואפשר לבטל מהצ'אט עם המעצב */
+function TextsEditor({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => void }) {
+  const kit = draft.data.edit!;
+  const [open, setOpen] = useState(false);
+  const [cards, setCards] = useState(kit.cards.map((c) => ({ head: c.headline ?? c.text, body: c.headline ? c.body ?? "" : "" })));
+  const [busy, setBusy] = useState(false);
+  useEffect(() => setCards(kit.cards.map((c) => ({ head: c.headline ?? c.text, body: c.headline ? c.body ?? "" : "" }))), [kit]);
+  const dirty = cards.some((c, i) => c.head !== (kit.cards[i].headline ?? kit.cards[i].text) || c.body !== (kit.cards[i].headline ? kit.cards[i].body ?? "" : ""));
+  const save = async () => {
+    setBusy(true);
+    const edit = { ...kit, cards: kit.cards.map((c, i) => ({ ...c, text: cards[i].head, headline: cards[i].head, body: cards[i].body })) };
+    const history = [kit, ...(draft.data.edit_history ?? [])].slice(0, 6);
+    const { data, error } = await db().from("studio_drafts").update({ data: { ...draft.data, edit, edit_history: history } }).eq("id", draft.id).select("*").single();
+    setBusy(false);
+    if (error) return toast(error.message, true);
+    onChange(data as Draft);
+    toast("הטקסטים עודכנו");
+  };
+  return (
+    <div className="rounded-2xl border border-[#E3D9CC] bg-white/70">
+      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex w-full items-center justify-between px-4 py-3 text-[14px] font-bold text-[#5E1D1D]">
+        לשנות טקסט: כותרת ראשית ומשנית
+        <span className="text-xl leading-none">{open ? "−" : "+"}</span>
+      </button>
+      {open && (
+        <div className="space-y-3 border-t border-[#E3D9CC] px-4 py-4">
+          {cards.map((c, i) => (
+            <div key={i} className="space-y-1.5 rounded-xl bg-[#FAF6F1] p-3">
+              <p className="text-[11px] font-bold text-[#9A8C85]">כרטיס {i + 1}</p>
+              <input className={inputCls} value={c.head} placeholder="כותרת ראשית" onChange={(e) => setCards((x) => x.map((y, j) => (j === i ? { ...y, head: e.target.value } : y)))} />
+              <input className={cn(inputCls, "text-[14px]")} value={c.body} placeholder="כותרת משנית (לא חובה)" onChange={(e) => setCards((x) => x.map((y, j) => (j === i ? { ...y, body: e.target.value } : y)))} />
+            </div>
+          ))}
+          <Btn busy={busy} disabled={!dirty} onClick={save} className="w-full">לשמור את הטקסטים</Btn>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -242,6 +315,13 @@ function StylePreview({ id, design }: { id: CaptionStyleId; design: ReelDesign }
         <span className="absolute inset-x-1 top-[38%] text-center">
           <span className="inline-block rounded px-1.5 py-0.5 text-[11px] font-black" style={{ background: acc, color: dark ? "#FFFFFF" : "#2A2622" }}>ככה עורכים</span>
           <span className="mt-1 block text-[10px] font-bold" style={{ color: main }}>בלי לשבת בלילה</span>
+        </span>
+      )}
+      {id === "editorial" && (
+        <span className="absolute inset-x-1 top-[30%] text-center leading-none">
+          <span className="block text-[12px] font-black" style={{ color: main, fontFamily: `"${REEL_FONTS.find((f) => f.id === (design.headFont ?? design.font ?? "frank"))?.family ?? "Frank Ruhl Libre"}"` }}>ככה</span>
+          <span className="block -rotate-6 text-[22px]" style={{ color: acc, fontFamily: `"${REEL_FONTS.find((f) => f.id === (design.emFont ?? "gveret"))?.family ?? "Gveret Levin"}"` }}>עורכים</span>
+          <span className="mt-1 block text-[9px] font-bold" style={{ color: design.body ?? acc }}>בלי לשבת בלילה</span>
         </span>
       )}
       {id === "lines" && (
