@@ -17,7 +17,15 @@ export function StudioVersions() {
     if (!projectId) return;
     getSupabaseBrowser().from("studio_drafts").select("*").eq("project_id", projectId).limit(1).then(({ data }) => setDraft((data?.[0] as Draft) ?? null));
   }, []);
-  if (!draft?.data.edit) return null;
+  if (!draft) return null;
+  if (!draft.data.edit) {
+    return (
+      <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-xs text-zinc-400">
+        <p className="mb-1 text-sm font-semibold text-zinc-100">מחובר לסטודיו: {draft.idea}</p>
+        מעלים את הסרטון, "עריכה אוטומטית" חותכת שתיקות ומוסיפה כתוביות מהדיבור, ו"ייצוא סרטון" מחזיר את הגרסה הערוכה לסטודיו וללוח.
+      </div>
+    );
+  }
   const current = styleForVariant(draft.data.chosen_variant);
   const choose = async (variant: string) => {
     const style = styleForVariant(variant);

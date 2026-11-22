@@ -20,6 +20,7 @@ const GROUPS: Group[] = [
   ] },
   { key: "create", label: "יצירה", href: "/studio/new", subs: [
     { href: "/studio/new", label: "+ ריל חדש" },
+    { href: "/studio/own-video", label: "+ סרטון שצילמתי" },
     { href: "/studio/carousel", label: "קרוסלות", count: "carousels" },
     { href: "/studio/reel", label: "רילס", count: "scripts" },
     { href: "/studio/templates", label: "תבניות" },

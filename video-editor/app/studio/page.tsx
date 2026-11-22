@@ -39,6 +39,7 @@ export default function HomePage() {
       <WeekStrip today={today} />
       <div className="flex flex-wrap gap-2">
         <Link href="/studio/new" className="inline-flex items-center gap-2 rounded-full bg-[#1F1B16] px-4 py-2 text-[13px] font-bold text-[#FBF8F2]">+ ריל חדש</Link>
+        <Link href="/studio/own-video" className="inline-flex items-center gap-2 rounded-full border border-[#1F1B16] bg-[#FBF8F2] px-4 py-2 text-[13px] font-bold">+ סרטון שצילמתי</Link>
         <Link href="/studio/ideas" className="inline-flex items-center gap-2 rounded-full border border-[#E2DACD] bg-[#FBF8F2] px-4 py-2 text-[13px] font-bold hover:bg-[#F4EFE6]">
           <Lightbulb className="size-4" />הצעות לרעיונות{open ? ` (${open})` : ""}
         </Link>
