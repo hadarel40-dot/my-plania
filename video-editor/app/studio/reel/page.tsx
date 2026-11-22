@@ -328,10 +328,15 @@ function DraftView({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => 
 }
 
 function ChecksPanel({ draft }: { draft: Draft }) {
-  const checks = draft.data.checks ?? [];
-  if (!checks.length) return null;
+  const all = draft.data.checks ?? [];
+  const [showAll, setShowAll] = useState(false);
+  if (!all.length) return null;
+  // רק מה שצריך תשומת לב. בדיקות שעברו מוסתרות עד שלוחצים
+  const passed = all.filter((c) => c.pass && !c.info).length;
+  const checks = showAll ? all : all.filter((c) => !c.pass || c.info);
   return (
-    <Panel title="בדיקות">
+    <Panel title="בדיקות" aside={passed > 0 ? <button type="button" className="text-[12px] underline underline-offset-4" onClick={() => setShowAll(!showAll)}>{showAll ? "רק מה שצריך תיקון" : `${passed} עברו. להציג`}</button> : undefined}>
+      {!checks.length && <p className="text-sm text-[#3E6B4F]">כל הבדיקות עברו.</p>}
       <ul className="space-y-2">
         {checks.map((c) => (
           <li key={c.id} className="flex gap-2 text-sm">

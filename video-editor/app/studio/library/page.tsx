@@ -27,6 +27,7 @@ export default function LibraryPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [drive, setDrive] = useState<{ configured: boolean; email?: string; files: DriveFile[] } | null>(null);
   const [q, setQ] = useState("");
+  const [showEmpty, setShowEmpty] = useState(false);
 
   useEffect(() => {
     db().from("studio_items").select("id, title, account, format, stage, planned_date, draft_id, auto, updated_at").order("updated_at", { ascending: false }).limit(400).then(({ data }) => setItems((data as Item[]) ?? []));
@@ -42,7 +43,9 @@ export default function LibraryPage() {
   const carousels = useMemo(() => drafts.filter((d) => d.mode === "carousel" && match(d.idea)), [drafts, q]); // eslint-disable-line react-hooks/exhaustive-deps
   const ideas = (items ?? []).filter((i) => i.stage === "idea" && match(i.title));
   const board = (items ?? []).filter((i) => i.stage !== "idea" && match(i.title));
-  const projs = projects.filter((p) => match(p.title));
+  // פרויקט בלי קליפים הוא כנראה "פרויקט חדש" שנפתח ונשכח. מסתירים אותו, לא מוחקים
+  const emptyProjects = projects.filter((p) => !(p.meta?.clipCount ?? 0)).length;
+  const projs = projects.filter((p) => match(p.title) && (showEmpty || (p.meta?.clipCount ?? 0) > 0));
   const files = (drive?.files ?? []).filter((f) => match(f.name));
 
   const section = (key: Tab) => tab === "all" || tab === key;
@@ -77,12 +80,17 @@ export default function LibraryPage() {
           {section("carousels") && (
             <Group title="קרוסלות" count={carousels.length}>
               {carousels.slice(0, tab === "all" ? 9 : 200).map((d) => (
-                <Row key={d.id} href={`/studio/reel?id=${d.id}`} title={d.data.carousel?.slides[0]?.headline ?? d.idea} meta={`${labelOf(ACCOUNTS, d.account)} · ${d.data.carousel?.slides.length ?? 0} שקופיות · ${formatDate(d.updated_at)}`} tags={[]} />
+                <Row key={d.id} href={`/studio/reel?id=${d.id}`} title={d.idea} meta={`${labelOf(ACCOUNTS, d.account)} · ${d.data.carousel?.slides.length ?? 0} שקופיות · ${formatDate(d.updated_at)}${d.data.carousel?.slides[0]?.headline && d.data.carousel.slides[0].headline !== d.idea ? ` · שער: ${d.data.carousel.slides[0].headline}` : ""}`} tags={[]} />
               ))}
             </Group>
           )}
           {section("editor") && (
             <Group title="פרויקטים בעורך" count={projs.length}>
+              {emptyProjects > 0 && (
+                <button type="button" onClick={() => setShowEmpty(!showEmpty)} className="col-span-full text-right text-[12px] text-[#6F675C] underline underline-offset-4">
+                  {showEmpty ? "להסתיר פרויקטים ריקים" : `${emptyProjects} פרויקטים ריקים מוסתרים. להציג`}
+                </button>
+              )}
               {projs.slice(0, tab === "all" ? 9 : 100).map((p) => (
                 <Row key={p.id} href={`/p/${p.id}`} title={p.title} meta={`${p.meta?.clipCount ?? 0} קליפים · ${p.meta?.duration ?? 0} ש׳ · ${formatDate(p.updated_at)}`} tags={[]} thumb={p.meta?.thumbnail ?? undefined} />
               ))}

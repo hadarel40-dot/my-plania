@@ -28,7 +28,7 @@ export default function FilmPage() {
   return (
     <>
       <PageHead label="יצירה" title="מה" accent="לצלם" sub="כל תסריט מוכן, עם השוטים לפי הסדר. לכל שוט יש גם דרך לצלם בלי פנים. מסמנים מה צולם, ואז פותחים בעורך." />
-      {!drafts ? <Loading /> : drafts.length === 0 ? <Note>אין עדיין תסריטים מוכנים לצילום. כותבים אחד ב"תסריטים".</Note> : (
+      {!drafts ? <Loading /> : drafts.length === 0 ? <Note>אין כרגע ריל שמחכה לצילום. הרילסים מהתוכן השבועי כבר ערוכים מהסרטונים שלך, אז הם לא כאן. ריל לצילום מתחילים ב<Link href="/studio/new" className="font-bold underline">ריל חדש</Link>.</Note> : (
         <div className="space-y-4">
           {drafts.map((d) => {
             const shots = d.data.shots ?? [];

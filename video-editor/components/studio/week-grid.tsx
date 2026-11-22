@@ -137,6 +137,13 @@ function Cell({ item, draft, thumb }: { item: Item; draft?: Draft; thumb?: strin
           <div className="absolute inset-0 flex items-center bg-[#F4EFE6] p-2 text-[11px] font-bold leading-snug text-[#1F1B16]">{item.hook || item.title}</div>
         )}
         {/* תג שלב רק כשהוא אומר משהו: טיוטה ורעיון הם ברירת המחדל */}
+        {/* מוכן לצילום: יש תסריט ורשימת שוטים, ועוד לא נפתח בעורך. מופיע גם ברשימת הצילום */}
+        {["idea", "draft"].includes(item.stage) && !!draft?.data.shots?.length && !draft.project_id && !draft.data.video && (
+          <span className="absolute right-1.5 top-1.5 rounded-md bg-[#3E6B4F] px-1.5 py-0.5 text-[10px] font-bold text-white">מוכן לצילום</span>
+        )}
+        {["idea", "draft"].includes(item.stage) && !!draft?.data.video && (
+          <span className="absolute right-1.5 top-1.5 rounded-md bg-[#1F1B16] px-1.5 py-0.5 text-[10px] font-bold text-[#FBF8F2]">מוכן להעלאה</span>
+        )}
         {!["idea", "draft"].includes(item.stage) && <span className="absolute right-1.5 top-1.5 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-[#1F1B16]" style={{ background: STAGE_TONE[item.stage] ?? "#ECE7DE" }}>{STAGE_LABEL[item.stage] ?? item.stage}</span>}
         {variants > 1 && <span className="absolute left-1.5 top-1.5 rounded-md bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-[#1F1B16]">{variants} גרסאות</span>}
         <span className="absolute bottom-1.5 right-1.5 rounded-md bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-[#1F1B16]">
