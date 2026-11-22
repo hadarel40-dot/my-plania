@@ -64,7 +64,7 @@ async function editKit(post) {
         "-an", "-c:v", "libx264", "-preset", "medium", "-crf", "21", "-pix_fmt", "yuv420p", "-movflags", "+faststart", out]);
       segments.push({ path: await upload(out, `${base}/edit/${post.id}/${String(segments.length + 1).padStart(2, "0")}.mp4`, "video/mp4"), seconds: Math.round(len * 100) / 100, width: 1080, height: 1920 });
     }
-    cards.push({ text: [s.headline, s.body].filter(Boolean).join(" "), start: Math.round(t * 100) / 100, end: Math.round((t + d) * 100) / 100 });
+    cards.push({ text: [s.headline, s.body].filter(Boolean).join(" "), headline: s.headline, body: s.body ?? "", start: Math.round(t * 100) / 100, end: Math.round((t + d) * 100) / 100 });
     t += d;
   }
   return { segments, cards };

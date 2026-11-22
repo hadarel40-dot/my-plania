@@ -60,12 +60,26 @@ export function projectFromDraft(draft: Draft): SavedProject & { notes: string }
     });
     project.assets = assets;
     project.timeline.clips = clips;
-    // הסגנון שהיא בחרה: מילה גדולה ובולטת במרכז, נכנסת בקפיצה
-    project.timeline.overlays = d.edit.cards.map((c, i) => ({
-      id: uid("ov"), kind: "text", hook: i === 0, text: c.text, start: c.start, end: c.end,
-      x: 0.5, y: 0.5, size: 92, color: "#FFFFFF", background: null, stroke: true, weight: 900,
-      rotate: 0, animIn: "pop", loop: "none", animOut: "fade",
-    }));
+    // הסגנון שהיא בחרה, כמו בסרטון: מילה אחת גדולה בכל פעם, במרכז, קופצת. כל מילה היא שכבה בזמן שלה,
+    // מילים של הכותרת בלבן ומילים של שורת ההמשך בוורוד
+    const ovs: Overlay[] = [];
+    d.edit.cards.forEach((c, ci) => {
+      const head = (c.headline ?? c.text).split(/\s+/).filter(Boolean);
+      const body = c.headline ? (c.body ?? "").split(/\s+/).filter(Boolean) : [];
+      const words = [...head.map((w) => ({ w, head: true })), ...body.map((w) => ({ w, head: false }))];
+      const dur = c.end - c.start;
+      const step = (dur * 0.85) / Math.max(1, words.length);
+      words.forEach((x, wi) => {
+        const start = +(c.start + 0.1 + wi * step).toFixed(2);
+        const end = wi === words.length - 1 ? c.end : +(start + step).toFixed(2);
+        ovs.push({
+          id: uid("ov"), kind: "text", hook: ci === 0 && wi === 0, text: x.w, start, end,
+          x: 0.5, y: 0.5, size: x.head ? 150 : 120, color: x.head ? "#FFFFFF" : "#F7C9D6", background: null, stroke: true, weight: 900,
+          rotate: 0, animIn: "pop", loop: "none", animOut: "none",
+        });
+      });
+    });
+    project.timeline.overlays = ovs;
     project.notes = `${project.notes}\n\nזה הריל המוכן מהתוכן השבועי: כל קטע וידאו נמצא בציר הזמן, וכל כרטיס טקסט הוא שכבה. מוזיקה מוסיפים באינסטגרם.`.slice(0, 8000);
   }
   return project;
