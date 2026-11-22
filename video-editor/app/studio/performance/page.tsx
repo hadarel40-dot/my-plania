@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { IgAccount } from "@/lib/studio/instagram";
 import { usualAndBest } from "@/lib/studio/metrics";
 import { formatDate, num, studioCall } from "@/lib/studio/client";
+import { LearnPanel } from "@/components/studio/learn-panel";
 import { Btn, Label, Loading, Note, PageHead, Panel, StatTile, Tag, Title } from "@/components/studio/ui";
 
 type Acc = (IgAccount & { ok: true }) | { ok: false; error: string };
@@ -48,6 +49,7 @@ export default function PerformancePage() {
           <p className="text-sm leading-relaxed text-[#6F675C]">צריך להגדיר ב-Vercel את INSTAGRAM_ACCESS_TOKENS: הטוקן שמפיקים באפליקציה ב-Meta (API setup with Unified login), עם ההרשאה instagram_manage_insights. ההוראות ב-README של העורך, בפרק "סטודיו התוכן".</p>
         </Panel>
       )}
+      <div className="mb-4"><LearnPanel /></div>
       {acc && !acc.ok && <Note tone="bad">החשבון לא נקרא: {acc.error}</Note>}
       {acc?.ok && <AccountView acc={acc} history={(data?.history ?? []).filter((h) => h.account === acc.profile.username)} />}
     </>

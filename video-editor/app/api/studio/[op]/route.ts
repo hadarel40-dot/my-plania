@@ -11,6 +11,7 @@ import { carouselIdeas, editCarouselByChat, understandReelRequest, matchMaterial
 import { projectFromDraft } from "@/lib/studio/handoff";
 import { advise, buildVoice, inspire, planToday, planWeek, preferencesBlock, type Feedback, researchTrends, suggestFromEdit, weekOptions, weeklyStats, writeReview } from "@/lib/studio/insights";
 import { instagramConfigured, loadAccounts } from "@/lib/studio/instagram";
+import { learnFromPosts, matchPublished, saveLearnings } from "@/lib/studio/learn";
 import { StudioError, getVoice, requireStudioAdmin, todayIL, voiceBlock } from "@/lib/studio/server";
 
 export const dynamic = "force-dynamic";
@@ -292,7 +293,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
         const { account: acc, text } = z.object({ account, text: z.string().max(8000).default("") }).parse(body);
         const { data: row } = await supabase.from("studio_voice").select("profile").eq("account", acc).maybeSingle();
         const built = await buildVoice(acc, row?.profile && Object.keys(row.profile).length ? row.profile : null, text);
-        const { error } = await supabase.from("studio_voice").upsert({ account: acc, profile: { ...built.profile, ...(row?.profile?.brand ? { brand: row.profile.brand } : {}) }, samples: built.samples.slice(0, 25), built_at: new Date().toISOString() });
+        const { error } = await supabase.from("studio_voice").upsert({ account: acc, profile: { ...built.profile, ...(row?.profile?.brand ? { brand: row.profile.brand } : {}), ...(row?.profile?.learnings ? { learnings: row.profile.learnings } : {}) }, samples: built.samples.slice(0, 25), built_at: new Date().toISOString() });
         if (error) throw new StudioError(error.message, 500);
         return NextResponse.json({ profile: built.profile, used: built.used, note: built.note });
       }
@@ -316,6 +317,30 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
         }
         const { data: history } = await supabase.from("studio_snapshots").select("date, account, followers").order("date").limit(1000);
         return NextResponse.json({ configured: true, accounts, history: history ?? [] });
+      }
+      case "learn": {
+        // מחבר כל פוסט שפורסם לפריט שלו, מעדכן מספרים, ולומד. לא משנה שלב של שום פריט
+        const { account: acc } = z.object({ account }).parse(body);
+        if (!instagramConfigured()) return NextResponse.json({ connected: false });
+        const rows = await matchPublished(supabase, acc);
+        if (!rows.connected) return NextResponse.json({ connected: false });
+        const learnings = await learnFromPosts(rows);
+        if (learnings) await saveLearnings(supabase, acc, learnings);
+        return NextResponse.json({
+          connected: true, baseline: rows.baseline, insightsAvailable: rows.insightsAvailable,
+          linked: rows.linked.map(({ item, draft, post, matchedNow }) => ({ itemId: item.id, title: item.title, format: item.format, content_type: item.content_type || draft.data.content_type || null, draftId: draft.id, chosen_variant: draft.data.chosen_variant ?? null, edit: !!draft.data.edit, post, matchedNow })),
+          learnings: learnings ?? (await getVoice(supabase, acc)).learnings ?? null,
+        });
+      }
+      case "unlink": {
+        // "לא זה": הפוסט מתנתק מהפריט ולא יחובר אליו שוב
+        const { draftId } = z.object({ draftId: uuid }).parse(body);
+        const draft = await loadDraft(draftId);
+        const media = draft.data.published?.media_id;
+        const { published: _drop, ...rest } = draft.data; // eslint-disable-line @typescript-eslint/no-unused-vars
+        await supabase.from("studio_drafts").update({ data: { ...rest, published_reject: [...(draft.data.published_reject ?? []), ...(media ? [media] : [])] } }).eq("id", draftId);
+        await supabase.from("studio_items").update({ ig_permalink: "" }).eq("draft_id", draftId);
+        return NextResponse.json({ ok: true });
       }
       case "drive": {
         if (!driveConfigured()) return NextResponse.json({ configured: false });

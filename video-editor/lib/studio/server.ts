@@ -42,6 +42,9 @@ export function voiceBlock(v: VoiceProfile, account: Account) {
     `מילים וביטויים שלה (להשתמש בטבעיות, לא בכוח): ${list(v.favorite_words)}`,
     `מילים שהיא לא אומרת: ${list(v.avoid_words)}`,
     `כללים: ${list(v.rules)}`,
+    v.learnings?.works.length ? `מה עבד אצלה בפועל (מהמספרים של אינסטגרם, ${v.learnings.posts} פוסטים): ${v.learnings.works.join(" | ")}` : "",
+    v.learnings?.stop.length ? `מה לא עבד: ${v.learnings.stop.join(" | ")}` : "",
+    v.learnings?.try_next.length ? `לנסות עכשיו: ${v.learnings.try_next.join(" | ")}` : "",
     "תמיד: עברית מדוברת, בלי אימוג'י, בלי מקפים ארוכים, בלי קלישאות ובלי שפה שיווקית מנופחת.",
   ].filter(Boolean).join("\n");
 }

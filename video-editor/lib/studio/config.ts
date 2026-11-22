@@ -58,6 +58,18 @@ export interface VoiceProfile {
   offer?: string;
   /** ערכת המותג: פלטה ופונטים */
   brand?: BrandKit;
+  /** מה למדנו מהפוסטים שפורסמו (מתעדכן מנתוני אינסטגרם) */
+  learnings?: Learnings;
+}
+
+/** מסקנות מהביצועים: כל מסקנה עם הראיה מהמספרים האמיתיים */
+export interface Learnings { at: string; posts: number; works: string[]; stop: string[]; try_next: string[] }
+
+/** הפוסט באינסטגרם שהפריט הזה הפך אליו, עם המספרים שלו */
+export interface PublishedPost {
+  media_id: string; permalink: string; posted_at: string; type: string;
+  stats: { reach?: number; views?: number; saved?: number; shares?: number; likes?: number; comments?: number };
+  updated_at: string;
 }
 
 /** הקול כפי שנכתב ב-.claude/instagram/voice.md, עד שהפרופיל נבנה מהכיתובים ותוקן ידנית */
@@ -122,6 +134,9 @@ export interface DraftData {
   /** כמה גרסאות לבחירה, והגרסה שנבחרה */
   variants?: Variant[];
   chosen_variant?: string;
+  /** הפוסט שפורסם באינסטגרם (נמצא לפי הכיתוב), והפוסטים שהיא אמרה שהם לא זה */
+  published?: PublishedPost;
+  published_reject?: string[];
   /** סרטון מוכן לעלייה */
   video?: ReadyVideo;
   /** כיתוב לריל מוכן (לקרוסלה הכיתוב בתוך carousel) */
