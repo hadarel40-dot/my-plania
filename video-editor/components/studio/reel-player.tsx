@@ -1,7 +1,18 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Player, type PlayerRef } from "@remotion/player";
-import { TimelineComposition, type CompositionProps } from "@/remotion/timeline-composition";
+import { MediaTagsContext, TimelineComposition, type CompositionProps, type MediaTags } from "@/remotion/timeline-composition";
+import { Html5Audio, Html5Video } from "remotion";
+
+/**
+ * בדשבורד הקטעים כבר בזיכרון, אז הנגן לא מחכה ל"טעינה" של הווידאו (באייפון זה תקע את השעון על 0:00
+ * בזמן שהסרטון עצמו רץ). קטע בלי קול מושתק, כדי שהטלפון ינגן אותו בלי לעצור.
+ */
+const V5 = Html5Video as unknown as React.ComponentType<Record<string, unknown>>;
+function SmoothVideo(props: Record<string, unknown>) {
+  return <V5 {...props} pauseWhenBuffering={false} muted={props.muted === true || props.volume === 0} playsInline />;
+}
+const SMOOTH_TAGS: MediaTags = { mode: "html5", Video: SmoothVideo, Audio: Html5Audio as unknown as MediaTags["Audio"] };
 import { timelineDuration } from "@/lib/editor/timeline-utils";
 import type { MediaAsset } from "@/lib/editor/types";
 import { CONTENT_TYPES, labelOf, type Draft } from "@/lib/studio/config";
@@ -29,9 +40,16 @@ async function warm(url: string) {
  * הקטעים נטענים במלואם לזיכרון לפני שהנגן מתחיל, ואז הריל מתנגן חלק גם בטלפון ב-4G
  * (בלי זה כל קטע נטען תוך כדי ניגון, והתצוגה נתקעת וקופצת).
  */
+const blobCache = new Map<string, string>();
 async function loadClips(assets: Record<string, MediaAsset>, onProgress: (p: number) => void) {
-  const signed = await signAssets(assets);
-  const list = Object.entries(signed).filter(([, a]) => a.url);
+  const cached: Record<string, MediaAsset> = {};
+  const rest: Record<string, MediaAsset> = {};
+  for (const [id, a] of Object.entries(assets)) {
+    const hit = a.storagePath && blobCache.get(a.storagePath);
+    if (hit) cached[id] = { ...a, url: hit }; else rest[id] = a;
+  }
+  const signed = { ...cached, ...(await signAssets(rest)) };
+  const list = Object.entries(signed).filter(([id, a]) => a.url && !cached[id]);
   const done: Record<string, number> = {};
   const totals: Record<string, number> = {};
   const report = () => {
@@ -56,7 +74,9 @@ async function loadClips(assets: Record<string, MediaAsset>, onProgress: (p: num
         report();
       }
       totals[id] = done[id];
-      out[id] = { ...a, url: URL.createObjectURL(new Blob(parts, { type: res.headers.get("content-type") || "video/mp4" })) };
+      const url = URL.createObjectURL(new Blob(parts, { type: res.headers.get("content-type") || "video/mp4" }));
+      if (a.storagePath) blobCache.set(a.storagePath, url);
+      out[id] = { ...a, url };
     } catch { /* נשארים עם הכתובת מהאחסון */ }
     report();
   }));
@@ -93,13 +113,15 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
   const style = styleForVariant(variant);
   const caption = draft.data.caption ?? "";
 
-  // הקבצים נחתמים פעם אחת; גרסה ועיצוב רק בונים מחדש את הכתוביות
+  // הקבצים נטענים פעם אחת; גרסה, עיצוב וטקסט רק בונים מחדש את הכתוביות.
+  // נטען מחדש רק אם רשימת הקטעים עצמה השתנתה (למשל המעצב החליף סרטון)
+  const clipsKey = kit.segments.map((s) => s.path).join("|");
   useEffect(() => {
     let live = true;
-    setAssets(null); setLoadPct(0);
+    setLoadPct(0);
     loadClips(buildReelTimeline(kit).assets, (p) => live && setLoadPct(p)).then((a) => live && setAssets(a)).catch(() => live && setAssets({}));
     return () => { live = false; };
-  }, [kit]);
+  }, [clipsKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const [shotUrls, setShotUrls] = useState<Record<string, string>>({});
   const shotKey = (design.shots ?? []).map((s) => s.path).join("|");
   useEffect(() => {
@@ -194,8 +216,10 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
         {/* הנגן מחושב משמאל לימין: בדף בעברית הוא זז מחוץ למסגרת בלי זה */}
         <div dir="ltr" className="mx-auto aspect-[9/16] w-full max-w-[280px] overflow-hidden rounded-2xl bg-black shadow-[0_20px_40px_-24px_rgba(94,29,29,0.8)]">
           {inputProps ? (
+            <MediaTagsContext.Provider value={SMOOTH_TAGS}>
             <Player ref={playerRef} component={TimelineComposition} inputProps={inputProps} durationInFrames={frames} fps={timeline.fps}
               compositionWidth={1080} compositionHeight={1920} style={{ width: "100%", height: "100%" }} controls clickToPlay loop />
+            </MediaTagsContext.Provider>
           ) : (
             <div className="flex size-full flex-col items-center justify-center gap-3 px-8 text-center text-[13px] text-white/85" dir="rtl">
               טוענת את הסרטונים, כדי שהתצוגה תהיה חלקה
