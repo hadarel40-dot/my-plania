@@ -234,7 +234,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
         const { account: acc, text } = z.object({ account, text: z.string().max(8000).default("") }).parse(body);
         const { data: row } = await supabase.from("studio_voice").select("profile").eq("account", acc).maybeSingle();
         const built = await buildVoice(acc, row?.profile && Object.keys(row.profile).length ? row.profile : null, text);
-        const { error } = await supabase.from("studio_voice").upsert({ account: acc, profile: built.profile, samples: built.samples.slice(0, 25), built_at: new Date().toISOString() });
+        const { error } = await supabase.from("studio_voice").upsert({ account: acc, profile: { ...built.profile, ...(row?.profile?.brand ? { brand: row.profile.brand } : {}) }, samples: built.samples.slice(0, 25), built_at: new Date().toISOString() });
         if (error) throw new StudioError(error.message, 500);
         return NextResponse.json({ profile: built.profile, used: built.used, note: built.note });
       }

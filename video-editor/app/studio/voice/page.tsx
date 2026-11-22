@@ -1,4 +1,5 @@
 "use client";
+import { BrandKitEditor } from "@/components/studio/design-panel";
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { ACCOUNTS, DEFAULT_VOICE, labelOf, type Account, type VoiceProfile } from "@/lib/studio/config";
@@ -21,6 +22,11 @@ export default function VoicePage() {
         {ACCOUNTS.map((a) => <Btn key={a.value} variant={account === a.value ? "solid" : "line"} onClick={() => setAccount(a.value)}>{a.label}</Btn>)}
       </PageHead>
       {!rows ? <Loading /> : <Editor key={account + (row?.built_at ?? "")} account={account} row={row} onSaved={load} />}
+      <section className="mt-6 rounded-2xl border border-[#E2DACD] bg-[#FBF8F2] p-4">
+        <h2 className="s-serif mb-1 text-xl">צבעים <span className="s-accent">ופונטים</span></h2>
+        <p className="mb-3 text-[13px] text-[#4E473E]">ערכת המותג של {ACCOUNTS.find((a) => a.value === account)?.label}. בכל קרוסלה, "פונטים וצבעים" ואז "להחיל את המותג".</p>
+        <BrandKitEditor key={account} account={account} />
+      </section>
       <div className="mt-6"><Connections /></div>
     </>
   );

@@ -1,3 +1,4 @@
+import type { BrandKit, Theme } from "./brand";
 /** סטודיו התוכן: הגדרות שמשותפות לדפדפן ולשרת */
 
 export type Account = "hadarelifergan" | "plania.il";
@@ -55,6 +56,8 @@ export interface VoiceProfile {
   rules: string[];
   audience?: string;
   offer?: string;
+  /** ערכת המותג: פלטה ופונטים */
+  brand?: BrandKit;
 }
 
 /** הקול כפי שנכתב ב-.claude/instagram/voice.md, עד שהפרופיל נבנה מהכיתובים ותוקן ידנית */
@@ -85,7 +88,7 @@ export interface Check { id: string; label: string; pass: boolean; info?: boolea
 /** תמונה לשקופית: קובץ שהעלתה (Supabase Storage) או קובץ מהדרייב */
 export type SlideImage = { kind: "storage"; path: string } | { kind: "drive"; id: string };
 export interface Slide { kind: "cover" | "stake" | "point" | "recap" | "cta"; headline: string; body: string; image?: SlideImage }
-export interface Carousel { slides: Slide[]; caption: string; alt: string; handle: string; style?: "cream" | "ink" | "butter" | "photo" }
+export interface Carousel { slides: Slide[]; caption: string; alt: string; handle: string; style?: "cream" | "ink" | "butter" | "photo"; theme?: Theme }
 export interface MaterialFile { id: string; name: string; mimeType: string; duration?: number }
 export interface Materials { files: MaterialFile[]; matches: { target: string; file_id: string; reason: string }[]; missing: string[]; checked_at: string }
 /** ארבעת סוגי התוכן */

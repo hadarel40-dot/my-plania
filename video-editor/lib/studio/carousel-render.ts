@@ -1,5 +1,6 @@
 "use client";
 import type { Carousel, Slide } from "./config";
+import { PHOTO_DEFAULT, boldOf, fontStack, regularOf } from "./brand";
 
 /**
  * שקופיות קרוסלה בגודל 1080x1350, נכתבות בדפדפן (שם עברית מימין לשמאל נכונה), בעיצוב הסטודיו:
@@ -13,9 +14,10 @@ const CREAM = "#FBF8F2";
 const BUTTER = "#F6E7A6";
 const MUTED = "#6F675C";
 const SERIF = '"Frank Ruhl Libre", "David Libre", Georgia, serif';
+const SERIF_BASE = SERIF;
 const SANS = '"Assistant", "Heebo", Arial, sans-serif';
+const SANS_BASE = SANS;
 const HAND = '"Amatic SC", "Assistant", cursive';
-const PINK = "#F7C9D6";
 const KIND: Record<Slide["kind"], string> = { cover: "", stake: "למה זה חשוב", point: "", recap: "בקיצור", cta: "ועכשיו" };
 
 function wrap(ctx: CanvasRenderingContext2D, text: string, max: number) {
@@ -70,9 +72,12 @@ function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: numb
 /** images: מספר שקופית -> כתובת תמונה (מהדרייב) */
 export async function renderSlide(c: Carousel, index: number, images: Record<number, string> = {}): Promise<HTMLCanvasElement> {
   if (document.fonts) {
-    await Promise.all([document.fonts.load(`900 80px ${SERIF}`), document.fonts.load(`600 40px ${SANS}`), document.fonts.load(`800 26px ${SANS}`), document.fonts.load(`700 60px ${HAND}`)]).catch(() => {});
+    await Promise.all([document.fonts.load(`900 80px ${SERIF_BASE}`), document.fonts.load(`600 40px ${SANS_BASE}`), document.fonts.load(`800 26px ${SANS_BASE}`), document.fonts.load(`700 60px ${HAND}`)]).catch(() => {});
   }
   if ((c.style ?? "cream") === "photo") return renderPhotoSlide(c, index, images);
+  const th = c.theme ?? {};
+  const SERIF = fontStack(th.headFont, SERIF_BASE), SANS = fontStack(th.bodyFont, SANS_BASE);
+  if (document.fonts && (th.headFont || th.bodyFont)) await Promise.all([document.fonts.load(`900 80px ${SERIF}`), document.fonts.load(`600 40px ${SANS}`)]).catch(() => {});
   const slide = c.slides[index];
   const canvas = document.createElement("canvas");
   canvas.width = W;
@@ -87,8 +92,8 @@ export async function renderSlide(c: Carousel, index: number, images: Record<num
   const bg = style === "ink" ? (slide.kind === "cover" ? BUTTER : INK)
     : style === "butter" ? (slide.kind === "cta" ? INK : BUTTER)
     : slide.kind === "cover" ? BUTTER : slide.kind === "cta" ? INK : CREAM;
-  const fg = dark ? CREAM : INK;
-  ctx.fillStyle = bg;
+  const fg = th.headColor ?? (dark ? CREAM : INK);
+  ctx.fillStyle = th.bg && slide.kind !== "cover" ? th.bg : bg;
   ctx.fillRect(0, 0, W, H);
 
   // מספור, כדי שרואים איפה נגמר
@@ -171,6 +176,10 @@ export async function renderSlide(c: Carousel, index: number, images: Record<num
  * כותרת מודגשת בוורוד בהיר ושורת המשך בכתב יד לבן. שקופית בלי תמונה מקבלת רקע כהה חם.
  */
 async function renderPhotoSlide(c: Carousel, index: number, images: Record<number, string>): Promise<HTMLCanvasElement> {
+  const t = { ...PHOTO_DEFAULT, ...(c.theme ?? {}) };
+  const HEAD = fontStack(t.headFont, SANS), BODY = fontStack(t.bodyFont, HAND);
+  const hw = boldOf(t.headFont), bw = t.bodyFont === "Amatic SC" ? 700 : regularOf(t.bodyFont) >= 500 ? regularOf(t.bodyFont) : 600;
+  if (document.fonts) await Promise.all([document.fonts.load(`${hw} 80px ${HEAD}`), document.fonts.load(`${bw} 60px ${BODY}`)]).catch(() => {});
   const slide = c.slides[index];
   const canvas = document.createElement("canvas");
   canvas.width = W;
@@ -180,46 +189,48 @@ async function renderPhotoSlide(c: Carousel, index: number, images: Record<numbe
   if (photo) {
     drawCover(ctx, photo, 0, 0, W, H);
     const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, "rgba(20,16,12,0.25)");
-    g.addColorStop(1, "rgba(20,16,12,0.62)");
+    g.addColorStop(0, `rgba(20,16,12,${(t.overlay * 0.55).toFixed(2)})`);
+    g.addColorStop(1, `rgba(20,16,12,${Math.min(0.9, t.overlay * 1.38).toFixed(2)})`);
     ctx.fillStyle = g;
   } else {
-    ctx.fillStyle = "#2A2622";
+    ctx.fillStyle = t.bg;
   }
   ctx.fillRect(0, 0, W, H);
   ctx.direction = "rtl";
-  ctx.textAlign = "right";
-  ctx.shadowColor = "rgba(0,0,0,0.45)";
+  ctx.textAlign = t.align === "center" ? "center" : "right";
+  const X = t.align === "center" ? W / 2 : W - 100;
+  ctx.shadowColor = photo ? "rgba(0,0,0,0.45)" : "transparent";
   ctx.shadowBlur = 18;
   const P = 100;
-  const centered = slide.kind === "cover" || slide.kind === "cta";
-  const headSize = slide.kind === "cover" ? 112 : 84;
-  // מודדים קודם כדי למקם: שער וקריאה לפעולה במרכז, השאר בתחתית
-  ctx.font = `800 ${headSize}px ${SANS}`;
-  const head = wrap(ctx, slide.headline, W - P * 2);
+  const pos = slide.kind === "cover" || slide.kind === "cta" ? "center" : t.position;
+  const headSize = Math.round((slide.kind === "cover" ? 112 : 84) * t.headScale);
   const recap = slide.kind === "recap";
+  // כתב יד נראה קטן יותר באותו גודל, אז מגדילים אותו
+  const bodySize = Math.round((recap ? 52 : t.bodyFont === "Amatic SC" ? 80 : 48) * t.bodyScale);
+  ctx.font = `${hw} ${headSize}px ${HEAD}`;
+  const head = wrap(ctx, slide.headline, W - P * 2);
   const rows = recap ? slide.body.split("\n").map((r) => r.replace(/^[-•·\d.\s]+/, "").trim()).filter(Boolean) : [];
-  ctx.font = recap ? `600 52px ${SANS}` : `700 80px ${HAND}`;
-  const body = recap ? rows : slide.body ? wrap(ctx, slide.body, W - P * 2) : [];
-  const bodyLH = recap ? 78 : 84;
+  ctx.font = `${bw} ${bodySize}px ${BODY}`;
+  const body = recap ? rows : slide.body ? wrap(ctx, slide.body, W - P * 2 - (recap ? 40 : 0)) : [];
+  const bodyLH = Math.round(bodySize * (recap ? 1.5 : 1.05));
   const total = head.length * headSize * 1.05 + (body.length ? 22 + body.length * bodyLH : 0);
-  let y = centered ? (H - total) / 2 : H - P - 60 - total;
-  ctx.fillStyle = PINK;
-  ctx.font = `800 ${headSize}px ${SANS}`;
-  for (const l of head) { y += headSize * 1.05; ctx.fillText(l, W - P, y - headSize * 0.2); }
+  let y = pos === "center" ? (H - total) / 2 : pos === "top" ? 170 : H - P - 60 - total;
+  ctx.fillStyle = t.headColor;
+  ctx.font = `${hw} ${headSize}px ${HEAD}`;
+  for (const l of head) { y += headSize * 1.05; ctx.fillText(l, X, y - headSize * 0.2); }
   if (body.length) {
     y += 22;
-    ctx.fillStyle = "#FFFFFF";
-    ctx.font = recap ? `600 52px ${SANS}` : `700 80px ${HAND}`;
+    ctx.fillStyle = t.bodyColor;
+    ctx.font = `${bw} ${bodySize}px ${BODY}`;
     for (const l of body) {
       y += bodyLH;
-      if (recap) { ctx.save(); ctx.fillStyle = PINK; ctx.beginPath(); ctx.arc(W - P - 10, y - 18, 8, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
-      ctx.fillText(l, W - P - (recap ? 40 : 0), y - 14);
+      if (recap) { ctx.save(); ctx.fillStyle = t.accent; ctx.beginPath(); ctx.arc(W - P - 10, y - bodySize * 0.35, 8, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+      ctx.fillText(l, recap ? W - P - 40 : X, y - 14);
     }
   }
   ctx.shadowBlur = 0;
   ctx.font = `800 30px ${SANS}`;
-  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.fillStyle = photo ? "rgba(255,255,255,0.85)" : t.bodyColor;
   ctx.textAlign = "left";
   ctx.direction = "ltr";
   if (slide.kind !== "cover") ctx.fillText(`${index + 1}/${c.slides.length}`, P, 100);

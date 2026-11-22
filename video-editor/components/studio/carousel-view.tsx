@@ -8,6 +8,8 @@ import { db, studioCall } from "@/lib/studio/client";
 import { MEDIA_BUCKET } from "@/lib/supabase/env";
 import { Btn, Label, Loading, Note, Panel, Select, Tag, inputCls, toast } from "./ui";
 import { VoiceSuggestions, type Suggestion } from "./voice-suggestions";
+import { DesignPanel } from "./design-panel";
+import type { Theme } from "@/lib/studio/brand";
 
 const KIND: Record<Slide["kind"], string> = { cover: "שער", stake: "למה זה חשוב", point: "רעיון", recap: "סיכום", cta: "קריאה לפעולה" };
 const KIND_OPTIONS = (Object.keys(KIND) as Slide["kind"][]).map((k) => ({ value: k, label: KIND[k] }));
@@ -65,7 +67,11 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
   }, [edit]); // eslint-disable-line react-hooks/exhaustive-deps
   const [busy, setBusy] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const shown = edit ?? c;
+  // עיצוב שמשתנה בלי מצב עריכה: התצוגה מתעדכנת מיד, והשמירה רגע אחרי שמפסיקים להזיז
+  const [themeLocal, setThemeLocal] = useState<Theme | undefined>(undefined);
+  const [designOpen, setDesignOpen] = useState(false);
+  const themeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shown = edit ?? (c && themeLocal !== undefined ? { ...c, theme: themeLocal } : c);
   const storageUrls = useStorageUrls(shown);
 
   // תמונה לכל שקופית: מה שהיא בחרה לשקופית קודם, ואם אין, ההתאמה מהדרייב
@@ -168,7 +174,7 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
                 {history.length > 0 && <Btn variant="line" busy={busy === "revert"} onClick={revert}><Undo2 className="size-4" />לחזור לגרסה הקודמת</Btn>}
                 <Btn variant="ghost" busy={busy === "regen"} onClick={regen}>לכתוב מחדש עם AI</Btn>
                 <Btn variant="line" onClick={() => setEdit(structuredClone(c))}>לערוך</Btn>
-                <Btn busy={busy === "zip"} onClick={async () => { setBusy("zip"); try { await downloadZip(c, draft.idea, photos); } finally { setBusy(""); } }}>להוריד את התמונות</Btn>
+                <Btn busy={busy === "zip"} onClick={async () => { setBusy("zip"); try { await downloadZip(shown ?? c, draft.idea, photos); } finally { setBusy(""); } }}>להוריד את התמונות</Btn>
               </>
             )}
           </div>
@@ -187,7 +193,19 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
             <button key={v} type="button" onClick={() => setStyle(v)}
               className={`rounded-lg border px-2.5 py-1 text-[12px] font-semibold ${style === v ? "border-[#1F1B16] bg-[#1F1B16] text-[#FBF8F2]" : "border-[#E2DACD] bg-white/70"}`}>{l}</button>
           ))}
+          <button type="button" onClick={() => setDesignOpen(!designOpen)} className="ms-2 text-[12px] font-bold underline underline-offset-4">{designOpen ? "לסגור עיצוב" : "פונטים וצבעים"}</button>
         </div>
+        {designOpen && (
+          <div className="mt-3">
+            <DesignPanel account={draft.account} theme={shown?.theme} onChange={(t) => {
+              if (edit) return setEdit({ ...edit, theme: t });
+              if (!c) return;
+              setThemeLocal(t);
+              if (themeTimer.current) clearTimeout(themeTimer.current);
+              themeTimer.current = setTimeout(() => { persist({ ...c, theme: t }).catch((e) => toast((e as Error).message, true)); }, 700);
+            }} />
+          </div>
+        )}
         <p className="mt-2 text-[11px] text-[#6F675C]">ההורדה כוללת את כל השקופיות כ-PNG ואת הכיתוב. מעלים אותן לאינסטגרם לפי הסדר. הסטודיו לא מפרסם בעצמו.</p>
       </Panel>
 
