@@ -57,7 +57,7 @@ export interface ReelDesign {
   stickers?: boolean;
   cardStickers?: Record<string, string>;
   /** צילומי מסך שקופצים מעל הסרטון בכרטיס מסוים */
-  shots?: { card: number; path: string; w: number; h: number; place?: "top" | "middle" | "bottom"; kind?: "image" | "video"; seconds?: number }[];
+  shots?: Shot[];
   /** משחק מלא לכל כרטיס בנפרד: סגנון ומיקום משלו */
   perCard?: Record<string, { style?: CaptionStyleId; place?: "top" | "middle" | "bottom" }>;
 }
@@ -100,6 +100,25 @@ export function stickerFor(text: string) {
   ];
   return rules.find(([r]) => r.test(text))?.[1] ?? "";
 }
+/** צילום או הקלטת מסך בכרטיס: איפה (תשעה מקומות), כמה גדול, מעל או מתחת לטקסט, ונטייה קלה */
+export interface Shot {
+  card: number; path: string; w: number; h: number; kind?: "image" | "video"; seconds?: number;
+  place?: "top" | "middle" | "bottom";
+  pos?: "tr" | "tc" | "tl" | "mr" | "mc" | "ml" | "br" | "bc" | "bl";
+  scale?: "s" | "m" | "l";
+  layer?: "front" | "back";
+  tilt?: boolean;
+}
+export const shotXY = (s: Shot) => {
+  const p = s.pos ?? (s.place === "top" ? "tc" : s.place === "bottom" ? "bc" : "mc");
+  return { x: p[1] === "r" ? 0.72 : p[1] === "l" ? 0.28 : 0.5, y: p[0] === "t" ? 0.27 : p[0] === "b" ? 0.72 : 0.5 };
+};
+const shotWidth = (s: Shot) => {
+  const v = s.h >= s.w;
+  const k = s.scale === "s" ? 0 : s.scale === "l" ? 2 : 1;
+  return (v ? [340, 520, 720] : [520, 780, 980])[k];
+};
+
 export type MotionId = "underline" | "circle" | "arrow" | "sparkles" | "burst";
 export const MOTIONS: { id: MotionId; label: string }[] = [
   { id: "underline", label: "קו בכתב יד" }, { id: "circle", label: "עיגול סביב" }, { id: "arrow", label: "חץ" },
@@ -167,6 +186,7 @@ function captions(cards: ReelEditKit["cards"], style: CaptionStyleId, design: Re
   const dark = (c: string) => ["#5E1D1D", "#2A2622", "#B5848E"].includes(c);
   const base = { kind: "text" as const, studio: true, x: 0.5, background: null, rotate: 0, loop: "none" as const };
   const out: Overlay[] = [];
+  const front: Overlay[] = [];
 
   const globalStyle = style;
   cards.forEach((c, ci) => {
@@ -181,8 +201,10 @@ function captions(cards: ReelEditKit["cards"], style: CaptionStyleId, design: Re
     for (const sh of (design.shots ?? []).filter((x) => x.card === ci + 1 && x.kind !== "video")) {
       const src = shotUrls[sh.path];
       if (!src) continue;
-      const wPx = sh.h > sh.w ? 520 : 820;
-      out.push({ ...base, id: uid("ov"), kind: "image", src, text: "", start: +(c.start + 0.2).toFixed(2), end: c.end, x: 0.5, y: sh.place === "top" ? 0.3 : sh.place === "bottom" ? 0.68 : 0.5, size: wPx, color: "#FFFFFF", weight: 400, stroke: false, rotate: ci % 2 ? 2 : -2, animIn: "pop", loop: "none", animOut: "fade" });
+      const { x, y: sy } = shotXY(sh);
+      const ov: Overlay = { ...base, id: uid("ov"), kind: "image", src, text: "", start: +(c.start + 0.2).toFixed(2), end: c.end, x, y: sy, size: shotWidth(sh), color: "#FFFFFF", weight: 400, stroke: false, rotate: sh.tilt === false ? 0 : ci % 2 ? 3 : -3, animIn: "pop", loop: "none", animOut: "fade" };
+      // מתחת לטקסט: נכנס לפני הכתוביות של הכרטיס. מעל: נשמר לסוף, כדי שיהיה מעל הכול
+      if (sh.layer === "front") front.push(ov); else out.push(ov);
     }
     const headline = c.headline ?? c.text;
     const body = c.headline ? c.body ?? "" : "";
@@ -217,20 +239,36 @@ function captions(cards: ReelEditKit["cards"], style: CaptionStyleId, design: Re
     const sub = body ? toLines(body, per + 1, "") : [];
     const hs = (style === "chips" || style === "marker" ? 84 : style === "editorial" ? 104 : style === "stairs" ? 120 : style === "outline" ? 120 : 96) * k;
     const bs = 60 * k;
-    const rows = [
-      ...head.map((l, li) => ({ ...l, size: l.em ? hs * (style === "editorial" ? 1.7 : 1.35) : style === "stairs" ? hs * (li % 2 ? 0.72 : 1.08) : hs, kind: "head" as const })),
+    let rows = [
+      ...head.map((l, li) => ({ ...l, size: l.em ? hs * (style === "editorial" ? 1.6 : 1.3) : style === "stairs" ? hs * (li % 2 ? 0.72 : 1.08) : hs, kind: "head" as const })),
       ...sub.map((l) => ({ ...l, size: bs, kind: "body" as const })),
     ];
-    const gap = (r: { size: number; kind: string; em: boolean }) => r.size * (style === "chips" || style === "marker" ? 1.45 : style === "stairs" ? 1.02 : 1.18) + (r.kind === "body" ? 6 : 0) + (r.em ? r.size * 0.18 : 0);
-    const total = rows.reduce((n, r) => n + gap(r), 0) + (sub.length ? 30 * k : 0);
-    let y = (0.5 + dy) * 1920 - total / 2;
     const mo = motionFor(ci, headline);
     const targetRow = Math.max(0, rows.findIndex((r) => r.em));
+    // גובה אמיתי של כל שורה: שורה ארוכה שנשברת לשתיים תופסת כפול, מילה מודגשת מוטה צריכה אוויר,
+    // וקו מתחת למילה צריך מקום משלו, כדי ששום דבר לא יעלה על משהו אחר
+    const lh = style === "chips" || style === "marker" ? 1.5 : style === "stairs" ? 1.12 : 1.3;
+    const linesOf = (r: { t: string; size: number }) => Math.max(1, Math.ceil((r.t.length * r.size * 0.56) / (1080 * 0.86)));
+    const textH = (r: { t: string; size: number; kind: string }) => r.size * (r.kind === "body" ? 1.3 : lh) * linesOf(r);
+    const below = (r: { size: number; em: boolean; kind: string }, ri: number) =>
+      (r.em ? r.size * 0.22 : 0) + (mo && ri === targetRow && r.kind === "head" ? (mo === "underline" ? r.size * 0.45 : mo === "circle" || mo === "burst" ? r.size * 0.3 : 0) : 0);
+    const above = (r: { size: number; em: boolean; kind: string }, ri: number) =>
+      (r.em ? r.size * 0.12 : 0) + (mo && ri === targetRow && r.kind === "head" && (mo === "arrow" || mo === "circle" || mo === "burst") ? r.size * 0.3 : 0);
+    const blockH = () => rows.reduce((n, r, ri) => n + above(r, ri) + textH(r) + below(r, ri), 0) + (sub.length ? 36 * k : 0);
+    // אם הכרטיס לא נכנס בגובה, מקטינים את כולו
+    const room = 1920 * 0.62;
+    if (blockH() > room) {
+      const f = room / blockH();
+      rows = rows.map((r) => ({ ...r, size: r.size * f }));
+    }
+    const total = blockH();
+    let y = Math.min(Math.max((0.5 + dy) * 1920 - total / 2, 1920 * 0.1), 1920 * 0.86 - total);
     rows.forEach((r, ri) => {
-      if (r.kind === "body" && ri === head.length) y += 30 * k;
-      const h = gap(r);
-      const cy = (y + h / 2) / 1920;
-      y += h;
+      if (r.kind === "body" && ri === head.length) y += 36 * k;
+      y += above(r, ri);
+      const th = textH(r);
+      const cy = (y + th / 2) / 1920;
+      y += th + below(r, ri);
       const start = +(c.start + 0.1 + ri * 0.22).toFixed(2);
       if (mo && ri === targetRow && r.kind === "head") {
         const rx = style === "stairs" ? (ri % 2 ? 0.56 : 0.44) : 0.5;
@@ -272,7 +310,7 @@ function captions(cards: ReelEditKit["cards"], style: CaptionStyleId, design: Re
       }
     });
   });
-  return out;
+  return [...out, ...front];
 }
 
 /** הכתוביות בלבד (לגרסאות בעורך: מחליפים כתוביות בלי לגעת בקטעים) */
@@ -303,11 +341,11 @@ export function buildReelTimeline(kit: ReelEditKit, style: CaptionStyleId = "pop
     const card = kit.cards[s.card - 1];
     if (!card) return;
     const id = `shot-${i + 1}`;
-    const vertical = s.h >= s.w;
     assets[id] = { id, name: "הקלטת מסך", url: shotUrls[s.path], thumbnailUrl: null, duration: s.seconds ?? card.end - card.start, width: s.w, height: s.h, origin: "upload" };
     const start = remap(card.start + 0.2);
     const len = Math.max(0.5, Math.min(s.seconds ?? 99, remap(card.end) - start));
-    layers.push({ id: uid("layer"), assetId: id, start, in: 0, out: +len.toFixed(2), layout: "pip", x: 0.5, y: s.place === "top" ? 0.32 : s.place === "bottom" ? 0.66 : 0.5, scale: vertical ? 0.5 : 0.82, shape: "rounded", border: true, opacity: 1, volume: 0 });
+    const { x, y } = shotXY(s);
+    layers.push({ id: uid("layer"), assetId: id, start, in: 0, out: +len.toFixed(2), layout: "pip", x, y, scale: shotWidth(s) / 1080, shape: "rounded", border: true, opacity: 1, volume: 0 });
   });
   return {
     timeline: { fps: 30, aspect: "9:16", clips, captions: [], overlays, audio: [], layers },

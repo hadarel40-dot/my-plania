@@ -17,7 +17,7 @@ import { timelineDuration } from "@/lib/editor/timeline-utils";
 import type { MediaAsset } from "@/lib/editor/types";
 import { CONTENT_TYPES, labelOf, type Draft } from "@/lib/studio/config";
 import { db } from "@/lib/studio/client";
-import { DESIGN_PRESETS, MOTIONS, PLAYS, REEL_COLORS, REEL_FONTS, REEL_STYLES, TRANSITIONS, buildReelTimeline, styleForVariant, surpriseDesign, type CaptionStyleId, type MotionId, type ReelDesign } from "@/lib/studio/reel-timeline";
+import { DESIGN_PRESETS, MOTIONS, PLAYS, REEL_COLORS, REEL_FONTS, REEL_STYLES, TRANSITIONS, buildReelTimeline, styleForVariant, surpriseDesign, type CaptionStyleId, type MotionId, type ReelDesign, type Shot } from "@/lib/studio/reel-timeline";
 import { Mic, Sparkles } from "lucide-react";
 import { ensureExtraFonts } from "@/lib/editor/fonts";
 import { canShareFiles, shareToInstagram } from "@/lib/studio/share";
@@ -495,6 +495,51 @@ function VoiceOver({ draft, onChange, reelSeconds, voUrl, onStart, onStop }: { d
   );
 }
 
+const POS: Shot["pos"][] = ["tr", "tc", "tl", "mr", "mc", "ml", "br", "bc", "bl"];
+
+/** צילום או הקלטת מסך: לבחור איפה על המסך (תשעה מקומות), כמה גדול, ומעל או מתחת לטקסט */
+function ShotControls({ shot, onChange, onRemove }: { shot: Shot; onChange: (p: Partial<Shot>) => void; onRemove: () => void }) {
+  const pos = shot.pos ?? (shot.place === "top" ? "tc" : shot.place === "bottom" ? "bc" : "mc");
+  const video = shot.kind === "video";
+  return (
+    <div className="w-full space-y-2 rounded-xl border border-[#E3D9CC] bg-white p-3">
+      <div className="flex items-center justify-between">
+        <span className="text-[13px] font-bold text-[#5E1D1D]">{video ? "הקלטת מסך" : "צילום מסך"}</span>
+        <button type="button" onClick={onRemove} className="text-[12px] font-bold text-[#A3402F] underline underline-offset-4">להסיר</button>
+      </div>
+      <div className="flex gap-4">
+        <div className="shrink-0">
+          <p className="mb-1 text-[11px] font-bold text-[#6A6158]">איפה על המסך</p>
+          <div className="grid w-[92px] shrink-0 grid-cols-3 gap-1 rounded-xl bg-[#2A2622] p-1.5">
+            {POS.map((p) => (
+              <button key={p} type="button" onClick={() => onChange({ pos: p })} aria-label={`מיקום ${p}`}
+                className={cn("h-9 rounded-md transition", pos === p ? "bg-[#F7C9D6]" : "bg-white/15 hover:bg-white/30")} />
+            ))}
+          </div>
+        </div>
+        <div className="min-w-0 flex-1 space-y-2">
+          <Row label="גודל">
+            {([["s", "קטן"], ["m", "בינוני"], ["l", "גדול"]] as const).map(([v, l]) => <Chip key={v} on={(shot.scale ?? "m") === v} onClick={() => onChange({ scale: v })}>{l}</Chip>)}
+          </Row>
+          {!video && (
+            <Row label="שכבה">
+              <Chip on={shot.layer !== "front"} onClick={() => onChange({ layer: "back" })}>מתחת לטקסט</Chip>
+              <Chip on={shot.layer === "front"} onClick={() => onChange({ layer: "front" })}>מעל הטקסט</Chip>
+            </Row>
+          )}
+          {!video && (
+            <Row label="נטייה">
+              <Chip on={shot.tilt !== false} onClick={() => onChange({ tilt: true })}>קצת עקום</Chip>
+              <Chip on={shot.tilt === false} onClick={() => onChange({ tilt: false })}>ישר</Chip>
+            </Row>
+          )}
+        </div>
+      </div>
+      {video && <p className="text-[11px] text-[#9A8C85]">הקלטת מסך מופיעה מתחת לטקסט, כדי שהכתוביות תמיד ייקראו.</p>}
+    </div>
+  );
+}
+
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-3 rounded-xl bg-[#FAF6F1] p-3">
@@ -558,6 +603,7 @@ function TextsEditor({ draft, onChange, design, setD, globalStyle }: { draft: Dr
     finally { setBusy(""); }
   };
   const removeShot = (path: string) => setD({ shots: (design.shots ?? []).filter((s) => s.path !== path) });
+  const updateShot = (path: string, patch: Partial<Shot>) => setD({ shots: (design.shots ?? []).map((s) => (s.path === path ? { ...s, ...patch } : s)) });
 
   return (
     <div className="rounded-2xl border border-[#E3D9CC] bg-white/70">
@@ -592,12 +638,7 @@ function TextsEditor({ draft, onChange, design, setD, globalStyle }: { draft: Dr
                 <div>
                   <p className="mb-1.5 text-[12px] font-bold text-[#6A6158]">צילום מסך או הקלטת מסך שקופצים</p>
                   <div className="flex flex-wrap items-center gap-2">
-                    {shots.map((s) => (
-                      <span key={s.path} className="inline-flex items-center gap-1.5 rounded-xl border border-[#E3D9CC] bg-white px-2 py-1 text-[12px]">
-                        {s.kind === "video" ? "הקלטת מסך" : "צילום מסך"}
-                        <button type="button" onClick={() => removeShot(s.path)} className="font-bold text-[#A3402F]" aria-label="להסיר את צילום המסך">×</button>
-                      </span>
-                    ))}
+                    {shots.map((s) => <ShotControls key={s.path} shot={s} onChange={(patch) => updateShot(s.path, patch)} onRemove={() => removeShot(s.path)} />)}
                     <label className={cn("inline-flex min-h-[38px] cursor-pointer items-center rounded-xl border border-dashed border-[#B5848E] px-3 text-[13px] font-bold text-[#5E1D1D]", busy === `shot${n}` && "opacity-50")}>
                       {busy === `shot${n}` ? "מעלה..." : "+ צילום מסך או הקלטת מסך"}
                       <input type="file" accept="image/*,video/*" className="sr-only" disabled={!!busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void addShot(n, f); }} />
