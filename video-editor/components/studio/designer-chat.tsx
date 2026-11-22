@@ -11,7 +11,7 @@ const EXAMPLES = {
   reel: ["הסרטון האחרון לא מתאים", "לשנות את הטקסט בכרטיס 2", "יותר מהיר", "להוריד את הכרטיס השלישי"],
 };
 
-/** צ'אט עם המעצב: מבקשים שינוי קטן במילים. קרוסלה משתנה מיד, ריל מתעדכן בעיבוד הבא */
+/** צ'אט עם המעצב: מבקשים שינוי קטן במילים, והקרוסלה או הריל משתנים מיד. אפשר לבטל */
 export function DesignerChat({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => void }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
@@ -20,6 +20,13 @@ export function DesignerChat({ draft, onChange }: { draft: Draft; onChange: (d: 
   const chat = draft.data.chat ?? [];
   const pending = (draft.data.requests ?? []).filter((r) => r.status === "pending").length;
 
+  const canUndo = !isCarousel && (draft.data.edit_history?.length ?? 0) > 0;
+  const undo = async () => {
+    setBusy(true);
+    try { onChange((await studioCall<{ draft: Draft }>("designer-undo", { draftId: draft.id })).draft); }
+    catch (e) { toast((e as Error).message, true); }
+    finally { setBusy(false); }
+  };
   const send = async (msg = text) => {
     if (msg.trim().length < 2) return;
     setBusy(true);
@@ -33,7 +40,7 @@ export function DesignerChat({ draft, onChange }: { draft: Draft; onChange: (d: 
   if (!open) {
     return (
       <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-2 rounded-full border border-[#5E1D1D] bg-[#FAF6F1] px-4 py-2 text-[13px] font-bold hover:bg-[#F2ECE4]">
-        <MessageCircle className="size-4" />משהו לא מתאים? לכתוב למעצב{pending ? ` · ${pending} בקשות בעבודה` : ""}
+        <MessageCircle className="size-4" />משהו לא מתאים? לכתוב למעצב{pending ? ` · ${pending} בקשות בתור` : ""}
       </button>
     );
   }
@@ -41,10 +48,13 @@ export function DesignerChat({ draft, onChange }: { draft: Draft; onChange: (d: 
     <div className="rounded-2xl border border-[#E3D9CC] bg-[#FAF6F1] p-3">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-sm font-bold">המעצב</span>
-        <button type="button" onClick={() => setOpen(false)} className="text-[12px] underline">לסגור</button>
+        <span className="flex items-center gap-3">
+          {canUndo && <button type="button" disabled={busy} onClick={undo} className="text-[12px] font-bold text-[#5E1D1D] underline">לבטל את השינוי האחרון</button>}
+          <button type="button" onClick={() => setOpen(false)} className="text-[12px] underline">לסגור</button>
+        </span>
       </div>
       <p className="mb-2 text-[12px] text-[#6A6158]">
-        {isCarousel ? "כותבים מה לשנות, והקרוסלה משתנה מיד. לא אהבת? \"לחזור לגרסה הקודמת\"." : "כותבים מה לשנות. הסרטון המעודכן מגיע בעיבוד הבא (בריצה השבועית, או כשמבקשים ממני בצ'אט)."}
+        {isCarousel ? "כותבים מה לשנות, והקרוסלה משתנה מיד. לא אהבת? \"לחזור לגרסה הקודמת\"." : "כותבים מה לשנות, והריל משתנה מיד בנגן. טקסט, קצב, להוריד כרטיס או להחליף סרטון."}
       </p>
       {chat.length > 0 && (
         <ul className="mb-2 max-h-64 space-y-1.5 overflow-y-auto">

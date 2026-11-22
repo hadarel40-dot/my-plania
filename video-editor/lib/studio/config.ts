@@ -139,6 +139,8 @@ export interface DraftData {
   /** עיצוב הכתוביות שנבחר בדשבורד (גופן, צבעים, גודל, מיקום) */
   reel_design?: import("./reel-timeline").ReelDesign;
   published_reject?: string[];
+  /** הגרסאות הקודמות של הריל, כדי לבטל שינוי של המעצב */
+  edit_history?: ReelEditKit[];
   /** סרטון מוכן לעלייה */
   video?: ReadyVideo;
   /** כיתוב לריל מוכן (לקרוסלה הכיתוב בתוך carousel) */

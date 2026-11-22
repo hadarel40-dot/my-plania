@@ -396,7 +396,8 @@ const ReelRequestSchema = z.object({
 
 /** בקשה על ריל: מבינים מה לשנות (כרטיס, פעולה), והסרטון מתעדכן בעיבוד הבא (רינדור הווידאו נעשה בתהליך השבועי) */
 export async function understandReelRequest(draft: Draft, message: string) {
-  const cards = (draft.data.cards ?? []).map((c, i) => ({ n: i + 1, text: c.text, from: c.start, to: c.end }));
+  const source = draft.data.edit?.cards ?? draft.data.cards ?? [];
+  const cards = source.map((c, i) => ({ n: i + 1, text: c.text, from: c.start, to: c.end }));
   return cleanDeep(await askBrain({
     schema: ReelRequestSchema,
     system: "את עורכת הווידאו שלה. מבינה בקשה קצרה על ריל ומתרגמת אותה לשינויים מדויקים. עברית פשוטה, בלי אימוג'י.",
@@ -406,7 +407,8 @@ ${JSON.stringify(cards)}
 הבקשה שלה: "${message}"
 
 changes: מה לשנות. card הוא מספר הכרטיס (n), "האחרון" הוא ${cards.length || "האחרון"}. action: replace_clip (להחליף סרטון), edit_text (לשנות טקסט, detail הוא הטקסט החדש), remove_card, reorder, timing (מהירות, אורך), other.
-reply: משפט אחד שמאשר מה יקרה. לכתוב שהסרטון המעודכן יגיע בעיבוד הבא, לא עכשיו.` }],
+timing: detail הוא "מהיר" או "איטי".
+reply: משפט אחד קצר שמאשר מה הבנת.` }],
   }));
 }
 

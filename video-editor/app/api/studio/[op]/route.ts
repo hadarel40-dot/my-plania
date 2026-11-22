@@ -9,6 +9,7 @@ import { driveAccessToken, driveConfigured, driveProblem, driveEmail, driveThumb
 import { adminStore, autoDraft, autoSuggest } from "@/lib/studio/auto";
 import { carouselIdeas, editCarouselByChat, understandReelRequest, matchMaterials, writeCarousel, writeHooks, writeScript } from "@/lib/studio/engine";
 import { projectFromDraft } from "@/lib/studio/handoff";
+import { applyReelChanges, type Segment } from "@/lib/studio/reel-edit";
 import { advise, buildVoice, inspire, planToday, planWeek, preferencesBlock, type Feedback, researchTrends, suggestFromEdit, weekOptions, weeklyStats, writeReview } from "@/lib/studio/insights";
 import { instagramConfigured, loadAccounts } from "@/lib/studio/instagram";
 import { learnFromPosts, matchPublished, saveLearnings } from "@/lib/studio/learn";
@@ -98,8 +99,30 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
           return NextResponse.json({ draft: await saveDraft(draft.id, { ...draft.data, carousel, carousel_history: history, chat: [...chat, { role: "designer", text: reply, at: new Date().toISOString() }] }) });
         }
         const { reply, changes } = await understandReelRequest(draft, message);
+        if (draft.data.edit) {
+          // ריל מהסטודיו: השינויים קורים מיד בערכה, והנגן מראה אותם. מה שאי אפשר לבד נשאר בתור
+          const { data: others } = await supabase.from("studio_drafts").select("data->edit->segments").not("data->edit", "is", null).limit(200);
+          const pool = (others ?? []).flatMap((r) => ((r as { segments?: Segment[] }).segments ?? []));
+          const { kit, done, left } = applyReelChanges(draft.data.edit, changes, pool, message);
+          const at = new Date().toISOString();
+          const text = done.length
+            ? `${done.join(". ")}.${left.length ? " את השאר אני לא יכולה לשנות לבד, אז זה בתור לעיבוד הבא." : ""}`
+            : `${reply} את זה אני לא יכולה לשנות לבד, אז זה בתור לעיבוד הבא.`;
+          const requests = left.length ? [...(draft.data.requests ?? []), { text: message, changes: left, status: "pending" as const, at }] : draft.data.requests;
+          const history = done.length ? [draft.data.edit, ...(draft.data.edit_history ?? [])].slice(0, 6) : draft.data.edit_history;
+          return NextResponse.json({ draft: await saveDraft(draft.id, { ...draft.data, edit: done.length ? kit : draft.data.edit, edit_history: history, requests, chat: [...chat, { role: "designer", text, at }] }) });
+        }
         const requests = [...(draft.data.requests ?? []), { text: message, changes, status: "pending" as const, at: new Date().toISOString() }];
         return NextResponse.json({ draft: await saveDraft(draft.id, { ...draft.data, requests, chat: [...chat, { role: "designer", text: reply, at: new Date().toISOString() }] }) });
+      }
+      case "designer-undo": {
+        // לבטל את השינוי האחרון של המעצב בריל
+        const { draftId } = z.object({ draftId: uuid }).parse(body);
+        const draft = await loadDraft(draftId);
+        const [prev, ...rest] = draft.data.edit_history ?? [];
+        if (!prev) throw new StudioError("אין שינוי לבטל", 400);
+        const chat = [...(draft.data.chat ?? []), { role: "designer" as const, text: "ביטלתי את השינוי האחרון.", at: new Date().toISOString() }];
+        return NextResponse.json({ draft: await saveDraft(draft.id, { ...draft.data, edit: prev, edit_history: rest, chat }) });
       }
       case "drive-match": {
         const { draftId, folder } = z.object({ draftId: uuid, folder: z.string().max(300).optional() }).parse(body);
