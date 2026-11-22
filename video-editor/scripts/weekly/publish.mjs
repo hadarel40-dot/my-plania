@@ -25,7 +25,7 @@ const base = `inbox/${token}/${plan.week}`;
 async function upload(file, dest, type) {
   const res = await fetch(`${SUPABASE_URL}/storage/v1/object/media/${dest}`, {
     method: "POST",
-    headers: { apikey: ANON, authorization: `Bearer ${ANON}`, "content-type": type, "x-upsert": "true" },
+    headers: { apikey: ANON, authorization: `Bearer ${ANON}`, "content-type": type },
     body: fs.readFileSync(file),
   });
   if (!res.ok) throw new Error(`upload ${dest}: ${res.status} ${await res.text()}`);
