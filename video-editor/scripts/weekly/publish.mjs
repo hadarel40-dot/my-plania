@@ -16,8 +16,10 @@ const SUPABASE_URL = "https://szactsolcqhvtyhlhwtb.supabase.co";
 const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN6YWN0c29sY3FodnR5aGxod3RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0NTA2MjAsImV4cCI6MjA5ODAyNjYyMH0.QT-frnoYHRC_5Ewm1vokf2BxuksYF4us0_5Tqs0cARI";
 const NICHE = { story: "home", viral: "meals", value: "meals", trust: "home" };
 
-const [weekDir, photoDir, token] = process.argv.slice(2);
-if (!weekDir || !photoDir || !token || token.length < 32) { console.error("usage: node publish.mjs <weekDir> <photoDir> <token(32+)>"); process.exit(1); }
+const [weekDir, photoDir, token, ...flags] = process.argv.slice(2);
+if (!weekDir || !photoDir || !token || token.length < 32) { console.error("usage: node publish.mjs <weekDir> <photoDir> <token(32+)> [--clips <clipDir>] [--edit-only]"); process.exit(1); }
+const clipDir = flags.includes("--clips") ? flags[flags.indexOf("--clips") + 1] : null;
+const editOnly = flags.includes("--edit-only");
 const plan = JSON.parse(fs.readFileSync(path.join(weekDir, "plan.json"), "utf8"));
 const out = path.resolve(weekDir, "out");
 const base = `inbox/${token}/${plan.week}`;
@@ -42,10 +44,52 @@ function slidePhoto(name) {
 
 const q = (s) => `'${String(s ?? "").replace(/'/g, "''")}'`;
 const sql = ["-- נוצר אוטומטית ע\"י publish.mjs: טיוטות לשבוע " + plan.week, "begin;"];
+/**
+ * ערכת עריכה לריל: כל קטע (cut) נחתך ומוכן לאנכי, ונכנס לעורך הווידאו כקליפ, והכרטיסים כשכבות טקסט.
+ * כך היא עורכת בעצמה בעורך (מחליפה סרטון, משנה טקסט) ומייצאת.
+ */
+async function editKit(post) {
+  if (!clipDir) return null;
+  const per = post.montage ? 1.6 : 2.6; // כמו ב-render.mjs
+  const segments = [], cards = [];
+  let t = 0;
+  for (const [i, s] of post.slides.entries()) {
+    const cuts = s.clips ?? (s.clip ? [{ clip: s.clip, start: s.start ?? 0 }] : []);
+    const d = per + (i === post.slides.length - 1 ? 1.2 : 0);
+    const len = d / cuts.length;
+    for (const [k, c] of cuts.entries()) {
+      const out = path.join(out_, `_seg_${post.id}_${i}_${k}.mp4`);
+      execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-ss", String(c.start ?? 0), "-i", path.resolve(clipDir, `${c.clip}.mov`), "-t", len.toFixed(2),
+        "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,tpad=stop_mode=clone:stop_duration=3", "-t", len.toFixed(2),
+        "-an", "-c:v", "libx264", "-preset", "medium", "-crf", "21", "-pix_fmt", "yuv420p", "-movflags", "+faststart", out]);
+      segments.push({ path: await upload(out, `${base}/edit/${post.id}/${String(segments.length + 1).padStart(2, "0")}.mp4`, "video/mp4"), seconds: Math.round(len * 100) / 100, width: 1080, height: 1920 });
+    }
+    cards.push({ text: [s.headline, s.body].filter(Boolean).join(" "), start: Math.round(t * 100) / 100, end: Math.round((t + d) * 100) / 100 });
+    t += d;
+  }
+  return { segments, cards };
+}
+const out_ = out;
+
 const photoCache = new Map();
 async function photo(name) {
   if (!photoCache.has(name)) photoCache.set(name, await upload(slidePhoto(name), `${base}/photos/${name}.jpg`, "image/jpeg"));
   return photoCache.get(name);
+}
+
+if (editOnly) {
+  // רק ערכות עריכה לרילס שכבר בלוח: מעדכן את הטיוטה הקיימת (לפי כותרת ושבוע)
+  for (const post of plan.posts.filter((p) => p.format === "reel")) {
+    const kit = await editKit(post);
+    if (!kit) throw new Error("--edit-only צריך --clips <clipDir>");
+    sql.push(`update public.studio_drafts set data = data || ${q(JSON.stringify({ edit: kit }))}::jsonb where idea = ${q(post.title)} and data->>'weekly' = ${q(plan.week)};`);
+    console.log("edit kit", post.id, kit.segments.length);
+  }
+  sql.push("commit;");
+  for (const f of fs.readdirSync(out)) if (f.startsWith("_")) fs.unlinkSync(path.join(out, f));
+  fs.writeFileSync(path.join(weekDir, "edit.sql"), sql.join("\n\n") + "\n");
+  console.log("wrote edit.sql");
+  process.exit(0);
 }
 
 for (const post of plan.posts) {
@@ -80,6 +124,8 @@ for (const post of plan.posts) {
   if (variants[0].video) data.video = variants[0].video;
   if (variants[0].carousel) data.carousel = variants[0].carousel;
   if (post.format !== "carousel") {
+    const kit = await editKit(post);
+    if (kit) data.edit = kit;
     data.caption = post.caption;
     const per = post.montage ? 1.6 : 2.6; // כמו ב-render.mjs
     data.cards = post.slides.map((sl, i) => ({ text: [sl.headline, sl.body].filter(Boolean).join(" "), start: Math.round(i * per * 10) / 10, end: Math.round((i + 1) * per * 10) / 10, y: 700 }));

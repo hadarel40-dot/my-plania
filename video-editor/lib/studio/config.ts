@@ -111,7 +111,12 @@ export interface ChatMessage { role: "me" | "designer"; text: string; at: string
 /** בקשת שינוי בריל, שמחכה לעיבוד (רינדור הווידאו) */
 export interface ReelRequest { text: string; changes: { card: number | null; action: string; detail: string }[]; status: "pending" | "done"; at: string }
 
+/** הריל כחומר גלם לעורך: הקטעים לפי הסדר (באחסון) והכרטיסים בזמנים שלהם */
+export interface ReelEditKit { segments: { path: string; seconds: number; width: number; height: number }[]; cards: { text: string; start: number; end: number }[] }
+
 export interface DraftData {
+  /** הריל המוכן כפרויקט לעריכה בעורך הווידאו */
+  edit?: ReelEditKit;
   chat?: ChatMessage[];
   requests?: ReelRequest[];
   /** כמה גרסאות לבחירה, והגרסה שנבחרה */

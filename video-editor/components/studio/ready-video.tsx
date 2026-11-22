@@ -2,7 +2,8 @@
 import { ShareHint } from "./share-hint";
 import { useEffect, useState } from "react";
 import { CONTENT_TYPES, labelOf, type Draft } from "@/lib/studio/config";
-import { db } from "@/lib/studio/client";
+import { db, editorHref, studioCall } from "@/lib/studio/client";
+import { useRouter } from "next/navigation";
 import { MEDIA_BUCKET } from "@/lib/supabase/env";
 import { Btn, Note, Panel, Tag, toast } from "./ui";
 import { shareToInstagram } from "@/lib/studio/share";
@@ -30,6 +31,14 @@ export function ReadyVideo({ draft, title = "הריל", accent = "מוכן" }: {
     } catch { window.open(url, "_blank"); }
   };
   const [sending, setSending] = useState(false);
+  const [opening, setOpening] = useState(false);
+  const router = useRouter();
+  // הריל נפתח בעורך כפרויקט: הקטעים בציר הזמן והטקסטים כשכבות. מחליפים סרטון, משנים טקסט ומייצאים
+  const openEditor = async () => {
+    setOpening(true);
+    try { router.push(editorHref((await studioCall<{ projectId: string }>("to-editor", { draftId: draft.id })).projectId, draft.data.template)); }
+    catch (e) { toast((e as Error).message, true); setOpening(false); }
+  };
   const send = async () => {
     if (!url) return;
     setSending(true);
@@ -51,6 +60,7 @@ export function ReadyVideo({ draft, title = "הריל", accent = "מוכן" }: {
           <div className="flex flex-wrap gap-2">
             <Btn disabled={!url} busy={sending} onClick={send}>לשלוח לאינסטגרם</Btn>
             <Btn variant="line" disabled={!url} onClick={download}>להוריד</Btn>
+            {draft.data.edit && <Btn variant="line" busy={opening} onClick={openEditor}>לערוך בעורך הווידאו</Btn>}
             {caption && <Btn variant="line" onClick={() => navigator.clipboard.writeText(caption).then(() => toast("הכיתוב הועתק"))}>להעתיק כיתוב</Btn>}
           </div>
 <ShareHint />
