@@ -172,7 +172,7 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
               </ol>
               <div className="mt-2 flex flex-wrap gap-2">
                 <Btn variant="line" onClick={() => navigator.clipboard.writeText(caption).then(() => toast("הכיתוב הועתק"))}>להעתיק כיתוב שוב</Btn>
-                <a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center rounded-[5px] bg-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold text-[#FAF6F1]">לפתוח את אינסטגרם</a>
+                <a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center rounded-xl bg-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold text-[#FAF6F1]">לפתוח את אינסטגרם</a>
                 <Btn variant="ghost" onClick={() => setReady(null)}>לסגור</Btn>
               </div>
             </div>

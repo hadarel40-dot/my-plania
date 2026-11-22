@@ -322,7 +322,7 @@ function DraftView({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => 
           <div className="xl:hidden"><ChecksPanel draft={draft} /></div>
 
           <div className="flex flex-wrap gap-2">
-            {itemId ? <Link href="/studio/board" className="rounded-[5px] border border-[#3E6B4F] px-3 py-2 text-sm font-semibold text-[#3E6B4F]">נמצא בלוח התוכן</Link>
+            {itemId ? <Link href="/studio/board" className="rounded-xl border border-[#3E6B4F] px-3 py-2 text-sm font-semibold text-[#3E6B4F]">נמצא בלוח התוכן</Link>
               : <Btn variant="green" busy={busy === "board"} onClick={toBoard}>לשמור בלוח כטיוטה</Btn>}
             <Btn variant="line" busy={busy === "editor"} onClick={toEditor}>{draft.project_id ? "לפתוח בעורך" : "לפתוח פרויקט בעורך"}</Btn>
           </div>
@@ -391,7 +391,7 @@ function CarouselDraft({ draft, onChange }: { draft: Draft; onChange: (d: Draft)
       {draft.data.carousel && <DesignerChat draft={draft} onChange={onChange} />}
       {draft.data.carousel && <MaterialsPanel draft={draft} onChange={onChange} />}
       <div className="xl:hidden"><ChecksPanel draft={draft} /></div>
-      {itemId ? <Link href="/studio/board" className="inline-block rounded-[5px] border border-[#3E6B4F] px-3 py-2 text-sm font-semibold text-[#3E6B4F]">נמצא בלוח התוכן</Link>
+      {itemId ? <Link href="/studio/board" className="inline-block rounded-xl border border-[#3E6B4F] px-3 py-2 text-sm font-semibold text-[#3E6B4F]">נמצא בלוח התוכן</Link>
         : <Btn variant="green" busy={busy} onClick={toBoard}>לשמור בלוח כטיוטה</Btn>}
     </>
   );

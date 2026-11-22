@@ -62,7 +62,7 @@ function SendNow({ path, caption, name }: { path: string; caption: string; name:
     } catch (e) { toast((e as Error).message, true); }
     finally { setBusy(false); }
   };
-  return <Btn busy={busy} onClick={go}>{busy ? "מכינה את הסרטון..." : file ? "לשלוח עכשיו" : "לשלוח לאינסטגרם"}</Btn>;
+  return <Btn busy={busy} onClick={go} className="min-h-[46px] w-full text-[15px]">{busy ? "מכינה את הסרטון..." : file ? "לשלוח עכשיו" : "לשלוח לאינסטגרם"}</Btn>;
 }
 
 async function loadRange(from: string, to: string) {
@@ -94,28 +94,36 @@ export function TodayPost({ today }: { today: string }) {
   // הטיוטה היא המקור: הכיתוב מהקרוסלה או מהריל, ורק אם אין, מהלוח
   const caption = d?.data.carousel?.caption || d?.data.caption || next.caption || "";
   return (
-    <Panel label={isToday ? "מה עולה היום" : `הבא בתור · ${formatDate(next.planned_date)}`} title={next.title}
-      aside={<span className="flex flex-wrap gap-1"><Tag>{FORMAT[next.format] ?? next.format}</Tag>{type && <Tag tone="butter">{labelOf(CONTENT_TYPES, type)}</Tag>}</span>}>
+    <Panel label={isToday ? "מה עולה היום" : `הבא בתור · ${formatDate(next.planned_date)}`} title={next.title}>
+      <div className="-mt-1 mb-3 flex flex-wrap gap-1.5">
+        <Tag>{FORMAT[next.format] ?? next.format}</Tag>
+        {type && <Tag tone="butter">{labelOf(CONTENT_TYPES, type)}</Tag>}
+        {d && (d.data.edit || variants > 1) && <Tag>גרסה {d.data.edit ? variantLabel(d.data.chosen_variant) : chosenId}</Tag>}
+      </div>
       <div className="flex gap-4">
-        <div className={cn("w-[120px] shrink-0 overflow-hidden rounded-xl border border-[#E3D9CC] bg-[#F2ECE4]", next.format === "carousel" ? "aspect-[4/5]" : "aspect-[9/16]")}>
+        <Link href={d ? `/studio/reel?id=${d.id}` : "/studio/board"} className={cn("w-[96px] shrink-0 overflow-hidden rounded-2xl border border-[#E3D9CC] bg-[#F2ECE4] shadow-[0_10px_24px_-16px_rgba(94,29,29,0.6)]", next.format === "carousel" ? "aspect-[4/5]" : "aspect-[9/16]")}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {thumb ? <img src={thumb} alt="" className="size-full object-cover" /> : <p className="p-2 text-[11px] font-bold">{next.hook}</p>}
+        </Link>
+        <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
+          <p className="text-[14px] leading-relaxed text-[#4E4540]">
+            {!d ? "עוד אין טיוטה לפוסט הזה." : isReady(d) ? "שולחים מהטלפון, מוסיפים מוזיקה טרנדית, ומפרסמים או שומרים כטיוטה." : "יש תסריט ורשימת שוטים. מצלמים, ואז עורכים בעורך."}
+          </p>
+          <p className="text-[11px] text-[#9A8C85]">הסטודיו לא מפרסם בעצמו.</p>
         </div>
-        <div className="min-w-0 flex-1 space-y-2">
-          {d ? (
-            <>
-              <p className="text-sm">{d.data.edit ? `גרסה ${variantLabel(d.data.chosen_variant)}. ` : variants > 1 ? `גרסה ${chosenId}${d.data.chosen_variant ? "" : " (ברירת מחדל)"}. ` : ""}{isReady(d) ? "שולחים לאינסטגרם מהטלפון, מוסיפים מוזיקה טרנדית ומפרסמים או שומרים כטיוטה." : "יש תסריט ורשימת שוטים. מצלמים, ואז עורכים בעורך הווידאו."}</p>
-              {variants > 1 && <Link href="/studio/pick" className="inline-flex min-h-[36px] items-center text-[13px] underline underline-offset-4">להחליף גרסה</Link>}
-              <div className="flex flex-wrap gap-2">
-                {readyVideo(d) && <SendNow path={readyVideo(d)!.path} caption={caption} name={next.title} />}
-                <Link href={`/studio/reel?id=${d.id}`} className={cn("inline-flex min-h-[40px] items-center rounded-[5px] px-3.5 py-2 text-[13px] font-bold", readyVideo(d) ? "border border-[#5E1D1D]" : "bg-[#5E1D1D] text-[#FAF6F1]")}>
-                  {readyVideo(d) ? "לפתוח" : d.data.edit || d.data.carousel || d.project_id ? "לפתוח ולשלוח לאינסטגרם" : "לפתוח את התסריט ולצלם"}
-                </Link>
-              </div>
-            </>
-          ) : <p className="text-sm">עוד אין טיוטה לפוסט הזה.</p>}
-          {caption && <Btn variant="line" onClick={() => navigator.clipboard.writeText(caption).then(() => toast("הכיתוב הועתק"))}>להעתיק כיתוב</Btn>}
-          <p className="text-[11px] text-[#6A6158]">הסטודיו לא מפרסם בעצמו.</p>
+      </div>
+      <div className="mt-4 space-y-2">
+        {d && (
+          readyVideo(d)
+            ? <SendNow path={readyVideo(d)!.path} caption={caption} name={next.title} />
+            : <Link href={`/studio/reel?id=${d.id}`} className="flex min-h-[46px] w-full items-center justify-center rounded-xl bg-[#5E1D1D] px-4 text-[15px] font-bold text-[#FAF6F1] shadow-[0_6px_16px_-10px_rgba(94,29,29,0.9)]">
+                {d.data.edit || d.data.carousel || d.project_id ? "לשלוח לאינסטגרם" : "לפתוח את התסריט"}
+              </Link>
+        )}
+        <div className="flex gap-2 [&>*]:flex-1 [&>*]:whitespace-nowrap">
+          {d && readyVideo(d) && <Link href={`/studio/reel?id=${d.id}`} className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-[#5E1D1D]/50 bg-white/60 px-3 text-[13px] font-bold text-[#5E1D1D]">לפתוח</Link>}
+          {caption && <Btn variant="line" className="px-3 text-[13px]" onClick={() => navigator.clipboard.writeText(caption).then(() => toast("הכיתוב הועתק"))}>להעתיק כיתוב</Btn>}
+          {variants > 1 && <Link href="/studio/pick" className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-[#E3D9CC] bg-white/60 px-3 text-[13px] font-bold text-[#5E1D1D]">להחליף גרסה</Link>}
         </div>
       </div>
     </Panel>

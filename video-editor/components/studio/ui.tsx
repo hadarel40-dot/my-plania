@@ -25,7 +25,7 @@ export function Label({ children, className }: { children: ReactNode; className?
 
 export function Panel({ title, accent, label, aside, children, className, tone }: { title?: ReactNode; accent?: ReactNode; label?: ReactNode; aside?: ReactNode; children: ReactNode; className?: string; tone?: "butter" | "wine" | "green" }) {
   return (
-    <section className={cn("rounded-2xl border border-[#E3D9CC] bg-[#FAF6F1] px-5 py-4 shadow-[0_1px_2px_rgba(31,27,22,0.06)]", tone === "butter" && "border-[#E9D27A] ring-2 ring-[#EFD9DD]", className)}>
+    <section className={cn("rounded-2xl border border-[#E3D9CC] bg-[#FAF6F1] px-5 py-4 shadow-[0_1px_2px_rgba(31,27,22,0.06)]", tone === "butter" && "border-[#E3C3CA] ring-2 ring-[#EFD9DD]", className)}>
       {(title || label || aside) && (
         <div className="mb-3 flex items-end justify-between gap-3">
           <div>
@@ -61,12 +61,12 @@ export function Btn({ variant = "solid", busy, children, className, disabled, ..
       {...props}
       disabled={busy || disabled}
       className={cn(
-        "inline-flex items-center justify-center gap-1.5 rounded-[5px] border px-3.5 py-2 text-[13px] font-bold tracking-wide transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-        variant === "solid" && "border-[#5E1D1D] bg-[#5E1D1D] text-[#FAF6F1] hover:bg-[#4A1517]",
+        "inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl border px-4 py-2 text-[14px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+        variant === "solid" && "border-[#5E1D1D] bg-[#5E1D1D] text-[#FAF6F1] shadow-[0_6px_16px_-10px_rgba(94,29,29,0.9)] hover:bg-[#4A1517]",
         variant === "green" && "border-[#3E6B4F] bg-[#3E6B4F] text-[#FAF6F1] hover:bg-[#335A42]",
-        variant === "butter" && "border-[#E9D27A] bg-[#EFD9DD] text-[#2A2622] hover:bg-[#F1DE8A]",
-        variant === "line" && "border-[#5E1D1D] bg-transparent text-[#2A2622] hover:bg-[#5E1D1D] hover:text-[#FAF6F1]",
-        variant === "ghost" && "border-transparent text-[#2A2622] underline-offset-4 hover:underline",
+        variant === "butter" && "border-[#E3C3CA] bg-[#EFD9DD] text-[#5E1D1D] hover:bg-[#E8C9CF]",
+        variant === "line" && "border-[#5E1D1D]/50 bg-white/60 text-[#5E1D1D] hover:border-[#5E1D1D] hover:bg-[#5E1D1D] hover:text-[#FAF6F1]",
+        variant === "ghost" && "border-transparent px-2 text-[#5E1D1D] underline-offset-4 hover:underline",
         className,
       )}
     >

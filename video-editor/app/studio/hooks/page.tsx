@@ -23,7 +23,7 @@ export default function HooksPage() {
     <>
       <PageHead label="תכנון" title="כל" accent="ההוקים" sub="כל ההוקים שנכתבו, מהחזק לחלש. הציון מחושב בקוד בחמש בדיקות, והבדיקה החלשה קובעת. מתחת ל-50 ההוק לא מוכן.">
         <label className="flex items-center gap-2 text-[13px] font-bold"><input type="checkbox" checked={onlyReady} onChange={(e) => setOnlyReady(e.target.checked)} />רק מוכנים</label>
-        <Link href="/studio/reel" className="rounded-[5px] bg-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold text-[#FAF6F1]">הוק חדש</Link>
+        <Link href="/studio/reel" className="rounded-xl bg-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold text-[#FAF6F1]">הוק חדש</Link>
       </PageHead>
       {!drafts ? <Loading /> : hooks.length === 0 ? <Note>עוד אין הוקים. "עוד הצעות" בעמוד הבית מביא רעיונות עם שלושה הוקים לכל אחד.</Note> : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">

@@ -123,8 +123,8 @@ export default function NewReelPage() {
           <Panel title="לשבץ ביום">
             {placed ? (
               <div className="flex flex-wrap gap-2">
-                <Link href="/studio/film" className="rounded-[5px] bg-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold text-[#FAF6F1]">לרשימת הצילום</Link>
-                <Link href={`/studio/reel?id=${draft.id}`} className="rounded-[5px] border border-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold">לפתוח את הטיוטה</Link>
+                <Link href="/studio/film" className="rounded-xl bg-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold text-[#FAF6F1]">לרשימת הצילום</Link>
+                <Link href={`/studio/reel?id=${draft.id}`} className="rounded-xl border border-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold">לפתוח את הטיוטה</Link>
                 <Btn variant="ghost" onClick={() => { setStep(1); setIdea(""); setDraft(null); setPlaced(false); }}>ריל נוסף</Btn>
               </div>
             ) : (

@@ -61,7 +61,7 @@ export default function FilmPage() {
                 )}
                 <div className="mt-3 flex gap-2">
                   <Btn busy={busy === d.id} onClick={() => toEditor(d)}>{d.project_id ? "לפתוח בעורך" : "לפתוח פרויקט בעורך"}</Btn>
-                  <Link href={`/studio/reel?id=${d.id}`} className="inline-flex items-center rounded-[5px] border border-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold">לתסריט</Link>
+                  <Link href={`/studio/reel?id=${d.id}`} className="inline-flex items-center rounded-xl border border-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold">לתסריט</Link>
                 </div>
               </Panel>
             );

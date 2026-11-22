@@ -11,8 +11,8 @@ export default function CarouselsPage() {
   return (
     <>
       <PageHead label="יצירה" title="כל" accent="הקרוסלות" sub="קרוסלה היא רעיון אחד מפורק לשלבים: שער שמושך להחליק, רעיון אחד בכל שקופית, שקופית סיכום ששולחים לחברה, וקריאה אחת לפעולה.">
-        <Link href="/studio/carousel-week" className="rounded-[5px] bg-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold text-[#FAF6F1]">צור שבוע</Link>
-        <Link href="/studio/reel?mode=carousel" className="rounded-[5px] border border-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold">קרוסלה חדשה</Link>
+        <Link href="/studio/carousel-week" className="rounded-xl bg-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold text-[#FAF6F1]">צור שבוע</Link>
+        <Link href="/studio/reel?mode=carousel" className="rounded-xl border border-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold">קרוסלה חדשה</Link>
       </PageHead>
       {!drafts ? <Loading /> : drafts.length === 0 ? <Note>עוד אין קרוסלות. "קרוסלה חדשה" כותבת אחת מרעיון.</Note> : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">

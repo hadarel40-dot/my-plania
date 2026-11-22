@@ -59,7 +59,7 @@ function TemplateCard({ t }: { t: Template }) {
         </div>
       )}
       <div className="mt-3 flex items-center gap-3 pt-1 md:mt-auto">
-        <Link href={hrefFor(t)} className="inline-flex flex-1 justify-center rounded-[5px] bg-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold text-[#FAF6F1]">להשתמש בתבנית</Link>
+        <Link href={hrefFor(t)} className="inline-flex flex-1 justify-center rounded-xl bg-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold text-[#FAF6F1]">להשתמש בתבנית</Link>
         <button type="button" onClick={() => setOpen(!open)} className="text-[12px] font-bold underline underline-offset-4">{open ? "פחות" : "השלבים"}</button>
       </div>
     </Panel>
@@ -95,7 +95,7 @@ export default function TemplatesPage() {
                 <p className="mt-1 text-[13px]">{t.reel_idea}</p>
                 <a href={t.source_url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-[11px] underline"><ExternalLink className="size-3" />{t.source_name}</a>
                 <Link href={tpl ? `/studio/reel?${new URLSearchParams({ template: tpl.id, idea: t.reel_idea, account: t.account, niche: t.niche, ...(tpl.kind === "carousel" ? { mode: "carousel" } : {}) })}` : `/studio/reel?${new URLSearchParams({ idea: t.reel_idea, account: t.account, niche: t.niche })}`}
-                  className="mt-3 inline-flex justify-center rounded-[5px] bg-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold text-[#FAF6F1]">לכתוב לפי הטרנד</Link>
+                  className="mt-3 inline-flex justify-center rounded-xl bg-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold text-[#FAF6F1]">לכתוב לפי הטרנד</Link>
               </Panel>
             ))}
           </div>
