@@ -60,7 +60,6 @@ export function ReadyVideo({ draft, title = "הריל", accent = "מוכן" }: {
           <div className="flex flex-wrap gap-2">
             <Btn disabled={!url} busy={sending} onClick={send}>לשלוח לאינסטגרם</Btn>
             <Btn variant="line" disabled={!url} onClick={download}>להוריד</Btn>
-            {draft.data.edit && <Btn variant="line" busy={opening} onClick={openEditor}>לערוך בעורך הווידאו</Btn>}
             {caption && <Btn variant="line" onClick={() => navigator.clipboard.writeText(caption).then(() => toast("הכיתוב הועתק"))}>להעתיק כיתוב</Btn>}
           </div>
 <ShareHint />

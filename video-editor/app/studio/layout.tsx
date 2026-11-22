@@ -48,10 +48,6 @@ export default async function StudioLayout({ children }: { children: React.React
         <div className="rounded-[26px] border border-[#D9CBBE] bg-[#F0E8DF] px-3 pb-8 pt-5 shadow-[0_12px_40px_-12px_rgba(94,29,29,0.28)] md:px-8">
           <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="flex rounded-full border border-[#5E1D1D] p-0.5 text-[11px] font-bold">
-                <span className="rounded-full bg-[#5E1D1D] px-3 py-1 text-[#FAF6F1]">סטודיו</span>
-                <Link href="/" className="rounded-full px-3 py-1 hover:bg-[#FAF6F1]">עורך</Link>
-              </div>
               <Link href="/studio" className="flex items-end gap-3" aria-label="סטודיו התוכן של Plania's">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/brand/planias-logo.png" alt="Plania's" className="h-7 w-auto md:h-9" />

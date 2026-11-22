@@ -60,9 +60,6 @@ export function MaterialsPanel({ draft, onChange }: { draft: Draft; onChange: (d
               <ul className="space-y-0.5 text-[13px]">{m.missing.map((x) => <li key={x}>· {x}</li>)}</ul>
             </div>
           )}
-          {draft.mode !== "carousel" && m.files.length > 0 && (
-            <Btn className="mt-3" busy={busy === "editor"} onClick={openEditor}>לפתוח בעורך עם החומרים ({m.files.length})</Btn>
-          )}
         </>
       )}
     </Panel>

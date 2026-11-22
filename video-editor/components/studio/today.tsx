@@ -107,7 +107,7 @@ export function TodayPost({ today }: { today: string }) {
         </Link>
         <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
           <p className="text-[14px] leading-relaxed text-[#4E4540]">
-            {!d ? "עוד אין טיוטה לפוסט הזה." : isReady(d) ? "שולחים מהטלפון, מוסיפים מוזיקה טרנדית, ומפרסמים או שומרים כטיוטה." : "יש תסריט ורשימת שוטים. מצלמים, ואז עורכים בעורך."}
+            {!d ? "עוד אין טיוטה לפוסט הזה." : isReady(d) ? "שולחים מהטלפון, מוסיפים מוזיקה טרנדית, ומפרסמים או שומרים כטיוטה." : "יש תסריט ורשימת שוטים. מצלמים ומעלים לדרייב, והריל נבנה מהם."}
           </p>
           <p className="text-[11px] text-[#9A8C85]">הסטודיו לא מפרסם בעצמו.</p>
         </div>

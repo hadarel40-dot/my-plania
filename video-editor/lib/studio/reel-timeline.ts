@@ -19,9 +19,27 @@ export const styleForVariant = (v?: string | null): CaptionStyleId => REEL_STYLE
 
 const PINK = "#F7C9D6";
 const SHADOW = "0 4px 6px rgba(0,0,0,.55), 0 8px 34px rgba(0,0,0,.45)";
-const base = { kind: "text" as const, studio: true, x: 0.5, background: null, font: "assistant", rotate: 0, loop: "none" as const };
 
-function captions(cards: ReelEditKit["cards"], style: CaptionStyleId): Overlay[] {
+/** העיצוב שהיא בוחרת בדשבורד, בלי עורך: גופן, צבע ראשי, צבע הדגשה, גודל ומיקום */
+export interface ReelDesign { font?: string; main?: string; accent?: string; size?: "s" | "m" | "l"; place?: "top" | "middle" | "bottom" }
+export const REEL_FONTS: { id: string; label: string; family: string }[] = [
+  { id: "assistant", label: "נקי", family: "Assistant" },
+  { id: "rubik", label: "עגול", family: "Rubik" },
+  { id: "secular", label: "כותרת", family: "Secular One" },
+  { id: "suez", label: "קלאסי", family: "Suez One" },
+  { id: "frank", label: "ספרותי", family: "Frank Ruhl Libre" },
+  { id: "bellefair", label: "אלגנטי", family: "Bellefair" },
+  { id: "gveret", label: "כתב יד", family: "Gveret Levin" },
+  { id: "playpen", label: "כתב חמוד", family: "Playpen Sans Hebrew" },
+];
+export const REEL_COLORS = ["#FFFFFF", "#FAF6F1", "#F7C9D6", "#B5848E", "#5E1D1D", "#F6E7A6", "#2A2622"];
+
+function captions(cards: ReelEditKit["cards"], style: CaptionStyleId, design: ReelDesign = {}): Overlay[] {
+  const MAIN = design.main ?? "#FFFFFF";
+  const ACC = design.accent ?? PINK;
+  const k = design.size === "s" ? 0.8 : design.size === "l" ? 1.2 : 1;
+  const dy = design.place === "top" ? -0.24 : design.place === "bottom" ? 0.22 : 0;
+  const base = { kind: "text" as const, studio: true, x: 0.5, background: null, font: design.font ?? "assistant", rotate: 0, loop: "none" as const };
   const out: Overlay[] = [];
   cards.forEach((c, ci) => {
     const headline = c.headline ?? c.text;
@@ -35,18 +53,18 @@ function captions(cards: ReelEditKit["cards"], style: CaptionStyleId): Overlay[]
         const start = +(c.start + 0.1 + wi * step).toFixed(2);
         out.push({
           ...base, id: uid("ov"), hook: ci === 0 && wi === 0, text: x.w, start, end: wi === words.length - 1 ? c.end : +(start + step).toFixed(2),
-          y: 0.487, size: x.head ? 150 : 120, color: x.head ? "#FFFFFF" : PINK, weight: 900,
-          stroke: x.head, strokeColor: PINK, strokeWidth: 0.02, shadow: SHADOW, animIn: "pop", animOut: "none",
+          y: 0.487 + dy, size: Math.round((x.head ? 150 : 120) * k), color: x.head ? MAIN : ACC, weight: 900,
+          stroke: x.head, strokeColor: ACC, strokeWidth: 0.02, shadow: SHADOW, animIn: "pop", animOut: "none",
         });
       });
     } else if (style === "chips") {
       // הכותרת בתיבה ורודה עם טקסט כהה, ההמשך בלבן מתחת
-      out.push({ ...base, id: uid("ov"), hook: ci === 0, text: headline, start: c.start + 0.1, end: c.end, y: 0.5, size: 88, color: "#2A2622", background: PINK, weight: 900, stroke: false, animIn: "pop", animOut: "fade" });
-      if (body) out.push({ ...base, id: uid("ov"), text: body, start: c.start + 0.5, end: c.end, y: 0.6, size: 64, color: "#FFFFFF", weight: 700, stroke: false, shadow: SHADOW, animIn: "fade", animOut: "fade" });
+      out.push({ ...base, id: uid("ov"), hook: ci === 0, text: headline, start: c.start + 0.1, end: c.end, y: 0.5 + dy, size: Math.round(88 * k), color: ACC === "#5E1D1D" || ACC === "#2A2622" ? "#FFFFFF" : "#2A2622", background: ACC, weight: 900, stroke: false, animIn: "pop", animOut: "fade" });
+      if (body) out.push({ ...base, id: uid("ov"), text: body, start: c.start + 0.5, end: c.end, y: 0.6 + dy, size: Math.round(64 * k), color: MAIN, weight: 700, stroke: false, shadow: SHADOW, animIn: "fade", animOut: "fade" });
     } else {
       // שורה אחרי שורה: הכותרת בלבן גדול, ההמשך בוורוד חצי שנייה אחריה
-      out.push({ ...base, id: uid("ov"), hook: ci === 0, text: headline, start: c.start + 0.1, end: c.end, y: 0.48, size: 100, color: "#FFFFFF", weight: 900, stroke: false, shadow: SHADOW, animIn: "slide-up", animOut: "fade" });
-      if (body) out.push({ ...base, id: uid("ov"), text: body, start: c.start + 0.6, end: c.end, y: 0.58, size: 64, color: PINK, weight: 700, stroke: false, shadow: SHADOW, animIn: "slide-up", animOut: "fade" });
+      out.push({ ...base, id: uid("ov"), hook: ci === 0, text: headline, start: c.start + 0.1, end: c.end, y: 0.48 + dy, size: Math.round(100 * k), color: MAIN, weight: 900, stroke: false, shadow: SHADOW, animIn: "slide-up", animOut: "fade" });
+      if (body) out.push({ ...base, id: uid("ov"), text: body, start: c.start + 0.6, end: c.end, y: 0.58 + dy, size: Math.round(64 * k), color: ACC, weight: 700, stroke: false, shadow: SHADOW, animIn: "slide-up", animOut: "fade" });
     }
   });
   return out;
@@ -55,7 +73,7 @@ function captions(cards: ReelEditKit["cards"], style: CaptionStyleId): Overlay[]
 /** הכתוביות בלבד (לגרסאות בעורך: מחליפים כתוביות בלי לגעת בקטעים) */
 export const reelCaptions = captions;
 
-export function buildReelTimeline(kit: ReelEditKit, style: CaptionStyleId = "pop"): { timeline: Timeline; assets: Record<string, MediaAsset> } {
+export function buildReelTimeline(kit: ReelEditKit, style: CaptionStyleId = "pop", design: ReelDesign = {}): { timeline: Timeline; assets: Record<string, MediaAsset> } {
   const assets: Record<string, MediaAsset> = {};
   const clips: Clip[] = kit.segments.map((s, i) => {
     const id = `seg-${i + 1}`;
@@ -63,7 +81,7 @@ export function buildReelTimeline(kit: ReelEditKit, style: CaptionStyleId = "pop
     return { id: uid("clip"), sourceAssetId: id, assetId: id, in: 0, out: s.seconds, look: NEUTRAL_LOOK, activeVariantId: null, volume: 0 };
   });
   return {
-    timeline: { fps: 30, aspect: "9:16", clips, captions: [], overlays: captions(kit.cards, style), audio: [] },
+    timeline: { fps: 30, aspect: "9:16", clips, captions: [], overlays: captions(kit.cards, style, design), audio: [] },
     assets,
   };
 }

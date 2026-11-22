@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { Check, X } from "lucide-react";
 import { ACCOUNTS, CHECK_LABELS, NICHES, labelOf, type Account, type Draft, type Hook, type Niche } from "@/lib/studio/config";
-import { db, editorHref, formatDate, studioCall, versionLabels } from "@/lib/studio/client";
+import { db, formatDate, studioCall, versionLabels } from "@/lib/studio/client";
 import { Btn, Field, Loading, Meter, Note, PageHead, Panel, Select, Tag, inputCls, toast } from "@/components/studio/ui";
 import { SafeZonePreview } from "@/components/studio/safe-zone";
 import { VoiceSuggestions, type Suggestion } from "@/components/studio/voice-suggestions";
@@ -227,10 +227,6 @@ function DraftView({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => 
     setItemId(data.id);
     toast("נשמר בלוח כטיוטה");
   });
-  const toEditor = () => run("editor", async () => {
-    const { projectId } = await studioCall<{ projectId: string }>("to-editor", { draftId: draft.id });
-    router.push(editorHref(projectId, draft.data.template));
-  });
 
   const beats = d.script?.beats ?? [];
   return (
@@ -239,7 +235,7 @@ function DraftView({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => 
         <p className="text-xs text-[#6A6158]">{labelOf(ACCOUNTS, draft.account)} · {labelOf(NICHES, draft.niche)}{draft.facts ? ` · עובדות: ${draft.facts}` : " · לא הוזנו מספרים"}</p>
       </Panel>
       {d.edit ? <ReelPlayer draft={draft} onChange={onChange} /> : <><VariantSwitch draft={draft} onChange={onChange} /><ReadyVideo draft={draft} /></>}
-      {d.video && <DesignerChat draft={draft} onChange={onChange} />}
+      {(d.video || d.edit) && <DesignerChat draft={draft} onChange={onChange} />}
 
       {(!d.video || !!d.hooks?.length) && <Panel title="שלושה הוקים" aside={<Btn variant="ghost" busy={busy === "hooks"} onClick={rehook}>הוקים חדשים</Btn>}>
         {d.hooks?.length ? (
@@ -324,9 +320,8 @@ function DraftView({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => 
           <div className="flex flex-wrap gap-2">
             {itemId ? <Link href="/studio/board" className="rounded-xl border border-[#3E6B4F] px-3 py-2 text-sm font-semibold text-[#3E6B4F]">נמצא בלוח התוכן</Link>
               : <Btn variant="green" busy={busy === "board"} onClick={toBoard}>לשמור בלוח כטיוטה</Btn>}
-            <Btn variant="line" busy={busy === "editor"} onClick={toEditor}>{draft.project_id ? "לפתוח בעורך" : "לפתוח פרויקט בעורך"}</Btn>
           </div>
-          <p className="text-[11px] text-[#6A6158]">בעורך: כרטיסי הטקסט כבר על ציר הזמן בזמנים ובאזור הבטוח, והתסריט והשוטים בהערות. מעלים קליפים (מהטלפון או מדרייב), וכתוביות נוצרות שם מהקול.</p>
+          <p className="text-[11px] text-[#6A6158]">מצלמים לפי השוטים ומעלים לתיקייה בדרייב. הריל נבנה מהם בעיבוד השבועי, ומופיע כאן עם גרסאות.</p>
         </>
       )}
     </>

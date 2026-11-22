@@ -38,7 +38,6 @@ export default function HomePage() {
         <Reset today={today} items={items} />
       </div>
       <p className="text-center text-[12px] text-[#9A8C85]">
-        <Link href="/studio/own-video" className="font-bold text-[#5E1D1D] underline underline-offset-4">צילמת סרטון בעצמך?</Link> מכניסים אותו לשבוע מכאן.
         {open ? <> · <Link href="/studio/ideas" className="font-bold text-[#5E1D1D] underline underline-offset-4">{open} רעיונות מחכים</Link></> : null}
       </p>
     </div>

@@ -21,7 +21,6 @@ const TABS: { href: string; label: string; match: string[] }[] = [
 const MORE: { title: string; links: { href: string; label: string; count?: keyof NavCounts }[] }[] = [
   { title: "ליצור", links: [
     { href: "/studio/new", label: "+ ריל חדש" },
-    { href: "/studio/own-video", label: "+ סרטון שצילמתי" },
     { href: "/studio/carousel", label: "קרוסלות", count: "carousels" },
     { href: "/studio/reel", label: "רילס", count: "scripts" },
   ] },

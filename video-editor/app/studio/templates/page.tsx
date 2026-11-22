@@ -102,7 +102,7 @@ export default function TemplatesPage() {
         )}
       </section>
 
-      <p className="mb-3 text-[12px] text-[#6A6158]">תבניות הרילס נמצאות גם בעורך הווידאו, בלשונית החכמה. בקרוסלה אפשר לכתוב עם AI או לבנות לבד בעורך הקרוסלות.</p>
+      <p className="mb-3 text-[12px] text-[#6A6158]">בקרוסלה אפשר לכתוב עם AI או לבנות לבד.</p>
       <div className="mb-4 flex flex-wrap gap-2">
         {([["all", "הכל"], ["reel", "רילס"], ["carousel", "קרוסלות"]] as const).map(([k, l]) => (
           <button key={k} type="button" onClick={() => setTab(k)} className={cn("rounded-full border px-3 py-1.5 text-sm font-semibold", tab === k ? "border-[#5E1D1D] bg-[#5E1D1D] text-[#FAF6F1]" : "border-[#E3D9CC] bg-[#FAF6F1]")}>{l}</button>

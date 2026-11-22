@@ -136,6 +136,8 @@ export interface DraftData {
   chosen_variant?: string;
   /** הפוסט שפורסם באינסטגרם (נמצא לפי הכיתוב), והפוסטים שהיא אמרה שהם לא זה */
   published?: PublishedPost;
+  /** עיצוב הכתוביות שנבחר בדשבורד (גופן, צבעים, גודל, מיקום) */
+  reel_design?: import("./reel-timeline").ReelDesign;
   published_reject?: string[];
   /** סרטון מוכן לעלייה */
   video?: ReadyVideo;

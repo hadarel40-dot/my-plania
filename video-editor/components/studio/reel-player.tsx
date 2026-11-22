@@ -1,14 +1,12 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Player } from "@remotion/player";
 import { TimelineComposition, type CompositionProps } from "@/remotion/timeline-composition";
-import { normalizeProject } from "@/lib/editor/initial-project";
 import { timelineDuration } from "@/lib/editor/timeline-utils";
-import type { MediaAsset, SavedProject, Timeline } from "@/lib/editor/types";
+import type { MediaAsset } from "@/lib/editor/types";
 import { CONTENT_TYPES, labelOf, type Draft } from "@/lib/studio/config";
-import { db, editorHref, studioCall } from "@/lib/studio/client";
-import { REEL_STYLES, buildReelTimeline, reelCaptions, styleForVariant } from "@/lib/studio/reel-timeline";
+import { db } from "@/lib/studio/client";
+import { REEL_COLORS, REEL_FONTS, REEL_STYLES, buildReelTimeline, styleForVariant, type CaptionStyleId, type ReelDesign } from "@/lib/studio/reel-timeline";
 import { canShareFiles, shareToInstagram } from "@/lib/studio/share";
 import { MEDIA_BUCKET } from "@/lib/supabase/env";
 import { Btn, Loading, Panel, Tag, toast } from "./ui";
@@ -37,81 +35,56 @@ async function signAssets(assets: Record<string, MediaAsset>) {
 }
 
 /**
- * הריל בדשבורד, באותו מנוע של העורך: אותו נגן, אותם פונטים, אותו קצב.
- * אם נפתח פרויקט בעורך, מוצג הפרויקט עצמו (כל עריכה שם נראית כאן מיד). אחרת, הריל מהסטודיו בגרסה שנבחרה.
- * "לשלוח לאינסטגרם" ו"להוריד" מייצאים מאותו ציר זמן, כך שהקובץ זהה למה שרואים.
+ * הריל בדשבורד, בלי עורך: רואים אותו, בוחרים גרסה, ומשנים עיצוב בכפתורים (גופן, צבעים, גודל, מיקום).
+ * כל שינוי נשמר בטיוטה ונראה בנגן מיד. "לשלוח לאינסטגרם" ו"להוריד" מייצאים בדיוק את מה שרואים.
  */
 export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => void }) {
-  const router = useRouter();
   const kit = draft.data.edit!;
-  const [project, setProject] = useState<{ timeline: Timeline; assets: Record<string, MediaAsset> } | null>(null);
-  const [fromEditor, setFromEditor] = useState(false);
+  const [assets, setAssets] = useState<Record<string, MediaAsset> | null>(null);
+  const [design, setDesign] = useState<ReelDesign>(draft.data.reel_design ?? {});
   const [busy, setBusy] = useState("");
   const [progress, setProgress] = useState(0);
-  // אחרי ששלחו או הורידו: מסך "מוכן לאינסטגרם" עם הצעדים
   const [ready, setReady] = useState<"shared" | "saved" | null>(null);
+  const [showDesign, setShowDesign] = useState(false);
   const abort = useRef<AbortController | null>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const variant = draft.data.chosen_variant;
+  const style = styleForVariant(variant);
   const caption = draft.data.caption ?? "";
 
+  // הקבצים נחתמים פעם אחת; גרסה ועיצוב רק בונים מחדש את הכתוביות
   useEffect(() => {
     let live = true;
-    (async () => {
-      // פרויקט בעורך קיים: הוא המקור. אחרת בונים מהערכה של הסטודיו
-      if (draft.project_id) {
-        const { data } = await db().from("projects").select("title, doc").eq("id", draft.project_id).maybeSingle();
-        if (data?.doc) {
-          const p = normalizeProject({ ...(data.doc as Omit<SavedProject, "title">), title: data.title } as SavedProject);
-          const assets = await signAssets(p.assets);
-          if (live) { setProject({ timeline: p.timeline, assets }); setFromEditor(true); }
-          return;
-        }
-      }
-      const built = buildReelTimeline(kit, styleForVariant(variant));
-      const assets = await signAssets(built.assets);
-      if (live) { setProject({ timeline: built.timeline, assets }); setFromEditor(false); }
-    })().catch(() => live && setProject(null));
+    signAssets(buildReelTimeline(kit).assets).then((a) => live && setAssets(a)).catch(() => live && setAssets({}));
     return () => { live = false; };
-  }, [draft.project_id, draft.project_id ? null : variant, kit]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [kit]);
+  const timeline = useMemo(() => buildReelTimeline(kit, style, design).timeline, [kit, style, design]);
+  const inputProps = useMemo<CompositionProps | null>(() => (assets ? { timeline, assets, override: null } : null), [timeline, assets]);
+  const frames = Math.max(1, Math.ceil(timelineDuration(timeline) * timeline.fps));
 
-  const inputProps = useMemo<CompositionProps | null>(() => (project ? { timeline: project.timeline, assets: project.assets, override: null } : null), [project]);
-  const frames = project ? Math.max(1, Math.ceil(timelineDuration(project.timeline) * project.timeline.fps)) : 1;
-
-  // החלפת גרסה: בטיוטה, ואם כבר נפתח פרויקט בעורך, גם בו (רק הכתוביות של הסטודיו מתחלפות)
   const chooseStyle = async (variantId: string) => {
     if (variantId === variant) return;
-    if (draft.project_id && project) {
-      const { data: row } = await db().from("projects").select("doc").eq("id", draft.project_id).maybeSingle();
-      if (row?.doc) {
-        const doc = row.doc as SavedProject;
-        const overlays = [...doc.timeline.overlays.filter((o) => !o.studio), ...reelCaptions(kit.cards, styleForVariant(variantId))];
-        await db().from("projects").update({ doc: { ...doc, timeline: { ...doc.timeline, overlays } } }).eq("id", draft.project_id);
-        setProject({ ...project, timeline: { ...project.timeline, overlays } });
-      }
-    }
     const { data, error } = await db().from("studio_drafts").update({ data: { ...draft.data, chosen_variant: variantId } }).eq("id", draft.id).select("*").single();
     if (error) return toast(error.message, true);
     onChange(data as Draft);
   };
+  // עיצוב: מתעדכן בנגן מיד, ונשמר רגע אחרי
+  const setD = (patch: Partial<ReelDesign> | null) => {
+    const next = patch === null ? {} : { ...design, ...patch };
+    setDesign(next);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      const { data } = await db().from("studio_drafts").update({ data: { ...draft.data, reel_design: next } }).eq("id", draft.id).select("*").single();
+      if (data) onChange(data as Draft);
+    }, 600);
+  };
 
-  // ייצוא מאותו ציר זמן (אותו מנוע כמו בעורך)
   const exportMp4 = async () => {
-    if (!project) throw new Error("הריל עוד נטען");
+    if (!assets) throw new Error("הריל עוד נטען");
     const { renderToMp4 } = await import("@/lib/export/render-video");
     abort.current = new AbortController();
     const phone = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
-    return renderToMp4(project.timeline, project.assets, { quality: phone ? "720p" : "1080p", signal: abort.current.signal, onProgress: setProgress });
-  };
-  const send = async () => {
-    setBusy("send"); setProgress(0);
-    try {
-      const blob = await exportMp4();
-      const file = new File([blob], "reel.mp4", { type: "video/mp4" });
-      const res = await shareToInstagram([file], caption);
-      if (res === "unsupported") { save(blob); setReady("saved"); }
-      else if (res === "shared") setReady("shared");
-    } catch (e) { if (!abort.current?.signal.aborted) toast((e as Error).message, true); }
-    finally { setBusy(""); }
+    return renderToMp4(timeline, assets, { quality: phone ? "720p" : "1080p", signal: abort.current.signal, onProgress: setProgress });
   };
   const save = (blob: Blob) => {
     const a = document.createElement("a");
@@ -120,66 +93,163 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
   };
-  const download = async () => {
-    setBusy("download"); setProgress(0);
-    try { save(await exportMp4()); if (caption) await navigator.clipboard?.writeText(caption).catch(() => {}); setReady("saved"); } catch (e) { if (!abort.current?.signal.aborted) toast((e as Error).message, true); }
+  const send = async () => {
+    setBusy("send"); setProgress(0);
+    try {
+      const blob = await exportMp4();
+      const res = await shareToInstagram([new File([blob], "reel.mp4", { type: "video/mp4" })], caption);
+      if (res === "unsupported") { save(blob); setReady("saved"); }
+      else if (res === "shared") setReady("shared");
+    } catch (e) { if (!abort.current?.signal.aborted) toast((e as Error).message, true); }
     finally { setBusy(""); }
   };
-  const openEditor = async () => {
-    setBusy("editor");
-    try { router.push(editorHref((await studioCall<{ projectId: string }>("to-editor", { draftId: draft.id })).projectId, draft.data.template)); }
-    catch (e) { toast((e as Error).message, true); setBusy(""); }
+  const download = async () => {
+    setBusy("download"); setProgress(0);
+    try { save(await exportMp4()); if (caption) await navigator.clipboard?.writeText(caption).catch(() => {}); setReady("saved"); }
+    catch (e) { if (!abort.current?.signal.aborted) toast((e as Error).message, true); }
+    finally { setBusy(""); }
   };
 
+  const changed = Object.keys(design).length > 0;
   return (
-    <Panel title="הריל" accent="שלך" aside={<span className="flex flex-wrap gap-1">{draft.data.content_type && <Tag tone="butter">{labelOf(CONTENT_TYPES, draft.data.content_type)}</Tag>}{fromEditor && <Tag tone="green">מסונכרן עם העורך</Tag>}</span>}>
-      {(
-        <div className="mb-3 flex flex-wrap items-center gap-1.5">
-          <span className="text-[12px] font-bold text-[#6A6158]">גרסה:</span>
-          {REEL_STYLES.map((s) => (
-            <button key={s.id} type="button" onClick={() => chooseStyle(s.variant)}
-              className={cn("rounded-full border px-3 py-1 text-[12px] font-semibold", (variant ? styleForVariant(variant) === s.id : s.id === "pop") ? "border-[#5E1D1D] bg-[#5E1D1D] text-[#FAF6F1]" : "border-[#E3D9CC] bg-white/70 hover:border-[#5E1D1D]")}>
-              {s.variant} · {s.label}
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="grid gap-4 md:grid-cols-[270px_1fr]">
+    <Panel title="הריל" accent="שלך" aside={draft.data.content_type ? <Tag tone="butter">{labelOf(CONTENT_TYPES, draft.data.content_type)}</Tag> : undefined}>
+      <div className="grid gap-5 md:grid-cols-[280px_1fr]">
         {/* הנגן מחושב משמאל לימין: בדף בעברית הוא זז מחוץ למסגרת בלי זה */}
-        <div dir="ltr" className="aspect-[9/16] w-full max-w-[270px] overflow-hidden rounded-xl bg-black">
+        <div dir="ltr" className="mx-auto aspect-[9/16] w-full max-w-[280px] overflow-hidden rounded-2xl bg-black shadow-[0_20px_40px_-24px_rgba(94,29,29,0.8)]">
           {inputProps ? (
-            <Player component={TimelineComposition} inputProps={inputProps} durationInFrames={frames} fps={project!.timeline.fps}
-              compositionWidth={1080} compositionHeight={1920} style={{ width: "100%", height: "100%" }} controls clickToPlay />
-          ) : <div className="flex size-full items-center justify-center p-4 text-center text-[13px] text-white/80" dir="rtl">טוענת את הסרטונים...</div>}
+            <Player component={TimelineComposition} inputProps={inputProps} durationInFrames={frames} fps={timeline.fps}
+              compositionWidth={1080} compositionHeight={1920} style={{ width: "100%", height: "100%" }} controls clickToPlay loop />
+          ) : <div className="flex size-full items-center justify-center text-[13px] text-white/80" dir="rtl">טוענת את הסרטונים...</div>}
         </div>
-        <div className="min-w-0 space-y-2">
-          <div className="flex flex-wrap gap-2">
-            <Btn busy={busy === "send"} onClick={send}>{busy === "send" ? `מכינה את הקובץ ${progress}%` : canShareFiles() ? "לשלוח לאינסטגרם" : "להוריד ולשלוח"}</Btn>
-            <Btn variant="line" busy={busy === "download"} onClick={download}>{busy === "download" ? `${progress}%` : "להוריד"}</Btn>
-            <Btn variant="line" busy={busy === "editor"} onClick={openEditor}>לערוך בעורך הווידאו</Btn>
-            {busy && (busy === "send" || busy === "download") && <Btn variant="ghost" onClick={() => abort.current?.abort()}>לעצור</Btn>}
+
+        <div className="min-w-0 space-y-5">
+          <div>
+            <p className="mb-2 text-[13px] font-bold text-[#5E1D1D]">בוחרים גרסה</p>
+            <div className="grid grid-cols-3 gap-2">
+              {REEL_STYLES.map((st) => {
+                const on = style === st.id;
+                return (
+                  <button key={st.id} type="button" onClick={() => chooseStyle(st.variant)} aria-pressed={on}
+                    className={cn("overflow-hidden rounded-2xl border-2 text-right transition", on ? "border-[#5E1D1D] shadow-[0_10px_20px_-14px_rgba(94,29,29,0.9)]" : "border-[#E3D9CC] hover:border-[#B5848E]")}>
+                    <StylePreview id={st.id} design={design} />
+                    <span className={cn("block px-2 py-1.5 text-[11px] font-bold leading-tight", on ? "bg-[#5E1D1D] text-[#FAF6F1]" : "bg-white text-[#2A2622]")}>{st.variant} · {st.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <ShareHint />
-          <p className="text-[12px] text-[#6A6158]">{fromEditor ? "מוצג הפרויקט מהעורך: כל שינוי שם מופיע כאן מיד, וגם בקובץ שנשלח." : "זה בדיוק מה שייפתח בעורך ומה שייצא בקובץ. בעורך אפשר להחליף קטע או לשנות טקסט."}</p>
+
+          <div className="rounded-2xl border border-[#E3D9CC] bg-white/70">
+            <button type="button" onClick={() => setShowDesign((v) => !v)} aria-expanded={showDesign}
+              className="flex w-full items-center justify-between px-4 py-3 text-[14px] font-bold text-[#5E1D1D]">
+              לשנות עיצוב: גופן, צבעים, גודל
+              <span className="text-xl leading-none">{showDesign ? "−" : "+"}</span>
+            </button>
+            {showDesign && (
+              <div className="space-y-4 border-t border-[#E3D9CC] px-4 py-4">
+                <Row label="גופן">
+                  {REEL_FONTS.map((f) => (
+                    <Chip key={f.id} on={(design.font ?? "assistant") === f.id} onClick={() => setD({ font: f.id })}>
+                      <span style={{ fontFamily: `"${f.family}"` }} className="text-[15px]">{f.label}</span>
+                    </Chip>
+                  ))}
+                </Row>
+                <Row label="צבע הטקסט"><Swatches value={design.main ?? "#FFFFFF"} onPick={(c) => setD({ main: c })} /></Row>
+                <Row label="צבע ההדגשה"><Swatches value={design.accent ?? "#F7C9D6"} onPick={(c) => setD({ accent: c })} /></Row>
+                <Row label="גודל">
+                  {([["s", "קטן"], ["m", "רגיל"], ["l", "גדול"]] as const).map(([v, l]) => <Chip key={v} on={(design.size ?? "m") === v} onClick={() => setD({ size: v })}>{l}</Chip>)}
+                </Row>
+                <Row label="מיקום">
+                  {([["top", "למעלה"], ["middle", "באמצע"], ["bottom", "למטה"]] as const).map(([v, l]) => <Chip key={v} on={(design.place ?? "middle") === v} onClick={() => setD({ place: v })}>{l}</Chip>)}
+                </Row>
+                {changed && <button type="button" onClick={() => setD(null)} className="text-[13px] font-bold text-[#5E1D1D] underline underline-offset-4">לחזור לעיצוב המקורי</button>}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Btn busy={busy === "send"} onClick={send} className="min-h-[48px] w-full text-[15px]">{busy === "send" ? `מכינה את הקובץ ${progress}%` : canShareFiles() ? "לשלוח לאינסטגרם" : "להוריד ולשלוח"}</Btn>
+            <div className="flex gap-2 [&>*]:flex-1">
+              <Btn variant="line" busy={busy === "download"} onClick={download}>{busy === "download" ? `${progress}%` : "להוריד"}</Btn>
+              {caption && <Btn variant="line" onClick={() => navigator.clipboard.writeText(caption).then(() => toast("הכיתוב הועתק"))}>להעתיק כיתוב</Btn>}
+              {busy && (busy === "send" || busy === "download") && <Btn variant="ghost" onClick={() => abort.current?.abort()}>לעצור</Btn>}
+            </div>
+            <ShareHint />
+          </div>
+
           {ready && (
-            <div className="rounded-xl border border-[#3E6B4F] bg-[#E2ECDF] p-3 text-sm">
+            <div className="rounded-2xl border border-[#3E6B4F] bg-[#E2ECDF] p-4 text-sm">
               <p className="mb-1.5 font-bold">מוכן לאינסטגרם</p>
               <ol className="list-decimal space-y-1 pr-5 text-[13px]">
-                <li>{ready === "shared" ? "באינסטגרם: בוחרים ריל, הסרטון כבר שם." : "הסרטון ירד. מעבירים לטלפון (או שולחים מהסטודיו בטלפון), ובאינסטגרם: + ואז ריל, ובוחרים אותו."}</li>
-                <li>מוסיפים שיר טרנדי (סמל התו המוזיקלי), ומכוונים את העוצמה של השיר.</li>
+                <li>{ready === "shared" ? "באינסטגרם: בוחרים ריל, הסרטון כבר שם." : "הסרטון ירד. באינסטגרם: + ואז ריל, ובוחרים אותו."}</li>
+                <li>מוסיפים שיר טרנדי, ומכוונים את העוצמה.</li>
                 <li>מדביקים את הכיתוב: הוא כבר הועתק.</li>
-                <li>מפרסמים, או שומרים כטיוטה באינסטגרם.</li>
+                <li>מפרסמים, או שומרים כטיוטה.</li>
               </ol>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <Btn variant="line" onClick={() => navigator.clipboard.writeText(caption).then(() => toast("הכיתוב הועתק"))}>להעתיק כיתוב שוב</Btn>
-                <a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center rounded-xl bg-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold text-[#FAF6F1]">לפתוח את אינסטגרם</a>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[40px] items-center rounded-xl bg-[#5E1D1D] px-4 text-[13px] font-bold text-[#FAF6F1]">לפתוח את אינסטגרם</a>
                 <Btn variant="ghost" onClick={() => setReady(null)}>לסגור</Btn>
               </div>
             </div>
           )}
-          {caption && <p className="whitespace-pre-line text-sm leading-relaxed">{caption}</p>}
+          {caption && <details className="rounded-2xl border border-[#E3D9CC] bg-white/70 px-4 py-3 text-sm"><summary className="cursor-pointer font-bold text-[#5E1D1D]">הכיתוב</summary><p className="mt-2 whitespace-pre-line leading-relaxed">{caption}</p></details>}
         </div>
       </div>
     </Panel>
+  );
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="mb-1.5 text-[12px] font-bold text-[#6A6158]">{label}</p>
+      <div className="flex flex-wrap gap-1.5">{children}</div>
+    </div>
+  );
+}
+
+function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button type="button" onClick={onClick} aria-pressed={on}
+      className={cn("min-h-[38px] rounded-xl border px-3 text-[13px] font-bold transition", on ? "border-[#5E1D1D] bg-[#5E1D1D] text-[#FAF6F1]" : "border-[#E3D9CC] bg-white text-[#2A2622] hover:border-[#B5848E]")}>
+      {children}
+    </button>
+  );
+}
+
+function Swatches({ value, onPick }: { value: string; onPick: (c: string) => void }) {
+  return (
+    <>
+      {REEL_COLORS.map((c) => (
+        <button key={c} type="button" onClick={() => onPick(c)} aria-label={`צבע ${c}`} aria-pressed={value.toLowerCase() === c.toLowerCase()}
+          className={cn("size-9 rounded-full border-2 transition", value.toLowerCase() === c.toLowerCase() ? "border-[#5E1D1D] ring-2 ring-[#EFD9DD]" : "border-[#E3D9CC]")}
+          style={{ background: c }} />
+      ))}
+    </>
+  );
+}
+
+/** תצוגה קטנה של כל גרסה, בצבעים ובגופן שנבחרו */
+function StylePreview({ id, design }: { id: CaptionStyleId; design: ReelDesign }) {
+  const main = design.main ?? "#FFFFFF";
+  const acc = design.accent ?? "#F7C9D6";
+  const font = `"${REEL_FONTS.find((f) => f.id === (design.font ?? "assistant"))?.family ?? "Assistant"}"`;
+  const dark = acc === "#5E1D1D" || acc === "#2A2622";
+  return (
+    <span className="relative block aspect-[4/5] w-full" style={{ background: "linear-gradient(170deg,#b98a7c,#6f3a36 60%,#2a1212)", fontFamily: font }}>
+      {id === "pop" && <span className="absolute inset-0 flex items-center justify-center text-[26px] font-black" style={{ color: main, WebkitTextStroke: `1px ${acc}`, textShadow: "0 2px 6px rgba(0,0,0,.5)" }}>ככה</span>}
+      {id === "chips" && (
+        <span className="absolute inset-x-1 top-[38%] text-center">
+          <span className="inline-block rounded px-1.5 py-0.5 text-[11px] font-black" style={{ background: acc, color: dark ? "#FFFFFF" : "#2A2622" }}>ככה עורכים</span>
+          <span className="mt-1 block text-[10px] font-bold" style={{ color: main }}>בלי לשבת בלילה</span>
+        </span>
+      )}
+      {id === "lines" && (
+        <span className="absolute inset-x-1 top-[38%] text-center leading-tight">
+          <span className="block text-[13px] font-black" style={{ color: main, textShadow: "0 2px 6px rgba(0,0,0,.5)" }}>ככה עורכים</span>
+          <span className="block text-[10px] font-bold" style={{ color: acc }}>בלי לשבת בלילה</span>
+        </span>
+      )}
+    </span>
   );
 }

@@ -27,7 +27,7 @@ export default function FilmPage() {
 
   return (
     <>
-      <PageHead label="יצירה" title="מה" accent="לצלם" sub="כל תסריט מוכן, עם השוטים לפי הסדר. לכל שוט יש גם דרך לצלם בלי פנים. מסמנים מה צולם, ואז פותחים בעורך." />
+      <PageHead label="יצירה" title="מה" accent="לצלם" sub="כל תסריט מוכן, עם השוטים לפי הסדר. לכל שוט יש גם דרך לצלם בלי פנים. מסמנים מה צולם ומעלים לתיקייה בדרייב." />
       {!drafts ? <Loading /> : drafts.length === 0 ? <Note>אין כרגע ריל שמחכה לצילום. הרילסים מהתוכן השבועי כבר ערוכים מהסרטונים שלך, אז הם לא כאן. ריל לצילום מתחילים ב<Link href="/studio/new" className="font-bold underline">ריל חדש</Link>.</Note> : (
         <div className="space-y-4">
           {drafts.map((d) => {
@@ -60,7 +60,6 @@ export default function FilmPage() {
                   </div>
                 )}
                 <div className="mt-3 flex gap-2">
-                  <Btn busy={busy === d.id} onClick={() => toEditor(d)}>{d.project_id ? "לפתוח בעורך" : "לפתוח פרויקט בעורך"}</Btn>
                   <Link href={`/studio/reel?id=${d.id}`} className="inline-flex items-center rounded-xl border border-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold">לתסריט</Link>
                 </div>
               </Panel>
