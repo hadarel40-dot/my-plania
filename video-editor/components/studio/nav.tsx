@@ -14,17 +14,15 @@ const GROUPS: Group[] = [
   { key: "today", label: "היום", href: "/studio", subs: [] },
   { key: "plan", label: "תכנון", href: "/studio/board", subs: [
     { href: "/studio/board", label: "לוח התוכן", count: "board" },
-    { href: "/studio/pick", label: "בחירת גרסאות" },
     { href: "/studio/ideas", label: "רעיונות", count: "ideas" },
     { href: "/studio/trends", label: "טרנדים", count: "trends" },
-    { href: "/studio/hooks", label: "משפטי פתיחה", count: "hooks" },
   ] },
-  { key: "create", label: "יצירה", href: "/studio/templates", subs: [
+  { key: "create", label: "יצירה", href: "/studio/new", subs: [
     { href: "/studio/new", label: "+ ריל חדש" },
-    { href: "/studio/templates", label: "תבניות" },
-    { href: "/studio/reel", label: "כתיבת ריל", count: "scripts" },
-    { href: "/studio/film", label: "רשימת צילום", count: "film" },
     { href: "/studio/carousel", label: "קרוסלות", count: "carousels" },
+    { href: "/studio/reel", label: "רילס", count: "scripts" },
+    { href: "/studio/templates", label: "תבניות" },
+    { href: "/studio/film", label: "רשימת צילום", count: "film" },
   ] },
   { key: "results", label: "תוצאות", href: "/studio/performance", subs: [
     { href: "/studio/performance", label: "ביצועים" },
@@ -32,7 +30,9 @@ const GROUPS: Group[] = [
   ] },
   { key: "more", label: "עוד", href: "/studio/library", subs: [
     { href: "/studio/library", label: "ספרייה" },
-    { href: "/studio/voice", label: "הקול שלי" },
+    { href: "/studio/voice", label: "הקול והמותג" },
+    { href: "/studio/hooks", label: "משפטי פתיחה" },
+    { href: "/studio/pick", label: "כל הגרסאות" },
   ] },
 ];
 

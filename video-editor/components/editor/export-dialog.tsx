@@ -32,6 +32,7 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const abortRef = useRef<AbortController | null>(null);
   const [cover, setCover] = useState<Cover>(null);
+  const [synced, setSynced] = useState(false);
 
   async function start() {
     const { timeline, assets } = useEditor.getState();
@@ -53,10 +54,19 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
       setPhase({ kind: "done", url: URL.createObjectURL(blob), size: blob.size, blob });
       // תמונת שער: הפריים הכי יפה עם משפט הפתיחה (אם לא מצליח, שומרים רק את הסרטון)
       setCover("making");
-      import("@/lib/export/cover")
+      const coverBlob = await import("@/lib/export/cover")
         .then(({ makeCover }) => makeCover(timeline, assets))
-        .then((c) => setCover(c ? { blob: c, url: URL.createObjectURL(c) } : null))
-        .catch((e) => { logEvent("cover_failed", { error: errorText(e) }); setCover(null); });
+        .catch((e) => { logEvent("cover_failed", { error: errorText(e) }); return null; });
+      setCover(coverBlob ? { blob: coverBlob, url: URL.createObjectURL(coverBlob) } : null);
+      // פרויקט שנפתח מהסטודיו: הסרטון הערוך חוזר לדשבורד כגרסה "ערוך בעורך"
+      const projectId = window.location.pathname.match(/^\/p\/([\w-]+)/)?.[1];
+      if (projectId) {
+        const { timelineDuration } = await import("@/lib/editor/timeline-utils");
+        import("@/lib/studio/sync")
+          .then(({ syncExportToStudio }) => syncExportToStudio(projectId, blob, coverBlob, timelineDuration(timeline)))
+          .then((ok) => ok && setSynced(true))
+          .catch((e) => logEvent("studio_sync_failed", { error: errorText(e) }));
+      }
     } catch (e) {
       if (controller.signal.aborted) setPhase({ kind: "idle" });
       else {
@@ -126,6 +136,7 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
 
         {phase.kind === "done" && (
           <div className="space-y-3">
+            {synced && <p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">עודכן גם בסטודיו: הגרסה הערוכה מופיעה עכשיו בטיוטה ובלוח.</p>}
             <div className="flex gap-2">
               <video src={phase.url} controls playsInline className="max-h-64 min-w-0 flex-1 rounded-lg bg-black" />
               {cover && (

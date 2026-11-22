@@ -50,7 +50,8 @@ export function TodayPost({ today }: { today: string }) {
   const chosenId = d?.data.chosen_variant ?? d?.data.variants?.[0]?.id;
   const type = next.content_type || d?.data.content_type;
   const isToday = next.planned_date === today;
-  const caption = next.caption || d?.data.caption || d?.data.carousel?.caption || "";
+  // הטיוטה היא המקור: הכיתוב מהקרוסלה או מהריל, ורק אם אין, מהלוח
+  const caption = d?.data.carousel?.caption || d?.data.caption || next.caption || "";
   return (
     <Panel label={isToday ? "מה עולה היום" : `הבא בתור · ${formatDate(next.planned_date)}`} title={next.title}
       aside={<span className="flex flex-wrap gap-1"><Tag>{FORMAT[next.format] ?? next.format}</Tag>{type && <Tag tone="butter">{labelOf(CONTENT_TYPES, type)}</Tag>}</span>}>

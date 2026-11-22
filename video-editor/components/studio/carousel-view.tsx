@@ -105,6 +105,8 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
   const persist = async (carousel: Carousel) => {
     const { data, error } = await db().from("studio_drafts").update({ data: { ...draft.data, carousel } }).eq("id", draft.id).select("*").single();
     if (error) throw new Error(error.message);
+    // סנכרון ללוח: הכיתוב והשער
+    await db().from("studio_items").update({ caption: carousel.caption, hook: carousel.slides[0]?.headline ?? "" }).eq("draft_id", draft.id);
     onChange(data as Draft);
   };
 

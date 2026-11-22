@@ -43,6 +43,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
     const saveDraft = async (id: string, data: Draft["data"]) => {
       const { data: saved, error } = await supabase.from("studio_drafts").update({ data }).eq("id", id).select("*").single();
       if (error) throw new StudioError(error.message, 500);
+      // סנכרון: הכיתוב וההוק בלוח תמיד כמו בטיוטה
+      const caption = data.carousel?.caption ?? data.caption;
+      const hook = data.carousel?.slides[0]?.headline ?? data.hooks?.[data.chosen ?? 0]?.spoken;
+      if (caption || hook) await supabase.from("studio_items").update({ ...(caption ? { caption } : {}), ...(hook ? { hook } : {}) }).eq("draft_id", id);
       return saved as Draft;
     };
 
