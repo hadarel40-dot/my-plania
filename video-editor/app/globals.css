@@ -123,3 +123,13 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
 .studio .s-serif, .studio h1, .studio h2, .studio h3 { font-family: "Frank Ruhl Libre", "David Libre", Georgia, serif; font-weight: 900; letter-spacing: -0.01em; }
 .studio .s-accent { font-family: "Bellefair", "Frank Ruhl Libre", Georgia, serif; font-weight: 400; letter-spacing: 0; }
 .studio ::selection { background: rgb(246 231 166 / 0.8); }
+
+/* כפתורים כהים בעורך (מעבר צבע): טקסט בהיר. בלי זה הטקסט כהה על רקע כהה והכפתור נראה כבוי */
+[class~="from-violet-600"],
+[class~="from-violet-500"] {
+  color: #fbf8f2;
+}
+[class~="from-violet-600"] svg,
+[class~="from-violet-500"] svg {
+  color: #fbf8f2;
+}

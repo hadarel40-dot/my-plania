@@ -65,7 +65,7 @@ export function StylePicker({ applyButton = false }: { applyButton?: boolean }) 
           {busy ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />} להחיל על הסרטון עכשיו
         </button>
       )}
-      {msg && <p className="text-xs text-emerald-300">✓ {msg}</p>}
+      {msg && <p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">✓ {msg}. אפשר לבטל עם החץ אחורה למטה.</p>}
     </div>
   );
 }
