@@ -1,4 +1,5 @@
 "use client";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -41,7 +42,8 @@ function ReelStudio() {
       <PageHead label="יצירה" title={isCarousel ? "סטודיו" : "סטודיו"} accent={isCarousel ? "הקרוסלה" : "הריל"} sub={isCarousel ? "רעיון, שקופיות בקול שלך, עיצוב ותמונות, ושליחה לאינסטגרם." : "רעיון, שלושה הוקים עם ציון, תסריט, טקסט על המסך ורשימת שוטים. כל ריל עובר את הבדיקות לפני שמצלמים."}>
         <Btn variant="line" onClick={() => router.push(isCarousel ? "/studio/reel?mode=carousel" : "/studio/new")}>{isCarousel ? "קרוסלה חדשה" : "ריל חדש"}</Btn>
       </PageHead>
-      <div className="grid gap-5 lg:grid-cols-[220px_1fr] xl:grid-cols-[220px_1fr_300px]">
+      {/* ריל מהסטודיו מקבל את כל הרוחב (בלי עמודת הבדיקות של התסריט), כדי שהעיצוב לא יידחס במחשב */}
+      <div className={cn("grid gap-5 lg:grid-cols-[220px_1fr]", !draft?.data.edit && "xl:grid-cols-[220px_1fr_300px]")}>
         <aside className="order-2 lg:order-1">
           <p className="mb-2 text-xs font-semibold text-[#6A6158]">{isCarousel ? "קרוסלות אחרונות" : "רילס אחרונים"}</p>
           {!drafts ? <Loading /> : listed.length === 0 ? <p className="text-sm text-[#6A6158]">עוד אין טיוטות.</p> : (
@@ -63,7 +65,7 @@ function ReelStudio() {
             : id ? <Loading />
             : <IdeaForm params={params} onCreated={(d) => { upsert(d); router.push(`/studio/reel?id=${d.id}`); }} />}
         </div>
-        <aside className="order-3 hidden space-y-5 xl:block">{draft && <ChecksPanel draft={draft} />}</aside>
+        {!draft?.data.edit && <aside className="order-3 hidden space-y-5 xl:block">{draft && <ChecksPanel draft={draft} />}</aside>}
       </div>
     </>
   );

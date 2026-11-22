@@ -212,9 +212,9 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
   const changed = Object.keys(design).length > 0;
   return (
     <Panel title="הריל" accent="שלך" aside={draft.data.content_type ? <Tag tone="butter">{labelOf(CONTENT_TYPES, draft.data.content_type)}</Tag> : undefined}>
-      <div className="grid gap-5 md:grid-cols-[280px_1fr]">
+      <div className="grid gap-5 md:grid-cols-[260px_1fr] lg:grid-cols-[300px_1fr]">
         {/* הנגן מחושב משמאל לימין: בדף בעברית הוא זז מחוץ למסגרת בלי זה */}
-        <div dir="ltr" className="mx-auto aspect-[9/16] w-full max-w-[280px] overflow-hidden rounded-2xl bg-black shadow-[0_20px_40px_-24px_rgba(94,29,29,0.8)]">
+        <div dir="ltr" className="mx-auto aspect-[9/16] w-full max-w-[300px] self-start overflow-hidden rounded-2xl bg-black shadow-[0_20px_40px_-24px_rgba(94,29,29,0.8)] md:sticky md:top-4">
           {inputProps ? (
             <MediaTagsContext.Provider value={SMOOTH_TAGS}>
             <Player ref={playerRef} component={TimelineComposition} inputProps={inputProps} durationInFrames={frames} fps={timeline.fps}
@@ -250,14 +250,14 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
 
           <div>
             <p className="mb-2 text-[13px] font-bold text-[#5E1D1D]">או בוחרים סגנון טקסט</p>
-            <div className="grid grid-cols-4 gap-1.5 md:gap-2">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(92px,1fr))] gap-2">
               {REEL_STYLES.map((st) => {
                 const on = style === st.id;
                 return (
                   <button key={st.id} type="button" onClick={() => chooseStyle(st.variant)} aria-pressed={on}
                     className={cn("overflow-hidden rounded-2xl border-2 text-right transition", on ? "border-[#5E1D1D] shadow-[0_10px_20px_-14px_rgba(94,29,29,0.9)]" : "border-[#E3D9CC] hover:border-[#B5848E]")}>
                     <StylePreview id={st.id} design={design} />
-                    <span className={cn("block px-1.5 py-1.5 text-[10px] font-bold leading-tight md:text-[11px]", on ? "bg-[#5E1D1D] text-[#FAF6F1]" : "bg-white text-[#2A2622]")}>{st.variant} · {st.label}</span>
+                    <span className={cn("line-clamp-2 block min-h-[34px] px-2 py-1.5 text-[11px] font-bold leading-tight", on ? "bg-[#5E1D1D] text-[#FAF6F1]" : "bg-white text-[#2A2622]")}>{st.variant} · {st.label}</span>
                   </button>
                 );
               })}
@@ -706,7 +706,7 @@ function StylePreview({ id, design }: { id: CaptionStyleId; design: ReelDesign }
   const font = `"${REEL_FONTS.find((f) => f.id === (design.font ?? "assistant"))?.family ?? "Assistant"}"`;
   const dark = acc === "#5E1D1D" || acc === "#2A2622";
   return (
-    <span className="relative block aspect-[4/5] w-full" style={{ background: "linear-gradient(170deg,#b98a7c,#6f3a36 60%,#2a1212)", fontFamily: font }}>
+    <span className="relative block aspect-[4/5] w-full overflow-hidden" style={{ background: "linear-gradient(170deg,#b98a7c,#6f3a36 60%,#2a1212)", fontFamily: font }}>
       {id === "pop" && <span className="absolute inset-0 flex items-center justify-center text-[26px] font-black" style={{ color: main, WebkitTextStroke: `1px ${acc}`, textShadow: "0 2px 6px rgba(0,0,0,.5)" }}>ככה</span>}
       {id === "chips" && (
         <span className="absolute inset-x-1 top-[38%] text-center">
