@@ -70,7 +70,11 @@ function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: numb
 }
 
 /** images: מספר שקופית -> כתובת תמונה (מהדרייב) */
-export async function renderSlide(c: Carousel, index: number, images: Record<number, string> = {}): Promise<HTMLCanvasElement> {
+/** מקום שמחכה למספר שלה מופיע כ-[המספר שלך], בלי הסוגריים הגולמיים */
+const fill = (s: string) => s.replace(/\{\{\s*([^}]+?)\s*\}\}/g, "[$1]");
+
+export async function renderSlide(c0: Carousel, index: number, images: Record<number, string> = {}): Promise<HTMLCanvasElement> {
+  const c: Carousel = { ...c0, slides: c0.slides.map((s) => ({ ...s, headline: fill(s.headline), body: fill(s.body) })) };
   if (document.fonts) {
     await Promise.all([document.fonts.load(`900 80px ${SERIF_BASE}`), document.fonts.load(`600 40px ${SANS_BASE}`), document.fonts.load(`800 26px ${SANS_BASE}`), document.fonts.load(`700 60px ${HAND}`)]).catch(() => {});
   }

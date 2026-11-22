@@ -69,9 +69,12 @@ ${niches}
 
 // ---------- ביצועים, בקיצור, למודל
 
-export async function performanceSummary(limit = 12) {
-  const accounts = await loadAccounts({ limit });
-  if (!accounts.length) return "אינסטגרם לא מחובר, אין נתוני ביצועים.";
+export async function performanceSummary(limit = 12, only?: string) {
+  const all = await loadAccounts({ limit });
+  if (!all.length) return "אינסטגרם לא מחובר, אין נתוני ביצועים.";
+  const want = only?.replace(/^@/, "").toLowerCase();
+  const accounts = want ? all.filter((a) => a.ok && a.profile.username.toLowerCase() === want) : all;
+  if (want && !accounts.length) return `אין עדיין נתוני ביצועים של @${want}. לא להסתמך על ביצועים של חשבון אחר.`;
   return accounts.map((a) => {
     if (!a.ok) return `חשבון שלא נקרא: ${a.error}`;
     const rows = a.media.map((m) => ({
@@ -106,7 +109,8 @@ const TodaySchema = z.object({
 export type Recommendation = z.infer<typeof TodaySchema>["recommendations"][number];
 
 export async function planToday(input: { trends: TrendItem[]; trendDate: string | null; board: Record<string, number>; planned: unknown[]; waiting: unknown[] }) {
-  const performance = await performanceSummary();
+  // ההמלצות היומיות הן ל-Plania, ולכן לומדות רק מהביצועים של @plania.il
+  const performance = await performanceSummary(12, "plania.il").catch(() => "לא הצלחתי לקרוא ביצועים של @plania.il.");
   const { recommendations } = cleanDeep(await askBrain({ prefer: "claude",
     schema: TodaySchema,
     system: "את מנהלת הסושיאל שלה. היא נכנסת לדשבורד ורוצה לדעת מה לצלם היום, איך ולמה זה יעבוד. עברית ישירה וחמה, בלי אימוג'י, בלי מקפים ארוכים, בלי קלישאות.",
@@ -121,7 +125,7 @@ ${JSON.stringify(input.trends.slice(0, 12).map((t) => ({ niche: t.niche, kind: t
 מתוכנן לשבוע הקרוב: ${JSON.stringify(input.planned)}
 ממתין לאישור שלה: ${JSON.stringify(input.waiting)}
 
-ביצועים אחרונים (שמירות ושיתופים חשובים יותר מלייקים):
+ביצועים אחרונים של @plania.il בלבד (שמירות ושיתופים חשובים יותר מלייקים). אם כתוב שאין נתונים, כל why אומר "אין עדיין נתונים מהחשבון" ונשען רק על הנושאים של Plania והטרנדים:
 ${performance}
 
 תני בדיוק שלוש המלצות, מהשפעה גבוהה לנמוכה. לכל אחת:

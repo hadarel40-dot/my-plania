@@ -1,4 +1,5 @@
 "use client";
+import { ShareHint } from "./share-hint";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, ImagePlus, Plus, Trash2, Undo2, X } from "lucide-react";
 import type { Carousel, Draft, Slide } from "@/lib/studio/config";
@@ -221,7 +222,7 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
             }} />
           </div>
         )}
-        <p className="mt-2 text-[11px] text-[#6F675C]">מהטלפון: "לשלוח לאינסטגרם" פותח את אינסטגרם עם כל השקופיות לפי הסדר. שם מוסיפים מוזיקה טרנדית, מדביקים את הכיתוב (כבר הועתק), ומפרסמים או שומרים כטיוטה.</p>
+        <ShareHint />
       </Panel>
 
       {edit && <SlideEditor edit={edit} setEdit={setEdit} images={images} />}

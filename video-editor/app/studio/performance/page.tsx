@@ -99,6 +99,9 @@ function AccountView({ acc, history }: { acc: IgAccount; history: { date: string
   const recent = [...acc.media].sort((a, b) => b.timestamp.localeCompare(a.timestamp)).slice(0, 6);
   // מה הכי נשלח השבוע: שליחות ביחס להגעה, האות שאינסטגרם נותנת לו הכי הרבה משקל להפצה לא-עוקבים
   const sharesRate = (p: IgAccount["media"][number]) => ((p.insights?.reach ?? 0) > 0 ? (p.insights?.shares ?? 0) / p.insights!.reach! : 0);
+  const weekPosts = acc.media.filter((p) => p.timestamp >= weekAgo);
+  // האם אינסטגרם החזירה בכלל את מספר השליחות (אפס אמיתי), או שהנתון חסר
+  const sharesRead = weekPosts.some((p) => typeof p.insights?.shares === "number");
   const topShared = acc.insightsAvailable ? acc.media.filter((p) => p.timestamp >= weekAgo && (p.insights?.shares ?? 0) > 0).sort((a, b) => sharesRate(b) - sharesRate(a))[0] : undefined;
 
   return (
@@ -110,9 +113,9 @@ function AccountView({ acc, history }: { acc: IgAccount; history: { date: string
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <StatTile label={m?.metricLabel === "לייקים" ? "הלייקים הרגילים שלך" : "החשיפה הרגילה שלך"} value={m ? num(m.usual) : "אין נתון"} />
         <StatTile label="הכי טוב עכשיו" value={m?.best ? num(m.bestValue) : "אין נתון"} chip={m?.ratio && m.ratio >= 1.5 ? `פי ${m.ratio} מהרגיל` : undefined} hint={m?.best ? (m.best.caption ?? "").split("\n")[0].slice(0, 40) : "אין פוסטים בשבועיים האחרונים"} />
-        <StatTile label="הכי נשלח השבוע" value={!acc.insightsAvailable ? "אין הרשאה" : topShared ? `${num(topShared.insights?.shares)} שליחות` : "אין שליחות השבוע"}
+        <StatTile label="הכי נשלח השבוע" value={!acc.insightsAvailable ? "אין הרשאה" : topShared ? `${num(topShared.insights?.shares)} שליחות` : weekPosts.length === 0 ? "אין פוסטים השבוע" : sharesRead ? "0 שליחות השבוע" : "השליחות לא נקראו"}
           chip={topShared ? `${(sharesRate(topShared) * 100).toFixed(1)} לכל 100 שהגיעו` : undefined}
-          hint={topShared ? (topShared.caption ?? "").split("\n")[0].slice(0, 40) : "שליחה בהודעה היא האות החזק ביותר להגעה לאנשים חדשים"} />
+          hint={topShared ? (topShared.caption ?? "").split("\n")[0].slice(0, 40) : weekPosts.length && !sharesRead ? "אינסטגרם לא החזירה את מספר השליחות לפוסטים של השבוע" : "שליחה בהודעה היא האות החזק ביותר להגעה לאנשים חדשים"} />
       </div>
       <Panel label="רילס אחרונים" className="mt-3">
         <ul className="divide-y divide-[#ECE7DE]">

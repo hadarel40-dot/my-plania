@@ -1,4 +1,5 @@
 "use client";
+import { ShareHint } from "./share-hint";
 import { useEffect, useState } from "react";
 import { CONTENT_TYPES, labelOf, type Draft } from "@/lib/studio/config";
 import { db } from "@/lib/studio/client";
@@ -52,7 +53,7 @@ export function ReadyVideo({ draft, title = "הריל", accent = "מוכן" }: {
             <Btn variant="line" disabled={!url} onClick={download}>להוריד</Btn>
             {caption && <Btn variant="line" onClick={() => navigator.clipboard.writeText(caption).then(() => toast("הכיתוב הועתק"))}>להעתיק כיתוב</Btn>}
           </div>
-          <p className="mt-2 text-[12px] text-[#6F675C]">מהטלפון: "לשלוח לאינסטגרם" פותח את אינסטגרם עם הסרטון. שם מוסיפים מוזיקה טרנדית, מדביקים את הכיתוב (כבר הועתק), ומפרסמים או שומרים כטיוטה.</p>
+<ShareHint />
           {caption && <p className="mt-3 whitespace-pre-line text-sm leading-relaxed">{caption}</p>}
         </div>
       </div>

@@ -329,6 +329,13 @@ function DraftView({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => 
   );
 }
 
+/** בדיקות ישנות שמרו את המשתנה הגולמי. מציגים במקומו הסבר */
+function friendlyDetail(detail: string) {
+  const n = (detail.match(/\{\{[^}]+\}\}/g) ?? []).length;
+  if (!n) return detail;
+  return `חסר מספר אמיתי ב${n === 1 ? "מקום אחד" : `-${n} מקומות`}. בשקופיות כתוב שם [המספר שלך]: מחליפים אותו במספר שלך, או מוחקים את המשפט.`;
+}
+
 function ChecksPanel({ draft }: { draft: Draft }) {
   const all = draft.data.checks ?? [];
   const [showAll, setShowAll] = useState(false);
@@ -343,7 +350,7 @@ function ChecksPanel({ draft }: { draft: Draft }) {
         {checks.map((c) => (
           <li key={c.id} className="flex gap-2 text-sm">
             {c.info ? <span className="mt-0.5 size-4 shrink-0 border border-[#2A2622]/40" /> : c.pass ? <Check className="mt-0.5 size-4 shrink-0 text-[#3E6B4F]" /> : <X className="mt-0.5 size-4 shrink-0 text-[#A3402F]" />}
-            <span><span className="block font-semibold">{c.label}</span><span className="block text-xs text-[#6F675C]">{c.detail}</span></span>
+            <span><span className="block font-semibold">{c.label}</span><span className="block text-xs text-[#6F675C]">{friendlyDetail(c.detail)}</span></span>
           </li>
         ))}
       </ul>
