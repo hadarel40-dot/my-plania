@@ -109,7 +109,8 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
       setShotUrls((u) => ({ ...u, ...Object.fromEntries((data ?? []).flatMap((d) => (d.path && d.signedUrl ? [[d.path, d.signedUrl]] : []))) })));
   }, [shotKey]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (showDesign) void ensureExtraFonts(); }, [showDesign]);
-  const timeline = useMemo(() => buildReelTimeline(kit, style, design, shotUrls).timeline, [kit, style, design, shotUrls]);
+  const built = useMemo(() => buildReelTimeline(kit, style, design, shotUrls), [kit, style, design, shotUrls]);
+  const timeline = built.timeline;
   // קריינות: נכנסת כמסלול שמע מתחילת הריל
   const vo = draft.data.voiceover;
   const [voUrl, setVoUrl] = useState<string | null>(null);
@@ -118,12 +119,14 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
     db().storage.from(MEDIA_BUCKET).createSignedUrl(vo.path, 6 * 60 * 60).then(({ data }) => setVoUrl(data?.signedUrl ?? null));
   }, [vo?.path]); // eslint-disable-line react-hooks/exhaustive-deps
   const full = useMemo(() => {
-    if (!vo || !voUrl || !assets) return { timeline, assets };
+    // הקלטות המסך באות מהעיצוב, והקטעים מהטעינה המלאה
+    const shotAssets = Object.fromEntries(Object.entries(built.assets).filter(([id]) => id.startsWith("shot-")));
+    if (!vo || !voUrl || !assets) return { timeline, assets: assets ? { ...assets, ...shotAssets } : null };
     return {
       timeline: { ...timeline, audio: [{ id: "voiceover", assetId: "voiceover", start: 0, in: 0, out: vo.seconds, volume: vo.volume ?? 1, fadeIn: 0, fadeOut: 0.2 }] },
-      assets: { ...assets, voiceover: { id: "voiceover", name: "קריינות", url: voUrl, thumbnailUrl: null, duration: vo.seconds, width: 0, height: 0, origin: "upload" as const, kind: "audio" as const } },
+      assets: { ...assets, ...shotAssets, voiceover: { id: "voiceover", name: "קריינות", url: voUrl, thumbnailUrl: null, duration: vo.seconds, width: 0, height: 0, origin: "upload" as const, kind: "audio" as const } },
     };
-  }, [timeline, assets, vo, voUrl]);
+  }, [timeline, built, assets, vo, voUrl]);
   const playerRef = useRef<PlayerRef>(null);
   const inputProps = useMemo<CompositionProps | null>(() => (full.assets ? { timeline: full.timeline, assets: full.assets, override: null } : null), [full]);
   const frames = Math.max(1, Math.ceil(timelineDuration(timeline) * timeline.fps));
@@ -515,15 +518,18 @@ function TextsEditor({ draft, onChange, design, setD, globalStyle }: { draft: Dr
   const addShot = async (n: number, file: File) => {
     setBusy(`shot${n}`);
     try {
-      const bmp = await createImageBitmap(file);
+      const isVideo = file.type.startsWith("video/");
+      const meta = isVideo
+        ? await new Promise<{ width: number; height: number; seconds: number }>((res, rej) => { const v = document.createElement("video"); v.preload = "metadata"; v.onloadedmetadata = () => res({ width: v.videoWidth, height: v.videoHeight, seconds: v.duration }); v.onerror = () => rej(new Error("הסרטון לא נקרא")); v.src = URL.createObjectURL(file); })
+        : await createImageBitmap(file).then((b) => ({ width: b.width, height: b.height, seconds: 0 }));
       const { data: u } = await db().auth.getUser();
       if (!u.user) throw new Error("צריך להתחבר מחדש");
-      const ext = (file.name.split(".").pop() || "png").toLowerCase();
+      const ext = (file.name.split(".").pop() || (isVideo ? "mp4" : "png")).toLowerCase();
       const path = `${u.user.id}/studio/${draft.id}/shot-${Date.now()}.${ext}`;
       const { error } = await db().storage.from(MEDIA_BUCKET).upload(path, file, { contentType: file.type || "image/png" });
       if (error) throw new Error(error.message);
-      setD({ shots: [...(design.shots ?? []), { card: n, path, w: bmp.width, h: bmp.height, place: "middle" }] });
-      toast("צילום המסך נוסף");
+      setD({ shots: [...(design.shots ?? []), { card: n, path, w: meta.width, h: meta.height, place: "middle", kind: isVideo ? "video" : "image", ...(isVideo ? { seconds: +meta.seconds.toFixed(2) } : {}) }] });
+      toast(isVideo ? "הקלטת המסך נוספה" : "צילום המסך נוסף");
     } catch (e) { toast((e as Error).message, true); }
     finally { setBusy(""); }
   };
@@ -560,17 +566,17 @@ function TextsEditor({ draft, onChange, design, setD, globalStyle }: { draft: Dr
                   {MOTIONS.map((m) => <Chip key={m.id} on={design.cardMotion?.[String(n)] === m.id} onClick={() => setMotion(n, m.id)}>{m.label}</Chip>)}
                 </Row>
                 <div>
-                  <p className="mb-1.5 text-[12px] font-bold text-[#6A6158]">צילום מסך שקופץ</p>
+                  <p className="mb-1.5 text-[12px] font-bold text-[#6A6158]">צילום מסך או הקלטת מסך שקופצים</p>
                   <div className="flex flex-wrap items-center gap-2">
                     {shots.map((s) => (
                       <span key={s.path} className="inline-flex items-center gap-1.5 rounded-xl border border-[#E3D9CC] bg-white px-2 py-1 text-[12px]">
-                        צילום מסך
+                        {s.kind === "video" ? "הקלטת מסך" : "צילום מסך"}
                         <button type="button" onClick={() => removeShot(s.path)} className="font-bold text-[#A3402F]" aria-label="להסיר את צילום המסך">×</button>
                       </span>
                     ))}
                     <label className={cn("inline-flex min-h-[38px] cursor-pointer items-center rounded-xl border border-dashed border-[#B5848E] px-3 text-[13px] font-bold text-[#5E1D1D]", busy === `shot${n}` && "opacity-50")}>
-                      {busy === `shot${n}` ? "מעלה..." : "+ להוסיף צילום מסך"}
-                      <input type="file" accept="image/*" className="sr-only" disabled={!!busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void addShot(n, f); }} />
+                      {busy === `shot${n}` ? "מעלה..." : "+ צילום מסך או הקלטת מסך"}
+                      <input type="file" accept="image/*,video/*" className="sr-only" disabled={!!busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void addShot(n, f); }} />
                     </label>
                   </div>
                 </div>

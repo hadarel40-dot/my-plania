@@ -1,5 +1,5 @@
 import { uid } from "@/lib/editor/timeline-utils";
-import { NEUTRAL_LOOK, type Clip, type MediaAsset, type Overlay, type Timeline, type TransitionType } from "@/lib/editor/types";
+import { NEUTRAL_LOOK, type Clip, type MediaAsset, type Overlay, type Timeline, type TransitionType, type VideoLayer } from "@/lib/editor/types";
 import { layoutClips } from "@/lib/editor/timeline-utils";
 import type { ReelEditKit } from "./config";
 
@@ -57,7 +57,7 @@ export interface ReelDesign {
   stickers?: boolean;
   cardStickers?: Record<string, string>;
   /** צילומי מסך שקופצים מעל הסרטון בכרטיס מסוים */
-  shots?: { card: number; path: string; w: number; h: number; place?: "top" | "middle" | "bottom" }[];
+  shots?: { card: number; path: string; w: number; h: number; place?: "top" | "middle" | "bottom"; kind?: "image" | "video"; seconds?: number }[];
   /** משחק מלא לכל כרטיס בנפרד: סגנון ומיקום משלו */
   perCard?: Record<string, { style?: CaptionStyleId; place?: "top" | "middle" | "bottom" }>;
 }
@@ -178,7 +178,7 @@ function captions(cards: ReelEditKit["cards"], style: CaptionStyleId, design: Re
     const emFont = design.emFont ?? (style === "editorial" ? "gveret" : headFont);
     const per = design.breaks === "many" ? 2 : design.breaks === "few" ? 4 : style === "editorial" ? 2 : style === "stairs" ? 1 : 3;
     // צילום מסך שקופץ בכרטיס
-    for (const sh of (design.shots ?? []).filter((x) => x.card === ci + 1)) {
+    for (const sh of (design.shots ?? []).filter((x) => x.card === ci + 1 && x.kind !== "video")) {
       const src = shotUrls[sh.path];
       if (!src) continue;
       const wPx = sh.h > sh.w ? 520 : 820;
@@ -297,8 +297,20 @@ export function buildReelTimeline(kit: ReelEditKit, style: CaptionStyleId = "pop
     return +(laid[i]?.start + (t - origStarts[i])).toFixed(2);
   };
   const overlays = captions(kit.cards, style, design, shotUrls).map((o) => ({ ...o, start: Math.max(0, remap(o.start)), end: remap(o.end) }));
+  // הקלטות מסך: חלון מעוגל עם מסגרת מעל הסרטון, בזמן של הכרטיס
+  const layers: VideoLayer[] = [];
+  (design.shots ?? []).filter((s) => s.kind === "video" && shotUrls[s.path]).forEach((s, i) => {
+    const card = kit.cards[s.card - 1];
+    if (!card) return;
+    const id = `shot-${i + 1}`;
+    const vertical = s.h >= s.w;
+    assets[id] = { id, name: "הקלטת מסך", url: shotUrls[s.path], thumbnailUrl: null, duration: s.seconds ?? card.end - card.start, width: s.w, height: s.h, origin: "upload" };
+    const start = remap(card.start + 0.2);
+    const len = Math.max(0.5, Math.min(s.seconds ?? 99, remap(card.end) - start));
+    layers.push({ id: uid("layer"), assetId: id, start, in: 0, out: +len.toFixed(2), layout: "pip", x: 0.5, y: s.place === "top" ? 0.32 : s.place === "bottom" ? 0.66 : 0.5, scale: vertical ? 0.5 : 0.82, shape: "rounded", border: true, opacity: 1, volume: 0 });
+  });
   return {
-    timeline: { fps: 30, aspect: "9:16", clips, captions: [], overlays, audio: [] },
+    timeline: { fps: 30, aspect: "9:16", clips, captions: [], overlays, audio: [], layers },
     assets,
   };
 }
