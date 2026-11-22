@@ -4,6 +4,7 @@ import { CONTENT_TYPES, labelOf, type Draft } from "@/lib/studio/config";
 import { db } from "@/lib/studio/client";
 import { MEDIA_BUCKET } from "@/lib/supabase/env";
 import { Btn, Note, Panel, Tag, toast } from "./ui";
+import { shareToInstagram } from "@/lib/studio/share";
 
 /** סרטון מוכן שהתהליך השבועי יצר: צפייה, הורדה, והכיתוב להעתקה. מוסיפים מוזיקה באינסטגרם */
 export function ReadyVideo({ draft, title = "הריל", accent = "מוכן" }: { draft: Draft; title?: string; accent?: string }) {
@@ -27,6 +28,18 @@ export function ReadyVideo({ draft, title = "הריל", accent = "מוכן" }: {
       setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
     } catch { window.open(url, "_blank"); }
   };
+  const [sending, setSending] = useState(false);
+  const send = async () => {
+    if (!url) return;
+    setSending(true);
+    try {
+      const blob = await (await fetch(url)).blob();
+      const res = await shareToInstagram([new File([blob], "reel.mp4", { type: "video/mp4" })], caption);
+      if (res === "unsupported") { toast("שליחה ישירה עובדת מהטלפון. במחשב: מורידים, ומעלים מהטלפון"); await download(); }
+      else if (res === "shared") toast("הכיתוב הועתק. באינסטגרם: מוסיפים מוזיקה ומדביקים את הכיתוב");
+    } catch (e) { toast((e as Error).message, true); }
+    finally { setSending(false); }
+  };
   return (
     <Panel title={title} accent={accent} aside={draft.data.content_type ? <Tag tone="butter">{labelOf(CONTENT_TYPES, draft.data.content_type)}</Tag> : undefined}>
       <div className="grid gap-4 md:grid-cols-[260px_1fr]">
@@ -35,10 +48,11 @@ export function ReadyVideo({ draft, title = "הריל", accent = "מוכן" }: {
         ) : <div className="aspect-[9/16] w-full max-w-[260px] animate-pulse rounded-xl bg-[#ECE7DE]" />}
         <div className="min-w-0">
           <div className="flex flex-wrap gap-2">
-            <Btn disabled={!url} onClick={download}>להוריד את הסרטון</Btn>
+            <Btn disabled={!url} busy={sending} onClick={send}>לשלוח לאינסטגרם</Btn>
+            <Btn variant="line" disabled={!url} onClick={download}>להוריד</Btn>
             {caption && <Btn variant="line" onClick={() => navigator.clipboard.writeText(caption).then(() => toast("הכיתוב הועתק"))}>להעתיק כיתוב</Btn>}
           </div>
-          <p className="mt-2 text-[12px] text-[#6F675C]">בלי מוזיקה בכוונה: מוסיפים צליל טרנדי באינסטגרם לפני שמעלים. הסטודיו לא מפרסם בעצמו.</p>
+          <p className="mt-2 text-[12px] text-[#6F675C]">מהטלפון: "לשלוח לאינסטגרם" פותח את אינסטגרם עם הסרטון. שם מוסיפים מוזיקה טרנדית, מדביקים את הכיתוב (כבר הועתק), ומפרסמים או שומרים כטיוטה.</p>
           {caption && <p className="mt-3 whitespace-pre-line text-sm leading-relaxed">{caption}</p>}
         </div>
       </div>

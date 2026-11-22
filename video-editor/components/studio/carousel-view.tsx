@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, ImagePlus, Plus, Trash2, Undo2, X } from "lucide-react";
 import type { Carousel, Draft, Slide } from "@/lib/studio/config";
 import { NEW_SLIDE } from "@/lib/studio/carousel-blank";
-import { downloadZip, renderAll } from "@/lib/studio/carousel-render";
+import { downloadZip, renderAll, renderSlide } from "@/lib/studio/carousel-render";
+import { canvasToJpeg, shareToInstagram } from "@/lib/studio/share";
 import { db, studioCall } from "@/lib/studio/client";
 import { MEDIA_BUCKET } from "@/lib/supabase/env";
 import { Btn, Label, Loading, Note, Panel, Select, Tag, inputCls, toast } from "./ui";
@@ -112,6 +113,19 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
     catch (e) { toast((e as Error).message, true); }
     finally { setBusy(""); }
   };
+  // מהטלפון: כל השקופיות נפתחות באינסטגרם כקרוסלה, ושם מוסיפים מוזיקה טרנדית
+  const sendToInstagram = async () => {
+    const car = shown ?? c;
+    if (!car) return;
+    setBusy("send");
+    try {
+      const files = await Promise.all(car.slides.map((_, i) => renderSlide(car, i, photos).then((cv) => canvasToJpeg(cv, `${String(i + 1).padStart(2, "0")}.jpg`))));
+      const res = await shareToInstagram(files, car.caption);
+      if (res === "unsupported") { toast("שליחה ישירה עובדת מהטלפון. במחשב: מורידים, ומעלים מהטלפון"); await downloadZip(car, draft.idea, photos); }
+      else if (res === "shared") toast("הכיתוב הועתק. באינסטגרם: מוסיפים מוזיקה ומדביקים את הכיתוב");
+    } catch (e) { toast((e as Error).message, true); }
+    finally { setBusy(""); }
+  };
   const history = draft.data.carousel_history ?? [];
   const revert = async () => {
     if (!history.length) return;
@@ -174,7 +188,8 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
                 {history.length > 0 && <Btn variant="line" busy={busy === "revert"} onClick={revert}><Undo2 className="size-4" />לחזור לגרסה הקודמת</Btn>}
                 <Btn variant="ghost" busy={busy === "regen"} onClick={regen}>לכתוב מחדש עם AI</Btn>
                 <Btn variant="line" onClick={() => setEdit(structuredClone(c))}>לערוך</Btn>
-                <Btn busy={busy === "zip"} onClick={async () => { setBusy("zip"); try { await downloadZip(shown ?? c, draft.idea, photos); } finally { setBusy(""); } }}>להוריד את התמונות</Btn>
+                <Btn busy={busy === "send"} onClick={sendToInstagram}>לשלוח לאינסטגרם</Btn>
+                <Btn variant="line" busy={busy === "zip"} onClick={async () => { setBusy("zip"); try { await downloadZip(shown ?? c, draft.idea, photos); } finally { setBusy(""); } }}>להוריד</Btn>
               </>
             )}
           </div>
@@ -206,7 +221,7 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
             }} />
           </div>
         )}
-        <p className="mt-2 text-[11px] text-[#6F675C]">ההורדה כוללת את כל השקופיות כ-PNG ואת הכיתוב. מעלים אותן לאינסטגרם לפי הסדר. הסטודיו לא מפרסם בעצמו.</p>
+        <p className="mt-2 text-[11px] text-[#6F675C]">מהטלפון: "לשלוח לאינסטגרם" פותח את אינסטגרם עם כל השקופיות לפי הסדר. שם מוסיפים מוזיקה טרנדית, מדביקים את הכיתוב (כבר הועתק), ומפרסמים או שומרים כטיוטה.</p>
       </Panel>
 
       {edit && <SlideEditor edit={edit} setEdit={setEdit} images={images} />}

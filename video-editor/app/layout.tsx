@@ -3,7 +3,7 @@ import "./globals.css";
 import { FONTS_CSS } from "@/lib/editor/fonts";
 
 export const metadata: Metadata = {
-  title: "AI Video Editor",
+  title: "Plania · עורך וסטודיו",
   description: "עורך וידאו בענן עם וריאציות AI",
 };
 

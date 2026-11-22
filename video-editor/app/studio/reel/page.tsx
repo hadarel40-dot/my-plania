@@ -29,19 +29,21 @@ function ReelStudio() {
     db().from("studio_drafts").select("*").order("updated_at", { ascending: false }).limit(60).then(({ data }) => setDrafts((data as Draft[]) ?? []));
   }, []);
   const draft = useMemo(() => drafts?.find((d) => d.id === id) ?? null, [drafts, id]);
+  const isCarousel = draft ? draft.mode === "carousel" : params.get("mode") === "carousel";
+  const listed = (drafts ?? []).filter((d) => (d.mode === "carousel") === isCarousel);
   const upsert = (saved: Draft) => setDrafts((all) => (all?.some((d) => d.id === saved.id) ? all.map((d) => (d.id === saved.id ? saved : d)) : [saved, ...(all ?? [])]));
 
   return (
     <>
-      <PageHead label="יצירה" title="סטודיו" accent="הריל" sub="רעיון, שלושה הוקים עם ציון, תסריט, טקסט על המסך ורשימת שוטים. כל ריל עובר את הבדיקות של ig-reel לפני שמצלמים.">
-        <Btn variant="line" onClick={() => router.push("/studio/reel")}>ריל חדש</Btn>
+      <PageHead label="יצירה" title={isCarousel ? "סטודיו" : "סטודיו"} accent={isCarousel ? "הקרוסלה" : "הריל"} sub={isCarousel ? "רעיון, שקופיות בקול שלך, עיצוב ותמונות, ושליחה לאינסטגרם." : "רעיון, שלושה הוקים עם ציון, תסריט, טקסט על המסך ורשימת שוטים. כל ריל עובר את הבדיקות לפני שמצלמים."}>
+        <Btn variant="line" onClick={() => router.push(isCarousel ? "/studio/reel?mode=carousel" : "/studio/new")}>{isCarousel ? "קרוסלה חדשה" : "ריל חדש"}</Btn>
       </PageHead>
       <div className="grid gap-5 lg:grid-cols-[220px_1fr] xl:grid-cols-[220px_1fr_300px]">
         <aside className="order-2 lg:order-1">
-          <p className="mb-2 text-xs font-semibold text-[#6F675C]">טיוטות אחרונות</p>
-          {!drafts ? <Loading /> : drafts.length === 0 ? <p className="text-sm text-[#6F675C]">עוד אין טיוטות.</p> : (
+          <p className="mb-2 text-xs font-semibold text-[#6F675C]">{isCarousel ? "קרוסלות אחרונות" : "רילס אחרונים"}</p>
+          {!drafts ? <Loading /> : listed.length === 0 ? <p className="text-sm text-[#6F675C]">עוד אין טיוטות.</p> : (
             <ul className="space-y-1">
-              {drafts.map((d) => (
+              {listed.map((d) => (
                 <li key={d.id}>
                   <Link href={`/studio/reel?id=${d.id}`} className={`block rounded-lg border px-2.5 py-2 text-sm ${d.id === id ? "border-[#1F1B16] bg-[#FBF8F2]" : "border-transparent hover:border-[#E2DACD]"}`}>
                     <span className="line-clamp-2 block">{d.idea}</span>

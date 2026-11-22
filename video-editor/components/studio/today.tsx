@@ -62,9 +62,9 @@ export function TodayPost({ today }: { today: string }) {
         <div className="min-w-0 flex-1 space-y-2">
           {d ? (
             <>
-              <p className="text-sm">{variants > 1 ? `גרסה ${chosenId}${d.data.chosen_variant ? "" : " (ברירת מחדל)"}. ` : ""}מורידים, מוסיפים מוזיקה באינסטגרם ומעלים.</p>
+              <p className="text-sm">{variants > 1 ? `גרסה ${chosenId}${d.data.chosen_variant ? "" : " (ברירת מחדל)"}. ` : ""}{d.data.video || d.data.carousel ? "שולחים לאינסטגרם מהטלפון, מוסיפים מוזיקה טרנדית ומפרסמים או שומרים כטיוטה." : "יש תסריט ורשימת שוטים. מצלמים, ואז עורכים בעורך הווידאו."}</p>
               {variants > 1 && <Link href="/studio/pick" className="block text-[12px] underline underline-offset-4">להחליף גרסה</Link>}
-              <Link href={`/studio/reel?id=${d.id}`} className="inline-flex rounded-[5px] bg-[#1F1B16] px-3.5 py-2 text-[13px] font-bold text-[#FBF8F2]">{next.format === "carousel" ? "להוריד את השקופיות" : "להוריד את הסרטון"}</Link>
+              <Link href={`/studio/reel?id=${d.id}`} className="inline-flex rounded-[5px] bg-[#1F1B16] px-3.5 py-2 text-[13px] font-bold text-[#FBF8F2]">{d.data.video || d.data.carousel ? "לשלוח לאינסטגרם" : "לפתוח את התסריט ולצלם"}</Link>
             </>
           ) : <p className="text-sm">עוד אין טיוטה לפוסט הזה.</p>}
           {caption && <Btn variant="line" onClick={() => navigator.clipboard.writeText(caption).then(() => toast("הכיתוב הועתק"))}>להעתיק כיתוב</Btn>}
