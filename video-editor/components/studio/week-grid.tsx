@@ -127,8 +127,7 @@ function Row({ label, Icon, children }: { label: string; Icon: typeof PlaySquare
 
 function Cell({ item, draft, thumb }: { item: Item; draft?: Draft; thumb?: string }) {
   const variants = draft?.data.variants?.length ?? 0;
-  const waiting = variants > 1 && !draft?.data.chosen_variant;
-  const href = waiting ? "/studio/pick" : draft ? `/studio/reel?id=${draft.id}` : "/studio/board";
+  const href = draft ? `/studio/reel?id=${draft.id}` : "/studio/board";
   const type = item.content_type || draft?.data.content_type;
   return (
     <Link href={href} className="group relative block overflow-hidden rounded-xl border border-[#E2DACD] bg-[#2A2622] shadow-[0_1px_2px_rgba(31,27,22,0.12)]">
@@ -139,7 +138,7 @@ function Cell({ item, draft, thumb }: { item: Item; draft?: Draft; thumb?: strin
         )}
         {/* תג שלב רק כשהוא אומר משהו: טיוטה ורעיון הם ברירת המחדל */}
         {!["idea", "draft"].includes(item.stage) && <span className="absolute right-1.5 top-1.5 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-[#1F1B16]" style={{ background: STAGE_TONE[item.stage] ?? "#ECE7DE" }}>{STAGE_LABEL[item.stage] ?? item.stage}</span>}
-        {waiting && <span className="absolute left-1.5 top-1.5 rounded-md bg-[#1F1B16] px-1.5 py-0.5 text-[10px] font-bold text-[#FBF8F2]">{variants} גרסאות</span>}
+        {variants > 1 && <span className="absolute left-1.5 top-1.5 rounded-md bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-[#1F1B16]">{variants} גרסאות</span>}
         <span className="absolute bottom-1.5 right-1.5 rounded-md bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-[#1F1B16]">
           {item.format === "carousel" ? "קרוסלה" : item.format === "reel" ? "ריל" : item.format === "story" ? "סטורי" : "תמונה"}{type ? ` · ${labelOf(CONTENT_TYPES, type)}` : ""}
         </span>

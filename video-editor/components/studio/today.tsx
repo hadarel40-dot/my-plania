@@ -47,7 +47,7 @@ export function TodayPost({ today }: { today: string }) {
   const d = next.draft_id ? data.drafts[next.draft_id] : undefined;
   const thumb = data.thumbs[thumbPath(d) ?? ""];
   const variants = d?.data.variants?.length ?? 0;
-  const waiting = variants > 1 && !d?.data.chosen_variant;
+  const chosenId = d?.data.chosen_variant ?? d?.data.variants?.[0]?.id;
   const type = next.content_type || d?.data.content_type;
   const isToday = next.planned_date === today;
   const caption = next.caption || d?.data.caption || d?.data.carousel?.caption || "";
@@ -60,14 +60,10 @@ export function TodayPost({ today }: { today: string }) {
           {thumb ? <img src={thumb} alt="" className="size-full object-cover" /> : <p className="p-2 text-[11px] font-bold">{next.hook}</p>}
         </div>
         <div className="min-w-0 flex-1 space-y-2">
-          {waiting ? (
+          {d ? (
             <>
-              <p className="text-sm">יש {variants} גרסאות. בוחרים אחת, ואז מורידים ומעלים.</p>
-              <Link href="/studio/pick" className="inline-flex rounded-[5px] bg-[#1F1B16] px-3.5 py-2 text-[13px] font-bold text-[#FBF8F2]">לבחור גרסה</Link>
-            </>
-          ) : d ? (
-            <>
-              <p className="text-sm">{d.data.chosen_variant ? `נבחרה גרסה ${d.data.chosen_variant}. ` : ""}מורידים, מוסיפים מוזיקה באינסטגרם ומעלים.</p>
+              <p className="text-sm">{variants > 1 ? `גרסה ${chosenId}${d.data.chosen_variant ? "" : " (ברירת מחדל)"}. ` : ""}מורידים, מוסיפים מוזיקה באינסטגרם ומעלים.</p>
+              {variants > 1 && <Link href="/studio/pick" className="block text-[12px] underline underline-offset-4">להחליף גרסה</Link>}
               <Link href={`/studio/reel?id=${d.id}`} className="inline-flex rounded-[5px] bg-[#1F1B16] px-3.5 py-2 text-[13px] font-bold text-[#FBF8F2]">{next.format === "carousel" ? "להוריד את השקופיות" : "להוריד את הסרטון"}</Link>
             </>
           ) : <p className="text-sm">עוד אין טיוטה לפוסט הזה.</p>}

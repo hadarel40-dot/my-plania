@@ -101,7 +101,7 @@ export type ContentType = (typeof CONTENT_TYPES)[number]["value"];
 export interface ReadyVideo { path: string; cover?: string; seconds?: number }
 
 /** גרסה אחת של פוסט (ריל או קרוסלה). היא בוחרת אחת ומשאירה הערה על כל גרסה */
-export interface Variant { id: string; label: string; video?: ReadyVideo; carousel?: Carousel; comment?: string }
+export interface Variant { id: string; label: string; video?: ReadyVideo; carousel?: Carousel; comment?: string; reaction?: "like" | "dislike" }
 
 export interface DraftData {
   /** כמה גרסאות לבחירה, והגרסה שנבחרה */

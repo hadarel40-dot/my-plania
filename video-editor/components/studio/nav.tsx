@@ -14,7 +14,7 @@ const GROUPS: Group[] = [
   { key: "today", label: "היום", href: "/studio", subs: [] },
   { key: "plan", label: "תכנון", href: "/studio/board", subs: [
     { href: "/studio/board", label: "לוח התוכן", count: "board" },
-    { href: "/studio/pick", label: "בחירת גרסאות", count: "pick" },
+    { href: "/studio/pick", label: "בחירת גרסאות" },
     { href: "/studio/ideas", label: "רעיונות", count: "ideas" },
     { href: "/studio/trends", label: "טרנדים", count: "trends" },
     { href: "/studio/hooks", label: "משפטי פתיחה", count: "hooks" },
@@ -48,7 +48,7 @@ export function StudioNav({ counts }: { counts: NavCounts }) {
     <nav aria-label="ניווט בסטודיו" className="space-y-2">
       <div className="flex gap-1 overflow-x-auto rounded-2xl border border-[#E2DACD] bg-[#FBF8F2] p-1 shadow-[0_1px_2px_rgba(31,27,22,0.06)]">
         {GROUPS.map((g) => {
-          const pending = g.key === "plan" ? counts.pick ?? 0 : 0;
+          const pending = 0;
           return (
             <Link key={g.key} href={g.href}
               className={cn("relative flex-1 whitespace-nowrap rounded-xl px-3 py-2 text-center text-sm font-bold transition-colors", g === group ? "bg-[#1F1B16] text-[#FBF8F2]" : "text-[#1F1B16] hover:bg-[#F4EFE6]")}>

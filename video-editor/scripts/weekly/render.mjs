@@ -130,7 +130,7 @@ async function shot(htmlStr, file, w, h, transparent) {
 const jobs = plan.posts.flatMap((post) => (post.variants?.length ? post.variants : [{ id: "A" }]).map((v) => {
   let slides = v.slides ?? post.slides;
   if (v.cover) slides = slides.map((sl, i) => (i === 0 ? { ...sl, ...v.cover } : sl));
-  return { ...post, id: `${post.id}-${v.id}`, slides, captionStyle: v.caption_style ?? "chips" };
+  return { ...post, id: `${post.id}-${v.id}`, slides, captionStyle: v.caption_style ?? post.caption_style ?? plan.caption_style ?? "pop" };
 }));
 for (const post of jobs) {
   const dir = path.join(out, post.id);
