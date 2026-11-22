@@ -46,7 +46,7 @@ export const presetById = (id: string) => OVERLAY_PRESETS.find((p) => p.id === i
 
 export const ANIM_IN_LABELS: Record<Overlay["animIn"], string> = {
   pop: "קפיצה", bounce: "ניתור", "slide-up": "מלמטה", "slide-side": "מהצד",
-  zoom: "זום", typewriter: "הקלדה", fade: "דהייה", none: "בלי",
+  zoom: "זום", typewriter: "הקלדה", fade: "דהייה", blur: "פוקוס", wipe: "חשיפה", drop: "נפילה", spin: "סיבוב", none: "בלי",
 };
 export const LOOP_LABELS: Record<Overlay["loop"], string> = {
   none: "בלי", pulse: "פעימה", wiggle: "נדנוד", float: "ריחוף", shake: "רעידה",

@@ -22,6 +22,8 @@ export function OverlayView({ overlay: o, durationInFrames }: { overlay: Overlay
   let dy = 0;
   let rotate = o.rotate;
   let text = o.text;
+  let blur = 0;
+  let clip: string | undefined;
 
   switch (o.animIn) {
     case "pop":
@@ -43,6 +45,29 @@ export function OverlayView({ overlay: o, durationInFrames }: { overlay: Overlay
       break;
     case "fade":
       opacity = interpolate(frame, [0, 0.4 * fps], [0, 1], { extrapolateRight: "clamp" });
+      break;
+    case "blur": {
+      // מטושטש לחד, כמו פוקוס של מצלמה
+      const q = interpolate(frame, [0, 0.45 * fps], [0, 1], { extrapolateRight: "clamp" });
+      blur = (1 - q) * 22 * unit;
+      opacity = q;
+      scale = interpolate(q, [0, 1], [1.08, 1]);
+      break;
+    }
+    case "wipe": {
+      // נחשף מימין לשמאל, כמו מסכה
+      const q = interpolate(frame, [0, 0.5 * fps], [0, 1], { extrapolateRight: "clamp" });
+      clip = `inset(-20% -5% -20% ${(1 - q) * 105}%)`;
+      break;
+    }
+    case "drop":
+      dy = -(1 - spring({ frame, fps, config: { damping: 9, mass: 0.8 } })) * height * 0.18;
+      opacity = Math.min(1, frame / (0.1 * fps));
+      break;
+    case "spin":
+      rotate += (1 - p) * -35;
+      scale = interpolate(p, [0, 1], [0.3, 1]);
+      opacity = Math.min(1, p * 1.5);
       break;
     case "typewriter": {
       const chars = [...o.text];
@@ -71,6 +96,9 @@ export function OverlayView({ overlay: o, durationInFrames }: { overlay: Overlay
   }
 
   const fontSize = o.size * unit;
+  if (o.kind === "shape") {
+    return <ShapeView o={o} frame={frame} fps={fps} width={width} height={height} unit={unit} opacity={opacity} />;
+  }
   if (o.kind === "image" && o.src) {
     // צילום מסך שקופץ מעל הסרטון: פינות עגולות, מסגרת לבנה וצל
     return (
@@ -87,6 +115,8 @@ export function OverlayView({ overlay: o, durationInFrames }: { overlay: Overlay
         top: o.y * height,
         transform: `translate(-50%, -50%) translate(${dx}px, ${dy}px) rotate(${rotate}deg) scale(${Math.max(0, scale)})`,
         opacity,
+        ...(blur ? { filter: `blur(${blur}px)` } : {}),
+        ...(clip ? { clipPath: clip } : {}),
         maxWidth: width * 0.9,
         width: "max-content",
         direction: "rtl",
@@ -106,5 +136,63 @@ export function OverlayView({ overlay: o, durationInFrames }: { overlay: Overlay
     >
       {text}
     </div>
+  );
+}
+
+/**
+ * גרפיקה שנכתבת על המסך: קו בכתב יד מתחת למילה, עיגול סביבה, חץ, ניצוצות או קרני הדגשה.
+ * הקו "נכתב" בהדרגה (כמו טוש), ואז נשאר. size הוא הרוחב, text הוא סוג הצורה.
+ */
+function ShapeView({ o, frame, fps, width, height, unit, opacity }: { o: Overlay; frame: number; fps: number; width: number; height: number; unit: number; opacity: number }) {
+  const w = o.size * unit;
+  const draw = interpolate(frame, [0, 0.55 * fps], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const sw = Math.max(4, w * 0.018);
+  const common = { fill: "none", stroke: o.color, strokeWidth: sw, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, pathLength: 1, strokeDasharray: 1, strokeDashoffset: 1 - draw };
+  let svg: React.ReactNode = null;
+  let h = w * 0.3;
+  switch (o.text) {
+    case "underline":
+      h = w * 0.16;
+      svg = <path d="M4 60 C 120 30, 260 26, 396 44 M 60 76 C 170 58, 290 58, 360 68" {...common} />;
+      break;
+    case "circle":
+      h = w * 0.5;
+      svg = <path d="M 330 20 C 400 40, 410 140, 300 176 C 180 210, 30 190, 12 120 C -4 60, 90 12, 210 10 C 280 8, 360 30, 372 60" {...common} />;
+      break;
+    case "arrow":
+      h = w * 0.7;
+      svg = <><path d="M 360 20 C 300 40, 200 80, 120 210" {...common} /><path d="M 90 170 L 118 214 L 168 196" {...common} strokeDashoffset={draw > 0.85 ? 0 : 1} /></>;
+      break;
+    case "sparkles": {
+      h = w * 0.6;
+      const s = interpolate(frame, [0, 0.35 * fps, 0.6 * fps], [0, 1.15, 1], { extrapolateRight: "clamp" });
+      const tw = 0.8 + 0.2 * Math.sin((frame / fps) * Math.PI * 3);
+      const star = (x: number, y: number, r: number) => (
+        <g transform={`translate(${x} ${y}) scale(${s * tw})`} key={`${x}${y}`}>
+          <path d={`M 0 ${-r} L ${r * 0.22} ${-r * 0.22} L ${r} 0 L ${r * 0.22} ${r * 0.22} L 0 ${r} L ${-r * 0.22} ${r * 0.22} L ${-r} 0 L ${-r * 0.22} ${-r * 0.22} Z`} fill={o.color} />
+        </g>
+      );
+      svg = <>{star(40, 40, 30)}{star(360, 70, 22)}{star(330, 210, 34)}{star(70, 200, 18)}</>;
+      break;
+    }
+    case "burst": {
+      h = w * 0.6;
+      const len = interpolate(frame, [0, 0.35 * fps], [0, 1], { extrapolateRight: "clamp" });
+      const fade = interpolate(frame, [0.5 * fps, 1.1 * fps], [1, 0.35], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+      const rays = Array.from({ length: 10 }, (_, i) => {
+        const a = (i / 10) * Math.PI * 2;
+        const r1 = 120, r2 = 120 + 70 * len;
+        return <line key={i} x1={200 + Math.cos(a) * r1 * 1.4} y1={120 + Math.sin(a) * r1 * 0.75} x2={200 + Math.cos(a) * r2 * 1.4} y2={120 + Math.sin(a) * r2 * 0.75} stroke={o.color} strokeWidth={sw} strokeLinecap="round" opacity={fade} />;
+      });
+      svg = <>{rays}</>;
+      break;
+    }
+  }
+  const vbH = o.text === "underline" ? 80 : o.text === "circle" ? 200 : o.text === "arrow" ? 240 : 240;
+  return (
+    <svg viewBox={`-10 -10 420 ${vbH + 20}`} preserveAspectRatio="none"
+      style={{ position: "absolute", left: o.x * width - w / 2, top: o.y * height - h / 2, width: w, height: h, opacity, overflow: "visible", transform: `rotate(${o.rotate}deg)`, filter: "drop-shadow(0 3px 6px rgba(0,0,0,.35))" }}>
+      {svg}
+    </svg>
   );
 }

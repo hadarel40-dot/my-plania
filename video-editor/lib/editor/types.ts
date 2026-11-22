@@ -133,7 +133,7 @@ export type ClipEffect = "none" | "zoom-in" | "zoom-out" | "pan-left" | "pan-rig
 export interface Adjust { brightness: number; contrast: number; saturation: number; warmth: number }
 
 /** אנימציית כניסה של טקסט או אימוג'י */
-export type OverlayAnimIn = "pop" | "bounce" | "slide-up" | "slide-side" | "zoom" | "typewriter" | "fade" | "none";
+export type OverlayAnimIn = "pop" | "bounce" | "slide-up" | "slide-side" | "zoom" | "typewriter" | "fade" | "blur" | "wipe" | "drop" | "spin" | "none";
 /** תנועה חוזרת כל עוד הפריט על המסך */
 export type OverlayLoop = "none" | "pulse" | "wiggle" | "float" | "shake";
 export type OverlayAnimOut = "fade" | "pop" | "slide-down" | "none";
@@ -149,7 +149,7 @@ export interface Overlay {
   /** אנימציה שהעורך הקפיץ ברגע חשוב בדיבור (מתחלפת כשמשנים את כמות האנימציות) */
   moment?: boolean;
   id: string;
-  kind: "text" | "emoji" | "image";
+  kind: "text" | "emoji" | "image" | "shape";
   text: string;
   /** תמונה (למשל צילום מסך) כשהשכבה היא תמונה; size הוא הרוחב */
   src?: string;

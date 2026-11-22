@@ -6,7 +6,8 @@ import { timelineDuration } from "@/lib/editor/timeline-utils";
 import type { MediaAsset } from "@/lib/editor/types";
 import { CONTENT_TYPES, labelOf, type Draft } from "@/lib/studio/config";
 import { db } from "@/lib/studio/client";
-import { REEL_COLORS, REEL_FONTS, REEL_STYLES, STICKERS, TRANSITIONS, buildReelTimeline, stickerFor, styleForVariant, type CaptionStyleId, type ReelDesign } from "@/lib/studio/reel-timeline";
+import { DESIGN_PRESETS, MOTIONS, PLAYS, REEL_COLORS, REEL_FONTS, REEL_STYLES, TRANSITIONS, buildReelTimeline, styleForVariant, surpriseDesign, type CaptionStyleId, type MotionId, type ReelDesign } from "@/lib/studio/reel-timeline";
+import { Sparkles } from "lucide-react";
 import { ensureExtraFonts } from "@/lib/editor/fonts";
 import { canShareFiles, shareToInstagram } from "@/lib/studio/share";
 import { MEDIA_BUCKET } from "@/lib/supabase/env";
@@ -22,6 +23,44 @@ async function warm(url: string) {
     } catch { /* רשת: ננסה שוב */ }
     await new Promise((res) => setTimeout(res, 600 * (i + 1)));
   }
+}
+
+/**
+ * הקטעים נטענים במלואם לזיכרון לפני שהנגן מתחיל, ואז הריל מתנגן חלק גם בטלפון ב-4G
+ * (בלי זה כל קטע נטען תוך כדי ניגון, והתצוגה נתקעת וקופצת).
+ */
+async function loadClips(assets: Record<string, MediaAsset>, onProgress: (p: number) => void) {
+  const signed = await signAssets(assets);
+  const list = Object.entries(signed).filter(([, a]) => a.url);
+  const done: Record<string, number> = {};
+  const totals: Record<string, number> = {};
+  const report = () => {
+    const t = list.reduce((n, [id]) => n + (totals[id] || 1), 0);
+    const d = list.reduce((n, [id]) => n + Math.min(done[id] || 0, totals[id] || 1), 0);
+    onProgress(Math.round((d / Math.max(1, t)) * 100));
+  };
+  const out = { ...signed };
+  await Promise.all(list.map(async ([id, a]) => {
+    try {
+      const res = await fetch(a.url);
+      if (!res.ok || !res.body) throw new Error(String(res.status));
+      totals[id] = Number(res.headers.get("content-length")) || 0;
+      const reader = res.body.getReader();
+      const parts: BlobPart[] = [];
+      for (;;) {
+        const { done: end, value } = await reader.read();
+        if (end) break;
+        parts.push(value);
+        done[id] = (done[id] || 0) + value.length;
+        if (!totals[id]) totals[id] = done[id] * 2;
+        report();
+      }
+      totals[id] = done[id];
+      out[id] = { ...a, url: URL.createObjectURL(new Blob(parts, { type: res.headers.get("content-type") || "video/mp4" })) };
+    } catch { /* נשארים עם הכתובת מהאחסון */ }
+    report();
+  }));
+  return out;
 }
 
 /** כתובות צפייה לכל הקבצים של הפרויקט (מהאחסון) */
@@ -47,6 +86,7 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
   const [progress, setProgress] = useState(0);
   const [ready, setReady] = useState<"shared" | "saved" | null>(null);
   const [showDesign, setShowDesign] = useState(false);
+  const [loadPct, setLoadPct] = useState(0);
   const abort = useRef<AbortController | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const variant = draft.data.chosen_variant;
@@ -56,7 +96,8 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
   // הקבצים נחתמים פעם אחת; גרסה ועיצוב רק בונים מחדש את הכתוביות
   useEffect(() => {
     let live = true;
-    signAssets(buildReelTimeline(kit).assets).then((a) => live && setAssets(a)).catch(() => live && setAssets({}));
+    setAssets(null); setLoadPct(0);
+    loadClips(buildReelTimeline(kit).assets, (p) => live && setLoadPct(p)).then((a) => live && setAssets(a)).catch(() => live && setAssets({}));
     return () => { live = false; };
   }, [kit]);
   const [shotUrls, setShotUrls] = useState<Record<string, string>>({});
@@ -72,6 +113,14 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
   const inputProps = useMemo<CompositionProps | null>(() => (assets ? { timeline, assets, override: null } : null), [timeline, assets]);
   const frames = Math.max(1, Math.ceil(timelineDuration(timeline) * timeline.fps));
 
+  // ערכה מוכנה: גרסה ועיצוב שלם, בלי לגעת בטקסטים, בצילומי המסך ובהגדרות של כל כרטיס
+  const applyPreset = async (variantId: string, preset: ReelDesign) => {
+    const next: ReelDesign = { ...preset, shots: design.shots, perCard: design.perCard, cardMotion: design.cardMotion };
+    setDesign(next);
+    const { data, error } = await db().from("studio_drafts").update({ data: { ...draft.data, chosen_variant: variantId, reel_design: next } }).eq("id", draft.id).select("*").single();
+    if (error) return toast(error.message, true);
+    onChange(data as Draft);
+  };
   const chooseStyle = async (variantId: string) => {
     if (variantId === variant) return;
     const { data, error } = await db().from("studio_drafts").update({ data: { ...draft.data, chosen_variant: variantId } }).eq("id", draft.id).select("*").single();
@@ -129,12 +178,36 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
           {inputProps ? (
             <Player component={TimelineComposition} inputProps={inputProps} durationInFrames={frames} fps={timeline.fps}
               compositionWidth={1080} compositionHeight={1920} style={{ width: "100%", height: "100%" }} controls clickToPlay loop />
-          ) : <div className="flex size-full items-center justify-center text-[13px] text-white/80" dir="rtl">טוענת את הסרטונים...</div>}
+          ) : (
+            <div className="flex size-full flex-col items-center justify-center gap-3 px-8 text-center text-[13px] text-white/85" dir="rtl">
+              טוענת את הסרטונים, כדי שהתצוגה תהיה חלקה
+              <span className="h-1.5 w-full overflow-hidden rounded-full bg-white/20"><span className="block h-full rounded-full bg-[#F7C9D6] transition-[width]" style={{ width: `${loadPct}%` }} /></span>
+              <span className="text-[11px] text-white/60">{loadPct}%</span>
+            </div>
+          )}
         </div>
 
         <div className="min-w-0 space-y-5">
           <div>
-            <p className="mb-2 text-[13px] font-bold text-[#5E1D1D]">בוחרים גרסה</p>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-[13px] font-bold text-[#5E1D1D]">ערכות עיצוב מוכנות</p>
+              <button type="button" onClick={() => { const s = surpriseDesign(); void applyPreset(s.variant, s.design); }} className="inline-flex min-h-[34px] items-center gap-1.5 rounded-full bg-[#5E1D1D] px-3 text-[12px] font-bold text-[#FAF6F1]">
+                <Sparkles className="size-3.5" />הפתיעי אותי
+              </button>
+            </div>
+            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
+              {DESIGN_PRESETS.map((pr) => (
+                <button key={pr.id} type="button" onClick={() => applyPreset(pr.variant, pr.design)}
+                  className="w-[104px] shrink-0 overflow-hidden rounded-2xl border-2 border-[#E3D9CC] text-right transition hover:border-[#B5848E]">
+                  <StylePreview id={styleForVariant(pr.variant)} design={pr.design} />
+                  <span className="block bg-white px-2 py-1.5 text-[11px] font-bold leading-tight text-[#2A2622]">{pr.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-2 text-[13px] font-bold text-[#5E1D1D]">או בוחרים סגנון טקסט</p>
             <div className="grid grid-cols-4 gap-1.5 md:gap-2">
               {REEL_STYLES.map((st) => {
                 const on = style === st.id;
@@ -177,8 +250,9 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
                   <Row label="ירידות שורה">
                     {([["few", "מעט"], [undefined, "רגיל"], ["many", "הרבה"]] as const).map(([v, l]) => <Chip key={l} on={design.breaks === v} onClick={() => setD({ breaks: v })}>{l}</Chip>)}
                   </Row>
-                  <Row label="איך האותיות נכנסות">
-                    {([[undefined, "כמו בגרסה"], ["calm", "רגוע"], ["bounce", "קופץ"], ["type", "מכונת כתיבה"], ["zoom", "זום"]] as const).map(([v, l]) => <Chip key={l} on={design.play === v} onClick={() => setD({ play: v })}>{l}</Chip>)}
+                  <Row label="איך האותיות נכנסות" scroll>
+                    <Chip on={!design.play} onClick={() => setD({ play: undefined })}>כמו בגרסה</Chip>
+                    {PLAYS.map((pl) => <Chip key={pl.id} on={design.play === pl.id} onClick={() => setD({ play: pl.id })}>{pl.label}</Chip>)}
                   </Row>
                   <p className="text-[11px] text-[#9A8C85]">כדי לבחור בעצמך איזו מילה מודגשת, שמים אותה בין כוכביות בטקסט, למשל: ככה *באמת* עורכים.</p>
                 </Group>
@@ -187,12 +261,13 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
                     {TRANSITIONS.map((t) => <Chip key={t.id} on={(design.transition ?? "fade") === t.id} onClick={() => setD({ transition: t.id })}>{t.label}</Chip>)}
                   </Row>
                 </Group>
-                <Group title="אנימציות קופצות">
-                  <Row label="לפי הטקסט בכל כרטיס">
-                    <Chip on={!!design.stickers} onClick={() => setD({ stickers: true })}>עם</Chip>
-                    <Chip on={!design.stickers} onClick={() => setD({ stickers: false })}>בלי</Chip>
+                <Group title="גרפיקה מונפשת">
+                  <Row label="נכתבת על המסך ליד המילה החשובה" scroll>
+                    <Chip on={!design.motion || design.motion === "off"} onClick={() => setD({ motion: "off" })}>בלי</Chip>
+                    <Chip on={design.motion === "auto"} onClick={() => setD({ motion: "auto" })}>אוטומטי</Chip>
+                    {MOTIONS.map((m) => <Chip key={m.id} on={design.motion === m.id} onClick={() => setD({ motion: m.id })}>{m.label}</Chip>)}
                   </Row>
-                  <p className="text-[11px] text-[#9A8C85]">כל כרטיס מקבל אנימציה שמתאימה למילים בו (אוכל, שבוע, זמן, רעיון...). אפשר לבחור אחרת לכל כרטיס למטה, ב"כל כרטיס בנפרד".</p>
+                  <p className="text-[11px] text-[#9A8C85]">"אוטומטי" בוחר לכל כרטיס: חץ לשאלה, עיגול למספר, ומתחלף בין השאר כדי שלא יחזור על עצמו. אפשר לבחור אחרת לכל כרטיס ב"כל כרטיס בנפרד".</p>
                 </Group>
                 <Group title="גודל ומיקום">
                   <Row label="גודל">
@@ -280,10 +355,10 @@ function TextsEditor({ draft, onChange, design, setD, globalStyle }: { draft: Dr
     const next = { ...cur, ...patch };
     setD({ perCard: { ...(design.perCard ?? {}), [String(n)]: next } });
   };
-  const setSticker = (n: number, s: string | null) => {
-    const m = { ...(design.cardStickers ?? {}) };
-    if (s === null) delete m[String(n)]; else m[String(n)] = s;
-    setD({ cardStickers: m });
+  const setMotion = (n: number, m: MotionId | "off" | null) => {
+    const map = { ...(design.cardMotion ?? {}) };
+    if (m === null) delete map[String(n)]; else map[String(n)] = m;
+    setD({ cardMotion: map });
   };
   const addShot = async (n: number, file: File) => {
     setBusy(`shot${n}`);
@@ -305,7 +380,7 @@ function TextsEditor({ draft, onChange, design, setD, globalStyle }: { draft: Dr
   return (
     <div className="rounded-2xl border border-[#E3D9CC] bg-white/70">
       <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex w-full items-center justify-between px-4 py-3 text-right text-[14px] font-bold text-[#5E1D1D]">
-        כל כרטיס בנפרד: טקסט, סגנון, אנימציה, צילום מסך
+        כל כרטיס בנפרד: טקסט, סגנון, גרפיקה, צילום מסך
         <span className="text-xl leading-none">{open ? "−" : "+"}</span>
       </button>
       {open && (
@@ -313,8 +388,6 @@ function TextsEditor({ draft, onChange, design, setD, globalStyle }: { draft: Dr
           {cards.map((c, i) => {
             const n = i + 1;
             const pc = design.perCard?.[String(n)] ?? {};
-            const auto = design.stickers ? stickerFor(`${c.head} ${c.body}`) : "";
-            const chosen = design.cardStickers?.[String(n)];
             const shots = (design.shots ?? []).filter((s) => s.card === n);
             return (
               <div key={i} className="space-y-2 rounded-xl bg-[#FAF6F1] p-3">
@@ -329,10 +402,10 @@ function TextsEditor({ draft, onChange, design, setD, globalStyle }: { draft: Dr
                   <Chip on={!pc.place} onClick={() => setCard(n, { place: undefined })}>כמו בכולם</Chip>
                   {([["top", "למעלה"], ["middle", "באמצע"], ["bottom", "למטה"]] as const).map(([v, l]) => <Chip key={v} on={pc.place === v} onClick={() => setCard(n, { place: v })}>{l}</Chip>)}
                 </Row>
-                <Row label="אנימציה קופצת" scroll>
-                  <Chip on={chosen === undefined} onClick={() => setSticker(n, null)}>{design.stickers ? `לפי הטקסט ${auto || "(אין)"}` : "בלי"}</Chip>
-                  {design.stickers && <Chip on={chosen === ""} onClick={() => setSticker(n, "")}>בלי</Chip>}
-                  {STICKERS.map((e) => <Chip key={e} on={chosen === e} onClick={() => setSticker(n, e)}><span className="text-lg">{e}</span></Chip>)}
+                <Row label="גרפיקה לכרטיס הזה" scroll>
+                  <Chip on={!design.cardMotion?.[String(n)]} onClick={() => setMotion(n, null)}>כמו בכולם</Chip>
+                  <Chip on={design.cardMotion?.[String(n)] === "off"} onClick={() => setMotion(n, "off")}>בלי</Chip>
+                  {MOTIONS.map((m) => <Chip key={m.id} on={design.cardMotion?.[String(n)] === m.id} onClick={() => setMotion(n, m.id)}>{m.label}</Chip>)}
                 </Row>
                 <div>
                   <p className="mb-1.5 text-[12px] font-bold text-[#6A6158]">צילום מסך שקופץ</p>
@@ -353,7 +426,7 @@ function TextsEditor({ draft, onChange, design, setD, globalStyle }: { draft: Dr
             );
           })}
           <Btn busy={busy === "save"} disabled={!dirty} onClick={save} className="w-full">לשמור את הטקסטים</Btn>
-          <p className="text-[11px] text-[#9A8C85]">סגנון, מיקום, אנימציות וצילומי מסך נשמרים לבד.</p>
+          <p className="text-[11px] text-[#9A8C85]">סגנון, מיקום, גרפיקה וצילומי מסך נשמרים לבד.</p>
         </div>
       )}
     </div>
