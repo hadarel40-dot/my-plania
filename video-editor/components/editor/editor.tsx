@@ -79,6 +79,7 @@ type Sheet = "edit" | "media" | Exclude<Tab, "ai"> | "ai";
  */
 function PhoneLayout({ top }: { top: React.ReactNode }) {
   const [sheet, setSheet] = useState<Sheet | null>(null);
+  const [moreTools, setMoreTools] = useState(false);
   // המגירות שכבר נפתחו (נשארות בנויות). "עריכה" תלויה בפריט הנבחר, ולכן נבנית מחדש בכל פתיחה
   const [visited, setVisited] = useState<Set<Sheet>>(() => new Set());
   useEffect(() => {
@@ -175,8 +176,9 @@ function PhoneLayout({ top }: { top: React.ReactNode }) {
       </div>
       {/* הסרגל נגלל לצדדים: כל הכלים זמינים, וכל כפתור בגודל נוח ללחיצה */}
       <nav className="relative shrink-0 border-t border-zinc-800/70 bg-zinc-950 pb-[max(env(safe-area-inset-bottom),4px)]">
-        <div data-hscroll className="no-scrollbar flex snap-x gap-0.5 overflow-x-auto px-1 pt-1">
-        {buttons.map((b) => {
+        <div data-hscroll className={cn("no-scrollbar flex gap-0.5 px-1 pt-1 sm:snap-x sm:flex-nowrap sm:overflow-x-auto", moreTools ? "flex-wrap justify-center" : "overflow-hidden")}>
+        {buttons.map((b, i) => {
+          const folded = !moreTools && i >= 5 && buttons.length > 6;
           const on = b.sheet !== undefined && sheet === b.sheet && (b.sheet !== "style" || b.id === "style");
           return (
             <button key={b.id} onClick={(e) => {
@@ -184,12 +186,18 @@ function PhoneLayout({ top }: { top: React.ReactNode }) {
               if (b.action) b.action();
               else setSheet((v) => (v === b.sheet ? null : b.sheet ?? null));
             }}
-              className={cn("flex min-w-[4.1rem] flex-none snap-start flex-col items-center gap-0.5 whitespace-nowrap rounded-xl px-1.5 py-1.5 text-[11px] transition active:scale-95",
-                on ? "bg-violet-500/15 text-violet-200" : b.tone === "danger" ? "text-red-300" : b.tone === "active" ? "text-amber-300" : b.tone === "brand" ? "text-fuchsia-300" : clipSelected ? "text-zinc-200" : "text-zinc-400")}>
+              className={cn("flex min-w-[3.75rem] flex-none snap-start flex-col sm:min-w-[4.1rem] items-center gap-0.5 whitespace-nowrap rounded-xl px-1.5 py-1.5 text-[11px] transition active:scale-95",
+                on ? "bg-violet-500/15 text-violet-200" : b.tone === "danger" ? "text-red-300" : b.tone === "active" ? "text-amber-300" : b.tone === "brand" ? "text-fuchsia-300" : clipSelected ? "text-zinc-200" : "text-zinc-400", folded && "hidden sm:flex")}>
               {b.icon}{b.label}
             </button>
           );
         })}
+        {buttons.length > 6 && (
+          <button type="button" onClick={() => setMoreTools((v) => !v)} aria-expanded={moreTools}
+            className="flex min-w-[3.75rem] flex-none flex-col items-center gap-0.5 rounded-xl px-1.5 py-1.5 text-[11px] text-zinc-300 sm:hidden">
+            <span className="flex size-5 items-center justify-center text-base leading-none">{moreTools ? "−" : "⋯"}</span>{moreTools ? "פחות" : `עוד ${buttons.length - 5}`}
+          </button>
+        )}
         </div>
         {/* רמז שיש עוד כפתורים בצד */}
         <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-zinc-950 to-transparent" />
@@ -308,7 +316,7 @@ function TopBar({ saveState, cloudSave, account }: {
       <div className="ms-auto flex shrink-0 items-center gap-1 sm:gap-2">
         <span className="hidden text-[11px] text-zinc-600 xl:inline" dir="ltr">Space · S · Del · Ctrl+Z</span>
         {account ? (
-          <form action="/auth/signout" method="post" className="flex items-center gap-2">
+          <form action="/auth/signout" method="post" className="hidden items-center gap-2 sm:flex" onSubmit={(e) => { if (!confirm("להתנתק?")) e.preventDefault(); }}>
             <span className="hidden text-[11px] text-zinc-500 md:inline" dir="ltr">{account.email}</span>
             <button title="התנתקות" aria-label="התנתקות" className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100">
               <LogOut className="size-3.5" />
@@ -321,11 +329,11 @@ function TopBar({ saveState, cloudSave, account }: {
           </button>
         )}
         <button onClick={exportJson} title="גיבוי הפרויקט כקובץ JSON" aria-label="גיבוי פרויקט"
-          className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100">
+          className="hidden rounded-md p-1.5 sm:block text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100">
           <FileJson className="size-4" />
         </button>
         <button onClick={() => setExporting(true)}
-          className="flex items-center gap-1.5 rounded-full bg-gradient-to-l from-violet-600 to-fuchsia-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-lg shadow-violet-900/40 hover:brightness-110">
+          className="flex min-h-[36px] items-center gap-1.5 rounded-full bg-gradient-to-l from-violet-600 to-fuchsia-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-lg shadow-violet-900/40 hover:brightness-110">
           <Download className="size-3.5" /> ייצוא<span className="hidden sm:inline"> סרטון</span>
         </button>
         {exporting && <ExportDialog onClose={() => setExporting(false)} />}

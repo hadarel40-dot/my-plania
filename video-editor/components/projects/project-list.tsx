@@ -40,7 +40,7 @@ export function ProjectList({ email, projects: all, error, showPassword, hasPass
         <Clapperboard className="size-5 text-violet-400" />
         <h1 className="text-sm font-semibold">הפרויקטים שלי</h1>
         {projects.length > 0 && <span className="text-xs text-zinc-500">{projects.length}</span>}
-        <form action="/auth/signout" method="post" className="ms-auto flex items-center gap-2 text-xs text-zinc-500">
+        <form action="/auth/signout" method="post" onSubmit={(e) => { if (!confirm("להתנתק?")) e.preventDefault(); }} className="ms-auto flex items-center gap-2 text-xs text-zinc-500">
           <span dir="ltr" className="hidden sm:inline">{email}</span>
           <Link href="/?password=1" title={hasPassword ? "שינוי סיסמה" : "בחירת סיסמה"} aria-label={hasPassword ? "שינוי סיסמה" : "בחירת סיסמה"}
             className="rounded-md p-1.5 hover:bg-zinc-800 hover:text-zinc-100">

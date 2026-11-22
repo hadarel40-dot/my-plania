@@ -15,12 +15,24 @@ import { Btn, Loading, Panel, Tag, toast } from "./ui";
 import { ShareHint } from "./share-hint";
 import { cn } from "@/lib/utils";
 
+async function warm(url: string) {
+  for (let i = 0; i < 4; i++) {
+    try {
+      const r = await fetch(url, { headers: { Range: "bytes=0-0" } });
+      if (r.ok || r.status === 206 || r.status < 500) return;
+    } catch { /* רשת: ננסה שוב */ }
+    await new Promise((res) => setTimeout(res, 600 * (i + 1)));
+  }
+}
+
 /** כתובות צפייה לכל הקבצים של הפרויקט (מהאחסון) */
 async function signAssets(assets: Record<string, MediaAsset>) {
   const paths = Object.values(assets).flatMap((a) => (a.storagePath ? [a.storagePath] : []));
   if (!paths.length) return assets;
   const { data } = await db().storage.from(MEDIA_BUCKET).createSignedUrls(paths, 6 * 60 * 60);
   const byPath = new Map((data ?? []).map((d) => [d.path, d.signedUrl]));
+  // האחסון מחזיר לפעמים 503 רגעי: מחממים כל קובץ (בית ראשון) עם ניסיון חוזר, לפני שהנגן עולה
+  await Promise.all([...byPath.values()].flatMap((u) => (u ? [warm(u)] : [])));
   return Object.fromEntries(Object.entries(assets).map(([id, a]) => [id, a.storagePath && byPath.get(a.storagePath) ? { ...a, url: byPath.get(a.storagePath)! } : a]));
 }
 
@@ -138,7 +150,7 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
           {inputProps ? (
             <Player component={TimelineComposition} inputProps={inputProps} durationInFrames={frames} fps={project!.timeline.fps}
               compositionWidth={1080} compositionHeight={1920} style={{ width: "100%", height: "100%" }} controls clickToPlay />
-          ) : <Loading>טוענת את הריל...</Loading>}
+          ) : <div className="flex size-full items-center justify-center p-4 text-center text-[13px] text-white/80" dir="rtl">טוענת את הסרטונים...</div>}
         </div>
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap gap-2">

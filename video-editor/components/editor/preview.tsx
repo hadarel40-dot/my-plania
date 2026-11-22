@@ -181,7 +181,11 @@ export function Preview() {
           <CtrlBtn label="פריים קדימה" onClick={() => step(1)}><SkipForward className="size-4" /></CtrlBtn>
           {duration > 0 && <CtrlBtn label="מסך מלא" onClick={openFull}><Maximize2 className="size-4" /></CtrlBtn>}
         </div>
-        <div className="flex w-24 justify-end gap-1">
+        <select value={timeline.aspect} onChange={(e) => setAspect(e.target.value as Aspect)} aria-label="יחס מסך"
+          className="min-h-[36px] rounded-md bg-zinc-800 px-2 text-xs text-zinc-100 sm:hidden">
+          {(Object.keys(ASPECT_SIZE) as Aspect[]).map((a) => <option key={a} value={a}>{a}</option>)}
+        </select>
+        <div className="hidden w-24 justify-end gap-1 sm:flex">
           {(Object.keys(ASPECT_SIZE) as Aspect[]).map((a) => (
             <button
               key={a}

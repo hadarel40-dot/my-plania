@@ -7,6 +7,7 @@ import { db, todayIL } from "@/lib/studio/client";
 import { MEDIA_BUCKET } from "@/lib/supabase/env";
 import { Label, Title } from "./ui";
 import { cn } from "@/lib/utils";
+import { isReady } from "./today";
 
 interface Item { id: string; title: string; account: string; format: string; stage: string; planned_date: string | null; hook: string; content_type?: string | null; draft_id: string | null }
 
@@ -71,7 +72,7 @@ export function WeekGrid({ account = "all" }: { account?: string }) {
 
   const today = todayIL();
   const rows = ROWS.filter((r) => r.format === "reel" || r.format === "carousel" || items?.some((i) => i.format === r.format));
-  const withMedia = items?.filter((i) => i.draft_id && thumbPath(drafts[i.draft_id])).length ?? 0;
+  const withMedia = items?.filter((i) => i.draft_id && isReady(drafts[i.draft_id])).length ?? 0;
 
   return (
     <section className="rounded-2xl border border-[#E2DACD] bg-[#FBF8F2] p-4 shadow-[0_1px_2px_rgba(31,27,22,0.06)]">
@@ -81,7 +82,7 @@ export function WeekGrid({ account = "all" }: { account?: string }) {
           <Title size="lg" accent={longDate(start)}>השבוע של</Title>
         </div>
         <div className="flex items-center gap-2">
-          {items && <span className="rounded-full border border-[#E2DACD] bg-white/70 px-3 py-1 text-[12px] font-bold">{items.length} פוסטים משובצים{items.length ? ` · ${withMedia} עם קבצים` : ""}</span>}
+          {items && <span className="rounded-full border border-[#E2DACD] bg-white/70 px-3 py-1 text-[12px] font-bold">{items.length} פוסטים משובצים{items.length ? ` · ${withMedia} מוכנים` : ""}</span>}
           <button type="button" aria-label="השבוע הקודם" onClick={() => setStart(addDays(start, -7))} className="rounded-lg border border-[#E2DACD] bg-white/70 p-1.5"><ChevronRight className="size-4" /></button>
           <Link href="/studio/replan" className="rounded-lg bg-[#1F1B16] px-2.5 py-1 text-[12px] font-bold text-[#FBF8F2]">לתכנן מחדש</Link>
           <button type="button" onClick={() => setStart(sundayOf(today))} className="rounded-lg border border-[#E2DACD] bg-white/70 px-2.5 py-1 text-[12px] font-bold">השבוע</button>

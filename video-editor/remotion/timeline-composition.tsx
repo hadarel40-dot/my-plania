@@ -1,4 +1,4 @@
-import { createContext, useContext } from "react";
+import { createContext, useState, useContext } from "react";
 import { AbsoluteFill, Html5Audio, Html5Video, Sequence, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import type { AudioClip, Caption, Look, MediaAsset, Timeline } from "@/lib/editor/types";
 import { OverlayView } from "./overlay-view";
@@ -24,9 +24,24 @@ export interface MediaTags {
   Video: React.ComponentType<Record<string, unknown>>;
   Audio: React.ComponentType<Record<string, unknown>>;
 }
+/**
+ * קובץ וידאו מהאחסון שנכשל בטעינה (למשל 503 רגעי) נטען שוב, עד ארבע פעמים בהשהיה עולה,
+ * במקום להשאיר מסך שחור. רק אחרי שכל הניסיונות נכשלו השגיאה עולה לנגן.
+ */
+function RetryVideo(props: Record<string, unknown>) {
+  const [attempt, setAttempt] = useState(0);
+  const [failed, setFailed] = useState<Error | null>(null);
+  if (failed) throw failed;
+  const V = Html5Video as unknown as React.ComponentType<Record<string, unknown>>;
+  return <V key={attempt} {...props} onError={(e: Error) => {
+    if (attempt < 4) setTimeout(() => setAttempt((n) => n + 1), 700 * (attempt + 1));
+    else setFailed(e);
+  }} />;
+}
+
 export const MediaTagsContext = createContext<MediaTags>({
   mode: "html5",
-  Video: Html5Video as unknown as MediaTags["Video"],
+  Video: RetryVideo,
   Audio: Html5Audio as unknown as MediaTags["Audio"],
 });
 

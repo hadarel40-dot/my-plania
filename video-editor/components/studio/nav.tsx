@@ -85,8 +85,8 @@ export function AdvisorButton() {
   if (path.startsWith("/studio/advisor")) return null;
   return (
     <Link href="/studio/advisor" aria-label="לשאול את היועצת"
-      className="fixed bottom-5 left-5 z-40 flex items-center gap-2 rounded-full bg-[#1F1B16] px-4 py-3 text-sm font-bold text-[#FBF8F2] shadow-[0_8px_24px_-6px_rgba(31,27,22,0.5)] hover:bg-[#3A332B]">
-      <MessageCircle className="size-4" />יועצת
+      className="fixed bottom-4 left-4 z-40 flex items-center gap-2 rounded-full bg-[#1F1B16] p-3 text-sm sm:bottom-5 sm:left-5 sm:px-4 font-bold text-[#FBF8F2] shadow-[0_8px_24px_-6px_rgba(31,27,22,0.5)] hover:bg-[#3A332B]">
+      <MessageCircle className="size-5 sm:size-4" /><span className="hidden sm:inline">יועצת</span>
     </Link>
   );
 }

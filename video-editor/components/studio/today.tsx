@@ -25,6 +25,46 @@ export function thumbPath(d?: Draft): string | null {
   return img?.kind === "storage" ? img.path : null;
 }
 
+/** פוסט מוכן: יש לו סרטון, קרוסלה, ריל מהסטודיו או פרויקט בעורך */
+export const isReady = (d?: Draft) => !!d && !!(thumbPath(d) || d.data.edit || d.project_id || d.data.video || d.data.carousel);
+
+/** הסרטון המוכן של הגרסה שנבחרה (אם יש קובץ) */
+const readyVideo = (d?: Draft) => {
+  const v = d?.data.variants?.find((x) => x.id === d.data.chosen_variant) ?? d?.data.variants?.[0];
+  return v?.video ?? d?.data.video ?? null;
+};
+
+/**
+ * "לשלוח לאינסטגרם" ישר מהכרטיס, כשיש קובץ מוכן. הקובץ נטען בלחיצה ואז נפתח חלון השיתוף.
+ * אם הטלפון חוסם שיתוף אחרי ההמתנה, הקובץ כבר מוכן ולחיצה שנייה שולחת מיד.
+ */
+function SendNow({ path, caption, name }: { path: string; caption: string; name: string }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const share = async (f: File) => {
+    if (caption) await navigator.clipboard?.writeText(caption).catch(() => {});
+    if (!navigator.canShare?.({ files: [f] })) {
+      const a = document.createElement("a"); a.href = URL.createObjectURL(f); a.download = f.name; a.click();
+      return toast("הסרטון ירד והכיתוב הועתק. שליחה ישירה עובדת מהטלפון");
+    }
+    try { await navigator.share({ files: [f] }); toast("הכיתוב הועתק. באינסטגרם: מוסיפים מוזיקה ומדביקים את הכיתוב"); }
+    catch (e) { if ((e as Error).name === "NotAllowedError") toast("הקובץ מוכן. לוחצים שוב לשליחה"); }
+  };
+  const go = async () => {
+    if (file) return share(file);
+    setBusy(true);
+    try {
+      const { data } = await db().storage.from(MEDIA_BUCKET).createSignedUrl(path, 60 * 60);
+      if (!data?.signedUrl) throw new Error("הקובץ לא נמצא");
+      const f = new File([await (await fetch(data.signedUrl)).blob()], `${name.slice(0, 40) || "reel"}.mp4`, { type: "video/mp4" });
+      setFile(f);
+      await share(f);
+    } catch (e) { toast((e as Error).message, true); }
+    finally { setBusy(false); }
+  };
+  return <Btn busy={busy} onClick={go}>{busy ? "מכינה את הסרטון..." : file ? "לשלוח עכשיו" : "לשלוח לאינסטגרם"}</Btn>;
+}
+
 async function loadRange(from: string, to: string) {
   const { data } = await db().from("studio_items").select("*").gte("planned_date", from).lte("planned_date", to).order("planned_date");
   const items = (data ?? []) as Item[];
@@ -64,9 +104,14 @@ export function TodayPost({ today }: { today: string }) {
         <div className="min-w-0 flex-1 space-y-2">
           {d ? (
             <>
-              <p className="text-sm">{d.data.edit ? `גרסה ${variantLabel(d.data.chosen_variant)}. ` : variants > 1 ? `גרסה ${chosenId}${d.data.chosen_variant ? "" : " (ברירת מחדל)"}. ` : ""}{d.data.video || d.data.carousel ? "שולחים לאינסטגרם מהטלפון, מוסיפים מוזיקה טרנדית ומפרסמים או שומרים כטיוטה." : "יש תסריט ורשימת שוטים. מצלמים, ואז עורכים בעורך הווידאו."}</p>
-              {variants > 1 && <Link href="/studio/pick" className="block text-[12px] underline underline-offset-4">להחליף גרסה</Link>}
-              <Link href={`/studio/reel?id=${d.id}`} className="inline-flex rounded-[5px] bg-[#1F1B16] px-3.5 py-2 text-[13px] font-bold text-[#FBF8F2]">{d.data.video || d.data.carousel ? "לשלוח לאינסטגרם" : "לפתוח את התסריט ולצלם"}</Link>
+              <p className="text-sm">{d.data.edit ? `גרסה ${variantLabel(d.data.chosen_variant)}. ` : variants > 1 ? `גרסה ${chosenId}${d.data.chosen_variant ? "" : " (ברירת מחדל)"}. ` : ""}{isReady(d) ? "שולחים לאינסטגרם מהטלפון, מוסיפים מוזיקה טרנדית ומפרסמים או שומרים כטיוטה." : "יש תסריט ורשימת שוטים. מצלמים, ואז עורכים בעורך הווידאו."}</p>
+              {variants > 1 && <Link href="/studio/pick" className="inline-flex min-h-[36px] items-center text-[13px] underline underline-offset-4">להחליף גרסה</Link>}
+              <div className="flex flex-wrap gap-2">
+                {readyVideo(d) && <SendNow path={readyVideo(d)!.path} caption={caption} name={next.title} />}
+                <Link href={`/studio/reel?id=${d.id}`} className={cn("inline-flex min-h-[40px] items-center rounded-[5px] px-3.5 py-2 text-[13px] font-bold", readyVideo(d) ? "border border-[#1F1B16]" : "bg-[#1F1B16] text-[#FBF8F2]")}>
+                  {readyVideo(d) ? "לפתוח" : d.data.edit || d.data.carousel || d.project_id ? "לפתוח ולשלוח לאינסטגרם" : "לפתוח את התסריט ולצלם"}
+                </Link>
+              </div>
             </>
           ) : <p className="text-sm">עוד אין טיוטה לפוסט הזה.</p>}
           {caption && <Btn variant="line" onClick={() => navigator.clipboard.writeText(caption).then(() => toast("הכיתוב הועתק"))}>להעתיק כיתוב</Btn>}

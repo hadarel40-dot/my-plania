@@ -85,13 +85,13 @@ export function TimelinePanel({ fill = false }: { fill?: boolean } = {}) {
           className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"
         >
           {transcribing ? <Loader2 className="size-3.5 animate-spin" /> : <Captions className="size-3.5" />}
-          <span dir="rtl">{transcribing ? transcribeStatus ?? "מתחיל…" : "כתוביות אוטומטיות"}</span>
+          <span dir="rtl" className={transcribing ? "" : "hidden sm:inline"}>{transcribing ? transcribeStatus ?? "מתחיל…" : "כתוביות אוטומטיות"}</span>
         </button>
         <div className="ms-auto flex shrink-0 items-center gap-2 ps-2 text-zinc-500">
-          <span className="font-mono tabular-nums">{formatTime(duration, timeline.fps)}</span>
+          <span className="hidden font-mono tabular-nums sm:inline">{formatTime(duration, timeline.fps)}</span>
           <ZoomIn className="size-3.5" />
           <input type="range" min={20} max={240} value={pps} onChange={(e) => setPps(+e.target.value)}
-            aria-label="זום ציר זמן" className="w-24 accent-zinc-400" />
+            aria-label="זום ציר זמן" className="w-16 accent-zinc-400 sm:w-24" />
         </div>
       </div>
 
