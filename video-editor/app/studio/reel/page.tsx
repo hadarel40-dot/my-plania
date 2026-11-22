@@ -12,6 +12,7 @@ import { CarouselView } from "@/components/studio/carousel-view";
 import { ReadyVideo } from "@/components/studio/ready-video";
 import { DesignerChat } from "@/components/studio/designer-chat";
 import { VariantSwitch } from "@/components/studio/variant-switch";
+import { ReelPlayer } from "@/components/studio/reel-player";
 import { MaterialsPanel } from "@/components/studio/materials";
 import { TEMPLATES, templateById } from "@/lib/studio/templates";
 import { blankCarousel } from "@/lib/studio/carousel-blank";
@@ -237,8 +238,7 @@ function DraftView({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => 
       <Panel title={draft.idea} aside={<span className="flex gap-1">{templateById(draft.data.template) && <Tag tone="butter">{templateById(draft.data.template)!.name}</Tag>}<Tag>{draft.mode === "short" ? "ריל טקסט קצר" : "תסריט מלא"}</Tag></span>}>
         <p className="text-xs text-[#6F675C]">{labelOf(ACCOUNTS, draft.account)} · {labelOf(NICHES, draft.niche)}{draft.facts ? ` · עובדות: ${draft.facts}` : " · לא הוזנו מספרים"}</p>
       </Panel>
-      <VariantSwitch draft={draft} onChange={onChange} />
-      <ReadyVideo draft={draft} />
+      {d.edit ? <ReelPlayer draft={draft} onChange={onChange} /> : <><VariantSwitch draft={draft} onChange={onChange} /><ReadyVideo draft={draft} /></>}
       {d.video && <DesignerChat draft={draft} onChange={onChange} />}
 
       {(!d.video || !!d.hooks?.length) && <Panel title="שלושה הוקים" aside={<Btn variant="ghost" busy={busy === "hooks"} onClick={rehook}>הוקים חדשים</Btn>}>

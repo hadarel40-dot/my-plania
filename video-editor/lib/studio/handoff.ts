@@ -1,7 +1,8 @@
 import "server-only";
 import { initialProject } from "@/lib/editor/initial-project";
 import { uid } from "@/lib/editor/timeline-utils";
-import { NEUTRAL_LOOK, type Clip, type MediaAsset, type Overlay, type SavedProject } from "@/lib/editor/types";
+import type { Overlay, SavedProject } from "@/lib/editor/types";
+import { buildReelTimeline, styleForVariant } from "./reel-timeline";
 import { SAFE, type Draft } from "./config";
 
 /**
@@ -52,38 +53,11 @@ export function projectFromDraft(draft: Draft): SavedProject & { notes: string }
   // ריל מוכן מהתהליך השבועי: הקטעים עצמם נכנסים לציר הזמן, והטקסטים כשכבות שאפשר לערוך.
   // כך מחליפים סרטון, משנים טקסט ומייצאים בעורך, בלי לחכות לרינדור מחדש
   if (d.edit?.segments.length) {
-    const assets: Record<string, MediaAsset> = {};
-    const clips: Clip[] = d.edit.segments.map((s, i) => {
-      const id = uid("asset");
-      assets[id] = { id, name: `קטע ${i + 1}`, url: "", thumbnailUrl: null, duration: s.seconds, width: s.width, height: s.height, origin: "library", storagePath: s.path };
-      return { id: uid("clip"), sourceAssetId: id, assetId: id, in: 0, out: s.seconds, look: NEUTRAL_LOOK, activeVariantId: null, volume: 0 };
-    });
-    project.assets = assets;
-    project.timeline.clips = clips;
-    // הסגנון שהיא בחרה, כמו בסרטון: מילה אחת גדולה בכל פעם, במרכז, קופצת. כל מילה היא שכבה בזמן שלה,
-    // מילים של הכותרת בלבן ומילים של שורת ההמשך בוורוד
-    const ovs: Overlay[] = [];
-    d.edit.cards.forEach((c, ci) => {
-      const head = (c.headline ?? c.text).split(/\s+/).filter(Boolean);
-      const body = c.headline ? (c.body ?? "").split(/\s+/).filter(Boolean) : [];
-      const words = [...head.map((w) => ({ w, head: true })), ...body.map((w) => ({ w, head: false }))];
-      const dur = c.end - c.start;
-      const step = (dur * 0.85) / Math.max(1, words.length);
-      words.forEach((x, wi) => {
-        const start = +(c.start + 0.1 + wi * step).toFixed(2);
-        const end = wi === words.length - 1 ? c.end : +(start + step).toFixed(2);
-        // אותם ערכים כמו ב-scripts/weekly/render.mjs (reelPop): Assistant, כותרת לבנה עם קו ורוד, המשך ורוד, צל רך
-        ovs.push({
-          id: uid("ov"), kind: "text", hook: ci === 0 && wi === 0, text: x.w, start, end,
-          x: 0.5, y: 0.487, size: x.head ? 150 : 120, color: x.head ? "#FFFFFF" : "#F7C9D6", background: null, weight: 900, font: "assistant",
-          stroke: x.head, strokeColor: "#F7C9D6", strokeWidth: 0.02,
-          shadow: "0 4px 6px rgba(0,0,0,.55), 0 8px 34px rgba(0,0,0,.45)",
-          rotate: 0, animIn: "pop", loop: "none", animOut: "none",
-        });
-      });
-    });
-    project.timeline.overlays = ovs;
-    project.notes = `${project.notes}\n\nזה הריל המוכן מהתוכן השבועי: כל קטע וידאו נמצא בציר הזמן, וכל כרטיס טקסט הוא שכבה. מוזיקה מוסיפים באינסטגרם.`.slice(0, 8000);
+    // אותו מנוע כמו הנגן בדשבורד: הקטעים והכתוביות בסגנון של הגרסה שנבחרה
+    const built = buildReelTimeline(d.edit, styleForVariant(d.chosen_variant));
+    project.assets = built.assets;
+    project.timeline = { ...project.timeline, ...built.timeline };
+    project.notes = `${project.notes}\n\nזה הריל מהסטודיו: כל קטע וידאו בציר הזמן, וכל מילה או כותרת היא שכבת טקסט. מוזיקה מוסיפים באינסטגרם.`.slice(0, 8000);
   }
   return project;
 }

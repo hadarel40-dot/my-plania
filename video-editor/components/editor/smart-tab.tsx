@@ -3,6 +3,7 @@ import { StylePicker } from "./style-picker";
 import { MyKeyCard } from "./my-key-card";
 import { brainHeaders } from "@/lib/ai/my-key";
 import { useEffect, useRef, useState } from "react";
+import { StudioVersions } from "./studio-versions";
 import { create } from "zustand";
 import { Captions, Crop, Loader2, Music2, Scissors, Send, Sparkles, TrendingUp } from "lucide-react";
 import type { Trends, TrendsRequest } from "@/lib/ai/smart-plan";
@@ -33,6 +34,7 @@ export function SmartTab() {
   return (
     <div className="space-y-5 p-4">
       {!hasClips && <p className="rounded-lg bg-zinc-900 p-3 text-sm text-zinc-400">קודם מעלים סרטון, ואז הכלים כאן עובדים עליו.</p>}
+      <StudioVersions />
       <AutoEditButton disabled={!hasClips} />
       <MyKeyCard />
       <Section title="טרנדים עכשיו">

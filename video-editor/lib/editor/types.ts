@@ -142,6 +142,8 @@ export type OverlayAnimOut = "fade" | "pop" | "slide-down" | "none";
 export interface Overlay {
   /** נוסף מתבנית (מוחלף כשבוחרים תבנית אחרת) */
   fromTemplate?: boolean;
+  /** כתובית מהסטודיו (מוחלפת כשבוחרים גרסה אחרת של הריל) */
+  studio?: boolean;
   /** משפט הפתיחה (ההוק): אפשר להחליף אותו בלחיצה באחת ההצעות */
   hook?: boolean;
   /** אנימציה שהעורך הקפיץ ברגע חשוב בדיבור (מתחלפת כשמשנים את כמות האנימציות) */
