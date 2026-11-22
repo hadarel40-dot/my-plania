@@ -320,8 +320,9 @@ export function buildReelTimeline(kit: ReelEditKit, style: CaptionStyleId = "pop
   const assets: Record<string, MediaAsset> = {};
   const clips: Clip[] = kit.segments.map((s, i) => {
     const id = `seg-${i + 1}`;
-    assets[id] = { id, name: `קטע ${i + 1}`, url: "", thumbnailUrl: null, duration: s.seconds, width: s.width, height: s.height, origin: "library", storagePath: s.path };
-    return { id: uid("clip"), sourceAssetId: id, assetId: id, in: 0, out: s.seconds, look: NEUTRAL_LOOK, activeVariantId: null, volume: 0 };
+    const from = s.from ?? 0;
+    assets[id] = { id, name: `קטע ${i + 1}`, url: "", thumbnailUrl: null, duration: from + s.seconds, width: s.width, height: s.height, origin: "library", storagePath: s.path };
+    return { id: uid("clip"), sourceAssetId: id, assetId: id, in: from, out: from + s.seconds, look: NEUTRAL_LOOK, activeVariantId: null, volume: kit.sound ? 1 : 0 };
   });
   // מעבר בין הקטעים: בלי בחירה, מעבר רך קצר, כדי שהחיתוכים לא ייראו קטועים
   const tr = design.transition ?? "fade";

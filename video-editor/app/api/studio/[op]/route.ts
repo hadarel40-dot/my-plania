@@ -7,7 +7,7 @@ import { computeMeta } from "@/lib/editor/project-meta";
 import type { Draft, TrendItem } from "@/lib/studio/config";
 import { driveAccessToken, driveConfigured, driveProblem, driveEmail, driveThumb, listDriveMedia } from "@/lib/studio/drive";
 import { adminStore, autoDraft, autoSuggest } from "@/lib/studio/auto";
-import { carouselIdeas, editCarouselByChat, understandReelRequest, matchMaterials, writeCarousel, writeHooks, writeScript } from "@/lib/studio/engine";
+import { carouselIdeas, editCarouselByChat, understandReelRequest, matchMaterials, writeCarousel, writeHooks, writeScript, writeUploadReel } from "@/lib/studio/engine";
 import { projectFromDraft } from "@/lib/studio/handoff";
 import { applyReelChanges, type Segment } from "@/lib/studio/reel-edit";
 import { advise, buildVoice, inspire, planToday, planWeek, preferencesBlock, type Feedback, researchTrends, suggestFromEdit, weekOptions, weeklyStats, writeReview } from "@/lib/studio/insights";
@@ -114,6 +114,50 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
         }
         const requests = [...(draft.data.requests ?? []), { text: message, changes, status: "pending" as const, at: new Date().toISOString() }];
         return NextResponse.json({ draft: await saveDraft(draft.id, { ...draft.data, requests, chat: [...chat, { role: "designer", text: reply, at: new Date().toISOString() }] }) });
+      }
+      case "upload-reel": {
+        // ריל מסרטונים שהיא העלתה: כתוביות מהדיבור, או כרטיסים שנכתבים לפי הרעיון
+        const input = z.object({
+          account, idea: z.string().max(600).default(""), content_type: z.enum(["story", "viral", "value", "trust"]),
+          date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          clips: z.array(z.object({ path: z.string().max(300), w: z.number(), h: z.number(), seconds: z.number().positive() })).min(1).max(20),
+          transcript: z.array(z.object({ start: z.number(), end: z.number(), text: z.string().max(400) })).max(300).default([]),
+        }).parse(body);
+        const talking = input.transcript.length > 0;
+        // בלי דיבור: מכל סרטון לוקחים את האמצע, עד 3 שניות, כדי שהריל יזוז. עם דיבור: הסרטונים כמו שהם
+        const segments = input.clips.map((c) => {
+          if (talking) return { path: c.path, seconds: +c.seconds.toFixed(2), width: c.w, height: c.h };
+          const len = Math.min(c.seconds, 3);
+          return { path: c.path, seconds: +len.toFixed(2), width: c.w, height: c.h, from: +Math.max(0, (c.seconds - len) / 2).toFixed(2) };
+        });
+        const total = segments.reduce((n, s) => n + s.seconds, 0);
+        const cardCount = Math.max(1, Math.min(6, Math.round(total / 2.6)));
+        const written = await writeUploadReel({
+          voice: await voiceWithPrefs(input.account), idea: input.idea,
+          transcript: talking ? input.transcript.map((t) => t.text).join(" ") : null, cardCount,
+        });
+        const cards = talking
+          ? input.transcript.map((t) => ({ text: t.text, headline: t.text, body: "", start: +t.start.toFixed(2), end: +t.end.toFixed(2) }))
+          : written.cards.slice(0, cardCount).map((c, i, all) => {
+              const step = total / all.length;
+              return { text: c.headline, headline: c.headline, body: c.body, start: +(i * step).toFixed(2), end: +((i + 1) * step).toFixed(2) };
+            });
+        const niche = input.account === "plania.il" ? "meals" : "business";
+        const { data: dr, error } = await supabase.from("studio_drafts").insert({
+          idea: written.title || input.idea || "ריל מהסרטונים שלי", account: input.account, niche, mode: "full", facts: "",
+          data: {
+            content_type: input.content_type, caption: written.caption, chosen_variant: talking ? "C" : "B",
+            edit: { segments, cards, ...(talking ? { sound: true } : {}) },
+            ...(talking ? { reel_design: { transition: "cut" } } : {}),
+          },
+        }).select("id").single();
+        if (error || !dr) throw new StudioError(error?.message ?? "לא נשמר", 500);
+        await supabase.from("studio_items").insert({
+          title: (written.title || input.idea || "ריל מהסרטונים שלי").slice(0, 80), account: input.account, niche, format: "reel", stage: "draft",
+          planned_date: input.date, content_type: input.content_type, draft_id: dr.id, caption: written.caption,
+          notes: talking ? "ריל מסרטון דיבור שהיא העלתה. הכתוביות מהדיבור." : "ריל מסרטונים שהיא העלתה.",
+        });
+        return NextResponse.json({ draftId: dr.id, talking });
       }
       case "designer-undo": {
         // לבטל את השינוי האחרון של המעצב בריל

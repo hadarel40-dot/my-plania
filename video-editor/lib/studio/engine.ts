@@ -436,3 +436,28 @@ niche מהרשימה המותרת. template הוא id של תבנית מהרשי
   }));
   return out.ideas.slice(0, count).map((x) => ({ ...x, niche: niches.includes(x.niche) ? x.niche : niches[0] }));
 }
+
+// ---------- ריל מסרטונים שהיא העלתה
+
+const UploadReelSchema = z.object({
+  title: z.string(),
+  caption: z.string(),
+  cards: z.array(z.object({ headline: z.string(), body: z.string() })),
+});
+
+/**
+ * ריל מהסרטונים שהיא העלתה. סרטון דיבור: הכתוביות הן מה שנאמר (לא משנים מילה), ורק הכותרת והכיתוב נכתבים.
+ * סרטונים בלי דיבור: נכתבים כרטיסי טקסט קצרים לפי הרעיון, אחד לכל קטע או שניים.
+ */
+export async function writeUploadReel(input: { voice: string; idea: string; transcript: string | null; cardCount: number }) {
+  return cleanDeep(await askBrain({
+    prefer: "claude", schema: UploadReelSchema,
+    system: "את מנהלת הסושיאל שלה. עברית מדוברת וחמה, בלי אימוג'י, בלי מקפים ארוכים, בלי מספרים מומצאים. את שם האפליקציה כותבים Plania.",
+    parts: [{ text: `${input.voice}
+
+הרעיון של הריל (מה שהיא כתבה): ${input.idea || "לא כתבה, תסיקי מהדיבור"}
+${input.transcript ? `מה שהיא אומרת בסרטון: "${input.transcript}"\n\ncards: רשימה ריקה (הכתוביות הן הדיבור עצמו).` : `אין דיבור בסרטונים. cards: בדיוק ${input.cardCount} כרטיסים לפי הסדר: headline עד 6 מילים שעוצר גלילה (הראשון הוא ההוק), body עד 7 מילים או ריק.`}
+title: שם קצר לריל (עד 7 מילים).
+caption: כיתוב לפוסט: שורה ראשונה שמושכת, 2-4 שורות קצרות, שאלה אחת בסוף, ושלושה האשטגים רלוונטיים בשורה אחרונה.` }],
+  }));
+}

@@ -124,7 +124,7 @@ export interface ChatMessage { role: "me" | "designer"; text: string; at: string
 export interface ReelRequest { text: string; changes: { card: number | null; action: string; detail: string }[]; status: "pending" | "done"; at: string }
 
 /** הריל כחומר גלם לעורך: הקטעים לפי הסדר (באחסון) והכרטיסים בזמנים שלהם */
-export interface ReelEditKit { segments: { path: string; seconds: number; width: number; height: number }[]; cards: { text: string; start: number; end: number; headline?: string; body?: string }[] }
+export interface ReelEditKit { /** הקול של הסרטונים נשמע (סרטון דיבור) */ sound?: boolean; segments: { path: string; seconds: number; width: number; height: number; from?: number }[]; cards: { text: string; start: number; end: number; headline?: string; body?: string }[] }
 
 export interface DraftData {
   /** הריל המוכן כפרויקט לעריכה בעורך הווידאו */
