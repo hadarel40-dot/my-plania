@@ -48,6 +48,18 @@ const sql = ["-- נוצר אוטומטית ע\"י publish.mjs: טיוטות לש
  * ערכת עריכה לריל: כל קטע (cut) נחתך ומוכן לאנכי, ונכנס לעורך הווידאו כקליפ, והכרטיסים כשכבות טקסט.
  * כך היא עורכת בעצמה בעורך (מחליפה סרטון, משנה טקסט) ומייצאת.
  */
+/**
+ * הפורמט השקט לכל ריל: כותרת שמתחילה במספר היא רשימה (K), סיפור אישי מקבל כותרת מגזין קבועה (I),
+ * ויראלי ואמון מקבלים תיבה לבנה טבעית (J), ערך עם הרבה שלבים הוא רשימה, ועם מעט הוא כותרת קבועה.
+ */
+function calmVariant(post) {
+  const first = post.slides?.[0]?.headline ?? "";
+  if (/^\d/.test(first.trim())) return "K";
+  if (post.content_type === "story") return "I";
+  if (post.content_type === "value") return (post.slides?.length ?? 0) >= 4 ? "K" : "I";
+  return "J";
+}
+
 async function editKit(post) {
   if (!clipDir) return null;
   const per = post.montage ? 1.6 : 2.6; // כמו ב-render.mjs
@@ -125,7 +137,12 @@ for (const post of plan.posts) {
   if (variants[0].carousel) data.carousel = variants[0].carousel;
   if (post.format !== "carousel") {
     const kit = await editKit(post);
-    if (kit) data.edit = kit;
+    if (kit) {
+      data.edit = kit;
+      // ברירת מחדל: פורמט שקט שמתאים לפוסט (בלי אנימציות קופצות). אפשר לקבוע ב-plan.json עם reel_variant
+      data.chosen_variant = post.reel_variant ?? calmVariant(post);
+      data.reel_design = { transition: "cut", motion: "off", ...(post.reel_design ?? {}) };
+    }
     data.caption = post.caption;
     const per = post.montage ? 1.6 : 2.6; // כמו ב-render.mjs
     data.cards = post.slides.map((sl, i) => ({ text: [sl.headline, sl.body].filter(Boolean).join(" "), start: Math.round(i * per * 10) / 10, end: Math.round((i + 1) * per * 10) / 10, y: 700 }));
