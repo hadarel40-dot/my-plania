@@ -141,6 +141,8 @@ export interface DraftData {
   published_reject?: string[];
   /** הגרסאות הקודמות של הריל, כדי לבטל שינוי של המעצב */
   edit_history?: ReelEditKit[];
+  /** קריינות שהוקלטה או הועלתה לריל */
+  voiceover?: { path: string; seconds: number; volume?: number };
   /** סרטון מוכן לעלייה */
   video?: ReadyVideo;
   /** כיתוב לריל מוכן (לקרוסלה הכיתוב בתוך carousel) */

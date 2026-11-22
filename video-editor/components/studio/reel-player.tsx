@@ -1,13 +1,13 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Player } from "@remotion/player";
+import { Player, type PlayerRef } from "@remotion/player";
 import { TimelineComposition, type CompositionProps } from "@/remotion/timeline-composition";
 import { timelineDuration } from "@/lib/editor/timeline-utils";
 import type { MediaAsset } from "@/lib/editor/types";
 import { CONTENT_TYPES, labelOf, type Draft } from "@/lib/studio/config";
 import { db } from "@/lib/studio/client";
 import { DESIGN_PRESETS, MOTIONS, PLAYS, REEL_COLORS, REEL_FONTS, REEL_STYLES, TRANSITIONS, buildReelTimeline, styleForVariant, surpriseDesign, type CaptionStyleId, type MotionId, type ReelDesign } from "@/lib/studio/reel-timeline";
-import { Sparkles } from "lucide-react";
+import { Mic, Sparkles } from "lucide-react";
 import { ensureExtraFonts } from "@/lib/editor/fonts";
 import { canShareFiles, shareToInstagram } from "@/lib/studio/share";
 import { MEDIA_BUCKET } from "@/lib/supabase/env";
@@ -110,7 +110,22 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
   }, [shotKey]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (showDesign) void ensureExtraFonts(); }, [showDesign]);
   const timeline = useMemo(() => buildReelTimeline(kit, style, design, shotUrls).timeline, [kit, style, design, shotUrls]);
-  const inputProps = useMemo<CompositionProps | null>(() => (assets ? { timeline, assets, override: null } : null), [timeline, assets]);
+  // קריינות: נכנסת כמסלול שמע מתחילת הריל
+  const vo = draft.data.voiceover;
+  const [voUrl, setVoUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!vo) { setVoUrl(null); return; }
+    db().storage.from(MEDIA_BUCKET).createSignedUrl(vo.path, 6 * 60 * 60).then(({ data }) => setVoUrl(data?.signedUrl ?? null));
+  }, [vo?.path]); // eslint-disable-line react-hooks/exhaustive-deps
+  const full = useMemo(() => {
+    if (!vo || !voUrl || !assets) return { timeline, assets };
+    return {
+      timeline: { ...timeline, audio: [{ id: "voiceover", assetId: "voiceover", start: 0, in: 0, out: vo.seconds, volume: vo.volume ?? 1, fadeIn: 0, fadeOut: 0.2 }] },
+      assets: { ...assets, voiceover: { id: "voiceover", name: "קריינות", url: voUrl, thumbnailUrl: null, duration: vo.seconds, width: 0, height: 0, origin: "upload" as const, kind: "audio" as const } },
+    };
+  }, [timeline, assets, vo, voUrl]);
+  const playerRef = useRef<PlayerRef>(null);
+  const inputProps = useMemo<CompositionProps | null>(() => (full.assets ? { timeline: full.timeline, assets: full.assets, override: null } : null), [full]);
   const frames = Math.max(1, Math.ceil(timelineDuration(timeline) * timeline.fps));
 
   // ערכה מוכנה: גרסה ועיצוב שלם, בלי לגעת בטקסטים, בצילומי המסך ובהגדרות של כל כרטיס
@@ -143,7 +158,7 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
     const { renderToMp4 } = await import("@/lib/export/render-video");
     abort.current = new AbortController();
     const phone = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
-    return renderToMp4(timeline, assets, { quality: phone ? "720p" : "1080p", signal: abort.current.signal, onProgress: setProgress });
+    return renderToMp4(full.timeline, full.assets!, { quality: phone ? "720p" : "1080p", signal: abort.current.signal, onProgress: setProgress });
   };
   const save = (blob: Blob) => {
     const a = document.createElement("a");
@@ -176,7 +191,7 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
         {/* הנגן מחושב משמאל לימין: בדף בעברית הוא זז מחוץ למסגרת בלי זה */}
         <div dir="ltr" className="mx-auto aspect-[9/16] w-full max-w-[280px] overflow-hidden rounded-2xl bg-black shadow-[0_20px_40px_-24px_rgba(94,29,29,0.8)]">
           {inputProps ? (
-            <Player component={TimelineComposition} inputProps={inputProps} durationInFrames={frames} fps={timeline.fps}
+            <Player ref={playerRef} component={TimelineComposition} inputProps={inputProps} durationInFrames={frames} fps={timeline.fps}
               compositionWidth={1080} compositionHeight={1920} style={{ width: "100%", height: "100%" }} controls clickToPlay loop />
           ) : (
             <div className="flex size-full flex-col items-center justify-center gap-3 px-8 text-center text-[13px] text-white/85" dir="rtl">
@@ -284,6 +299,10 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
 
           <TextsEditor draft={draft} onChange={onChange} design={design} setD={setD} globalStyle={style} />
 
+          <VoiceOver draft={draft} onChange={onChange} reelSeconds={timelineDuration(timeline)} voUrl={voUrl}
+            onStart={() => { playerRef.current?.seekTo(0); playerRef.current?.mute(); playerRef.current?.play(); }}
+            onStop={() => { playerRef.current?.pause(); playerRef.current?.unmute(); }} />
+
           <div className="space-y-2">
             <Btn busy={busy === "send"} onClick={send} className="min-h-[48px] w-full text-[15px]">{busy === "send" ? `מכינה את הקובץ ${progress}%` : canShareFiles() ? "לשלוח לאינסטגרם" : "להוריד ולשלוח"}</Btn>
             <div className="flex gap-2 [&>*]:flex-1">
@@ -313,6 +332,139 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
         </div>
       </div>
     </Panel>
+  );
+}
+
+/**
+ * קריינות: מקליטים כאן, תוך כדי שהריל מתנגן (בלי קול), כדי לדבר בקצב של הכרטיסים.
+ * הטקסט של הכרטיסים מופיע כמו פרומפטר. אפשר גם להעלות קובץ. נשמר לריל ונכנס לקובץ שנשלח.
+ */
+function VoiceOver({ draft, onChange, reelSeconds, voUrl, onStart, onStop }: { draft: Draft; onChange: (d: Draft) => void; reelSeconds: number; voUrl: string | null; onStart: () => void; onStop: () => void }) {
+  const kit = draft.data.edit!;
+  const vo = draft.data.voiceover;
+  const [open, setOpen] = useState(false);
+  const [rec, setRec] = useState<MediaRecorder | null>(null);
+  const [secs, setSecs] = useState(0);
+  const [take, setTake] = useState<{ blob: Blob; url: string; seconds: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const chunks = useRef<Blob[]>([]);
+  const t0 = useRef(0);
+  useEffect(() => {
+    if (!rec) return;
+    const id = setInterval(() => setSecs((Date.now() - t0.current) / 1000), 200);
+    return () => clearInterval(id);
+  }, [rec]);
+  // הכרטיס שעכשיו צריך להגיד, לפי הזמן
+  const now = kit.cards.findIndex((c) => secs >= c.start && secs < c.end);
+
+  const start = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+      const r = new MediaRecorder(stream);
+      chunks.current = [];
+      r.ondataavailable = (e) => e.data.size && chunks.current.push(e.data);
+      r.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunks.current, { type: r.mimeType || "audio/webm" });
+        setTake({ blob, url: URL.createObjectURL(blob), seconds: (Date.now() - t0.current) / 1000 });
+      };
+      setTake(null);
+      t0.current = Date.now(); setSecs(0);
+      r.start(250);
+      setRec(r);
+      onStart();
+    } catch { toast("אין גישה למיקרופון. צריך לאשר מיקרופון בדפדפן", true); }
+  };
+  const stop = () => { rec?.stop(); setRec(null); onStop(); };
+  // עצירה לבד בסוף הריל
+  useEffect(() => { if (rec && secs >= reelSeconds + 0.3) stop(); }, [secs]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const save = async (blob: Blob, seconds: number) => {
+    setBusy(true);
+    try {
+      const { data: u } = await db().auth.getUser();
+      if (!u.user) throw new Error("צריך להתחבר מחדש");
+      const ext = blob.type.includes("mp4") ? "m4a" : blob.type.includes("mpeg") ? "mp3" : blob.type.includes("wav") ? "wav" : "webm";
+      const path = `${u.user.id}/studio/${draft.id}/voice-${Date.now()}.${ext}`;
+      const { error } = await db().storage.from(MEDIA_BUCKET).upload(path, blob, { contentType: blob.type || "audio/webm" });
+      if (error) throw new Error(error.message);
+      const { data, error: e2 } = await db().from("studio_drafts").update({ data: { ...draft.data, voiceover: { path, seconds: +seconds.toFixed(2), volume: 1 } } }).eq("id", draft.id).select("*").single();
+      if (e2) throw new Error(e2.message);
+      onChange(data as Draft);
+      setTake(null);
+      toast("הקריינות נשמרה");
+    } catch (e) { toast((e as Error).message, true); }
+    finally { setBusy(false); }
+  };
+  const upload = async (f: File) => {
+    const seconds = await new Promise<number>((res) => { const a = new Audio(URL.createObjectURL(f)); a.onloadedmetadata = () => res(a.duration || 0); a.onerror = () => res(0); });
+    await save(f, seconds);
+  };
+  const remove = async () => {
+    const { voiceover: _v, ...rest } = draft.data; // eslint-disable-line @typescript-eslint/no-unused-vars
+    const { data } = await db().from("studio_drafts").update({ data: rest }).eq("id", draft.id).select("*").single();
+    if (data) onChange(data as Draft);
+  };
+  const setVolume = async (v: number) => {
+    if (!vo) return;
+    const { data } = await db().from("studio_drafts").update({ data: { ...draft.data, voiceover: { ...vo, volume: v } } }).eq("id", draft.id).select("*").single();
+    if (data) onChange(data as Draft);
+  };
+
+  return (
+    <div className="rounded-2xl border border-[#E3D9CC] bg-white/70">
+      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex w-full items-center justify-between px-4 py-3 text-right text-[14px] font-bold text-[#5E1D1D]">
+        <span className="flex items-center gap-2"><Mic className="size-4" />קריינות{vo ? " · יש קריינות" : ""}</span>
+        <span className="text-xl leading-none">{open ? "−" : "+"}</span>
+      </button>
+      {open && (
+        <div className="space-y-3 border-t border-[#E3D9CC] px-4 py-4">
+          <p className="text-[12px] leading-relaxed text-[#6A6158]">לוחצים "להקליט", והריל מתחיל להתנגן בלי קול. מדברים בקצב של הכרטיסים, והטקסט של כל כרטיס מודגש כשמגיע הזמן שלו. ההקלטה נעצרת לבד בסוף הריל ({Math.round(reelSeconds)} שניות).</p>
+          <ol className="space-y-1.5 rounded-xl bg-[#FAF6F1] p-3">
+            {kit.cards.map((c, i) => (
+              <li key={i} className={cn("rounded-lg px-2 py-1.5 text-[14px] leading-snug transition", rec && now === i ? "bg-[#5E1D1D] font-bold text-[#FAF6F1]" : "text-[#2A2622]")}>
+                {(c.headline ?? c.text).replace(/\*/g, "")}{c.headline && c.body ? `. ${c.body}` : ""}
+              </li>
+            ))}
+          </ol>
+          {rec ? (
+            <button type="button" onClick={stop} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-[#A3402F] text-[15px] font-bold text-white">
+              <span className="size-2.5 animate-pulse rounded-full bg-white" />לעצור · {secs.toFixed(1)} / {Math.round(reelSeconds)} שניות
+            </button>
+          ) : (
+            <div className="flex gap-2 [&>*]:flex-1">
+              <Btn onClick={start} className="min-h-[46px]"><Mic className="size-4" />{vo || take ? "להקליט מחדש" : "להקליט"}</Btn>
+              <label className="inline-flex min-h-[46px] cursor-pointer items-center justify-center rounded-xl border border-[#5E1D1D]/50 bg-white/60 px-3 text-[13px] font-bold text-[#5E1D1D]">
+                להעלות קובץ
+                <input type="file" accept="audio/*" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void upload(f); }} />
+              </label>
+            </div>
+          )}
+          {take && !rec && (
+            <div className="space-y-2 rounded-xl border border-[#B5848E] bg-[#FAF6F1] p-3">
+              <p className="text-[13px] font-bold text-[#5E1D1D]">ההקלטה החדשה ({take.seconds.toFixed(1)} שניות)</p>
+              <audio src={take.url} controls className="w-full" />
+              <div className="flex gap-2 [&>*]:flex-1">
+                <Btn busy={busy} onClick={() => save(take.blob, take.seconds)}>לשמור בריל</Btn>
+                <Btn variant="line" onClick={() => setTake(null)}>לוותר</Btn>
+              </div>
+            </div>
+          )}
+          {vo && !take && !rec && (
+            <div className="space-y-2 rounded-xl bg-[#FAF6F1] p-3">
+              <p className="text-[13px] font-bold text-[#5E1D1D]">הקריינות של הריל ({vo.seconds.toFixed(1)} שניות)</p>
+              {voUrl && <audio src={voUrl} controls className="w-full" />}
+              <Row label="עוצמה">
+                {([[0.5, "שקט"], [0.8, "רגיל"], [1, "מלא"]] as const).map(([v, l]) => <Chip key={l} on={(vo.volume ?? 1) === v} onClick={() => setVolume(v)}>{l}</Chip>)}
+              </Row>
+              {vo.seconds > reelSeconds + 0.5 && <p className="text-[12px] text-[#A3402F]">הקריינות ארוכה מהריל, אז הסוף שלה ייחתך. אפשר להקליט קצר יותר, או לבקש מהמעצב להאט.</p>}
+              <button type="button" onClick={remove} className="text-[12px] font-bold text-[#A3402F] underline underline-offset-4">להסיר את הקריינות</button>
+            </div>
+          )}
+          <p className="text-[11px] text-[#9A8C85]">באינסטגרם אפשר עדיין להוסיף מוזיקה טרנדית מתחת לקריינות, ולהנמיך אותה.</p>
+        </div>
+      )}
+    </div>
   );
 }
 
