@@ -14,6 +14,7 @@ const GROUPS: Group[] = [
   { key: "today", label: "היום", href: "/studio", subs: [] },
   { key: "plan", label: "תכנון", href: "/studio/board", subs: [
     { href: "/studio/board", label: "לוח התוכן", count: "board" },
+    { href: "/studio/replan", label: "לתכנן את השבוע מחדש" },
     { href: "/studio/ideas", label: "רעיונות", count: "ideas" },
     { href: "/studio/trends", label: "טרנדים", count: "trends" },
   ] },

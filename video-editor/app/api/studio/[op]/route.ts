@@ -9,7 +9,7 @@ import { driveAccessToken, driveConfigured, driveProblem, driveEmail, driveThumb
 import { adminStore, autoDraft, autoSuggest } from "@/lib/studio/auto";
 import { carouselIdeas, editCarouselByChat, understandReelRequest, matchMaterials, writeCarousel, writeHooks, writeScript } from "@/lib/studio/engine";
 import { projectFromDraft } from "@/lib/studio/handoff";
-import { advise, buildVoice, inspire, planToday, planWeek, preferencesBlock, type Feedback, researchTrends, suggestFromEdit, weeklyStats, writeReview } from "@/lib/studio/insights";
+import { advise, buildVoice, inspire, planToday, planWeek, preferencesBlock, type Feedback, researchTrends, suggestFromEdit, weekOptions, weeklyStats, writeReview } from "@/lib/studio/insights";
 import { instagramConfigured, loadAccounts } from "@/lib/studio/instagram";
 import { StudioError, getVoice, requireStudioAdmin, todayIL, voiceBlock } from "@/lib/studio/server";
 
@@ -208,6 +208,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
         if (error) throw new StudioError(error.message, 500);
         await supabase.from("studio_drafts").update({ project_id: data.id }).eq("id", draft.id);
         return NextResponse.json({ projectId: data.id });
+      }
+      case "week-options": {
+        const { account: acc, dates } = z.object({ account, dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).min(1).max(7) }).parse(body);
+        const [{ data: trend }, { data: existing }, { data: fb }] = await Promise.all([
+          supabase.from("studio_trends").select("items").eq("status", "done").order("date", { ascending: false }).limit(1).maybeSingle(),
+          supabase.from("studio_items").select("title").eq("account", acc).order("created_at", { ascending: false }).limit(60),
+          supabase.from("studio_feedback").select("kind, text, verdict, reason").order("created_at", { ascending: false }).limit(60),
+        ]);
+        const days = await weekOptions({
+          account: acc, dates, voice: voiceBlock(await getVoice(supabase, acc), acc),
+          trends: ((trend?.items ?? []) as TrendItem[]).filter((t) => t.account === acc),
+          existing: (existing ?? []).map((e) => e.title as string), feedback: (fb ?? []) as Feedback[],
+          templates: TEMPLATES.map((t) => ({ id: t.id, name: t.name, kind: t.kind })),
+        });
+        return NextResponse.json({ days });
       }
       case "plan-week": {
         const { focus } = z.object({ focus: z.string().max(800).default("") }).parse(body);

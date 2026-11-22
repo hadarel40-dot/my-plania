@@ -83,6 +83,7 @@ export function WeekGrid({ account = "all" }: { account?: string }) {
         <div className="flex items-center gap-2">
           {items && <span className="rounded-full border border-[#E2DACD] bg-white/70 px-3 py-1 text-[12px] font-bold">{items.length} פוסטים משובצים{items.length ? ` · ${withMedia} עם קבצים` : ""}</span>}
           <button type="button" aria-label="השבוע הקודם" onClick={() => setStart(addDays(start, -7))} className="rounded-lg border border-[#E2DACD] bg-white/70 p-1.5"><ChevronRight className="size-4" /></button>
+          <Link href="/studio/replan" className="rounded-lg bg-[#1F1B16] px-2.5 py-1 text-[12px] font-bold text-[#FBF8F2]">לתכנן מחדש</Link>
           <button type="button" onClick={() => setStart(sundayOf(today))} className="rounded-lg border border-[#E2DACD] bg-white/70 px-2.5 py-1 text-[12px] font-bold">השבוע</button>
           <button type="button" aria-label="השבוע הבא" onClick={() => setStart(addDays(start, 7))} className="rounded-lg border border-[#E2DACD] bg-white/70 p-1.5"><ChevronLeft className="size-4" /></button>
         </div>

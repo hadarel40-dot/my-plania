@@ -440,3 +440,43 @@ ${HOOK_RULES}
   const raw = cleanDeep(await askBrain({ prefer: "claude", schema: IdeaSuggestSchema, system: "את מנהלת סושיאל שהופכת השראה לרעיון מקורי שמתאים ליוצרת.", parts }));
   return finishSuggestions(raw, [], "inspiration", input.url);
 }
+
+// ---------- תכנון השבוע מחדש: כמה אפשרויות לכל יום
+
+const WeekOptionsSchema = z.object({
+  days: z.array(z.object({
+    date: z.string(),
+    options: z.array(z.object({
+      content_type: z.enum(["story", "viral", "value", "trust"]),
+      format: z.enum(["reel", "carousel"]),
+      title: z.string(),
+      idea: z.string(),
+      hook: z.string(),
+      why: z.string(),
+      template: z.string(),
+    })),
+  })),
+});
+
+/** לכל יום שלוש אפשרויות שונות זו מזו (סוג תוכן, פורמט, זווית), כדי שהיא תבחר */
+export async function weekOptions(input: { account: string; dates: string[]; voice: string; trends: TrendItem[]; existing: string[]; feedback: Feedback[]; templates: { id: string; name: string; kind: string }[] }) {
+  const performance = await performanceSummary(12, input.account).catch(() => "אין נתוני ביצועים.");
+  const { days } = cleanDeep(await askBrain({
+    prefer: "claude", schema: WeekOptionsSchema,
+    system: "את מנהלת הסושיאל שלה ומתכננת איתה את השבוע מחדש. עברית מדוברת וחמה, בלי אימוג'י, בלי מקפים ארוכים, בלי מספרים מומצאים. את שם האפליקציה כותבים Plania.",
+    parts: [{ text: `${input.voice}
+${preferencesBlock(input.feedback)}
+
+החשבון: @${input.account}.
+הימים: ${input.dates.join(", ")}
+טרנדים מאומתים: ${JSON.stringify(input.trends.slice(0, 10).map((t) => ({ title: t.title, idea: t.reel_idea })))}
+ביצועים של החשבון: ${performance}
+כבר קיים (לא לחזור): ${JSON.stringify(input.existing.slice(0, 50))}
+תבניות: ${JSON.stringify(input.templates)}
+
+לכל יום תני בדיוק 3 אפשרויות שונות באמת זו מזו: סוג תוכן אחר (story סיפור אישי, viral ויראלי, value ערך, trust אמון והוכחה), זווית אחרת, ולפחות ריל אחד וקרוסלה אחת ביום.
+בכל השבוע יחד, שכל ארבעת סוגי התוכן יופיעו.
+לכל אפשרות: title (עד 8 מילים), idea (מה רואים ומה הצופה מקבלת, משפט או שניים), hook (המשפט הראשון על המסך, עד 8 מילים), why (למה זה יעבוד, רק לפי מה שלמעלה), template (id מהרשימה שמתאים לפורמט).` }],
+  }));
+  return days;
+}
