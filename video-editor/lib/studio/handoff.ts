@@ -72,9 +72,12 @@ export function projectFromDraft(draft: Draft): SavedProject & { notes: string }
       words.forEach((x, wi) => {
         const start = +(c.start + 0.1 + wi * step).toFixed(2);
         const end = wi === words.length - 1 ? c.end : +(start + step).toFixed(2);
+        // אותם ערכים כמו ב-scripts/weekly/render.mjs (reelPop): Assistant, כותרת לבנה עם קו ורוד, המשך ורוד, צל רך
         ovs.push({
           id: uid("ov"), kind: "text", hook: ci === 0 && wi === 0, text: x.w, start, end,
-          x: 0.5, y: 0.5, size: x.head ? 150 : 120, color: x.head ? "#FFFFFF" : "#F7C9D6", background: null, stroke: true, weight: 900,
+          x: 0.5, y: 0.487, size: x.head ? 150 : 120, color: x.head ? "#FFFFFF" : "#F7C9D6", background: null, weight: 900, font: "assistant",
+          stroke: x.head, strokeColor: "#F7C9D6", strokeWidth: 0.02,
+          shadow: "0 4px 6px rgba(0,0,0,.55), 0 8px 34px rgba(0,0,0,.45)",
           rotate: 0, animIn: "pop", loop: "none", animOut: "none",
         });
       });

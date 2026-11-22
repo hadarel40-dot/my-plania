@@ -159,8 +159,14 @@ export interface Overlay {
   color: string;
   /** רקע "תווית" מאחורי הטקסט, או null בלי רקע */
   background: string | null;
-  /** קו מתאר שחור סביב האותיות */
+  /** קו מתאר סביב האותיות (שחור, אלא אם נבחר צבע) */
   stroke: boolean;
+  /** צבע הקו המתאר (ברירת מחדל: שחור) */
+  strokeColor?: string;
+  /** עובי הקו המתאר ביחס לגודל הגופן (ברירת מחדל 0.05) */
+  strokeWidth?: number;
+  /** צל לטקסט, ב-CSS (למשל מהסטודיו, כדי שייראה בדיוק כמו בדשבורד) */
+  shadow?: string;
   weight: 400 | 700 | 900;
   /** גופן (מזהה מ-lib/editor/fonts). בלי: הגופן הרגיל */
   font?: string;

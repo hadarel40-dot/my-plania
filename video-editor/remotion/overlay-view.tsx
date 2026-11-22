@@ -89,11 +89,11 @@ export function OverlayView({ overlay: o, durationInFrames }: { overlay: Overlay
         fontSize,
         fontWeight: o.weight,
         color: o.color,
-        ...(o.stroke ? { WebkitTextStroke: `${Math.max(2, fontSize * 0.05)}px black`, paintOrder: "stroke fill" } : {}),
+        ...(o.stroke ? { WebkitTextStroke: `${Math.max(1, fontSize * (o.strokeWidth ?? 0.05))}px ${o.strokeColor ?? "black"}`, paintOrder: "stroke fill" } : {}),
         ...(o.background
           ? { background: o.background, padding: `${fontSize * 0.18}px ${fontSize * 0.4}px`, borderRadius: fontSize * 0.3 }
           : {}),
-        textShadow: o.stroke || o.background || o.kind === "emoji" ? undefined : "0 4px 16px rgba(0,0,0,.6)",
+        textShadow: o.shadow ?? (o.stroke || o.background || o.kind === "emoji" ? undefined : "0 4px 16px rgba(0,0,0,.6)"),
       }}
     >
       {text}

@@ -96,6 +96,7 @@ export function OverlayInspector({ id, onClose }: { id: string; onClose: () => v
             </Section>
             <div className="flex gap-2">
               <Toggle on={o.stroke} onClick={() => set({ stroke: !o.stroke })}>קו מתאר</Toggle>
+              {o.stroke && <input type="color" aria-label="צבע הקו המתאר" value={o.strokeColor ?? "#000000"} onChange={(e) => set({ strokeColor: e.target.value })} className="h-8 w-9 cursor-pointer rounded-md border border-zinc-700 bg-transparent p-0.5" />}
               {([400, 700, 900] as const).map((w) => (
                 <Toggle key={w} on={o.weight === w} onClick={() => set({ weight: w })}>
                   <span style={{ fontWeight: w }}>{w === 400 ? "רגיל" : w === 700 ? "מודגש" : "עבה"}</span>
