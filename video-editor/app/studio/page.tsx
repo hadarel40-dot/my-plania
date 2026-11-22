@@ -95,8 +95,10 @@ function Reset({ today, items }: { today: string; items: Item[] | null }) {
             <li key={r.k} className="py-2.5">
               <div className="flex items-start gap-3">
                 <button type="button" aria-label={done[r.k] ? "בטל סימון" : "סמני שבוצע"} onClick={() => toggle(r.k)}
-                  className={cn("mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border-[1.5px] border-[#1F1B16]", done[r.k] && "bg-[#1F1B16]")}>
-                  {done[r.k] && <Check className="size-3 text-[#FBF8F2]" />}
+                  className="-m-2.5 grid size-10 shrink-0 place-items-center">
+                  <span className={cn("grid size-5 place-items-center rounded-full border-[1.5px] border-[#1F1B16]", done[r.k] && "bg-[#1F1B16]")}>
+                    {done[r.k] && <Check className="size-3 text-[#FBF8F2]" />}
+                  </span>
                 </button>
                 <button type="button" className={cn("flex-1 text-right text-[15px] font-semibold", done[r.k] && "text-[#9A9184] line-through")} onClick={() => (r.rec ? setOpen(open === r.i ? null : r.i!) : null)}>
                   {r.title}

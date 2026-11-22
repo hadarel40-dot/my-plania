@@ -1,4 +1,5 @@
 "use client";
+import { fontCssReady } from "@/lib/font-css";
 import type { Carousel, Slide } from "./config";
 import { PHOTO_DEFAULT, boldOf, fontStack, regularOf, sizeFactor } from "./brand";
 
@@ -75,12 +76,14 @@ const fill = (s: string) => s.replace(/\{\{\s*([^}]+?)\s*\}\}/g, "[$1]");
 
 export async function renderSlide(c0: Carousel, index: number, images: Record<number, string> = {}): Promise<HTMLCanvasElement> {
   const c: Carousel = { ...c0, slides: c0.slides.map((s) => ({ ...s, headline: fill(s.headline), body: fill(s.body) })) };
+  await fontCssReady();
   if (document.fonts) {
     await Promise.all([document.fonts.load(`900 80px ${SERIF_BASE}`), document.fonts.load(`600 40px ${SANS_BASE}`), document.fonts.load(`800 26px ${SANS_BASE}`), document.fonts.load(`700 60px ${HAND}`)]).catch(() => {});
   }
   if ((c.style ?? "cream") === "photo") return renderPhotoSlide(c, index, images);
   const th = c.theme ?? {};
   const SERIF = fontStack(th.headFont, SERIF_BASE), SANS = fontStack(th.bodyFont, SANS_BASE);
+  await fontCssReady();
   if (document.fonts && (th.headFont || th.bodyFont)) await Promise.all([document.fonts.load(`900 80px ${SERIF}`), document.fonts.load(`600 40px ${SANS}`)]).catch(() => {});
   const slide = c.slides[index];
   const canvas = document.createElement("canvas");
@@ -183,6 +186,7 @@ async function renderPhotoSlide(c: Carousel, index: number, images: Record<numbe
   const t = { ...PHOTO_DEFAULT, ...(c.theme ?? {}) };
   const HEAD = fontStack(t.headFont, SANS), BODY = fontStack(t.bodyFont, HAND);
   const hw = boldOf(t.headFont), bw = t.bodyFont === "Amatic SC" ? 700 : regularOf(t.bodyFont) >= 500 ? regularOf(t.bodyFont) : 600;
+  await fontCssReady();
   if (document.fonts) await Promise.all([document.fonts.load(`${hw} 80px ${HEAD}`), document.fonts.load(`${bw} 60px ${BODY}`)]).catch(() => {});
   const slide = c.slides[index];
   const canvas = document.createElement("canvas");

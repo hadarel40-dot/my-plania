@@ -1,4 +1,5 @@
 "use client";
+import { fontCssReady } from "@/lib/font-css";
 import type { MediaAsset, Timeline } from "@/lib/editor/types";
 import { layoutClips, videoEnd } from "@/lib/editor/timeline-utils";
 import { fontFamily } from "@/lib/editor/fonts";
@@ -74,6 +75,7 @@ export async function makeCover(timeline: Timeline, assets: Record<string, Media
       ctx.fillRect(0, 0, W, H * 0.45);
       const family = fontFamily(hook?.font ?? timeline.captionStyle?.font ?? "secular");
       const size = text.length > 30 ? 84 : 104;
+      await fontCssReady();
       await document.fonts.load(`900 ${size}px ${family}`).catch(() => undefined);
       ctx.font = `900 ${size}px ${family}`;
       ctx.direction = "rtl";

@@ -1,4 +1,5 @@
 "use client";
+import { fontCssReady } from "@/lib/font-css";
 import "@/lib/dispose-polyfill";
 import { canRenderMediaOnWeb, renderMediaOnWeb } from "@remotion/web-renderer";
 import type { CompositionProps } from "@/remotion/timeline-composition";
@@ -34,6 +35,7 @@ export async function renderToMp4(
   // הגופנים חייבים להיות טעונים לפני הרינדור, אחרת הטקסט ייצא בגופן ברירת המחדל
   if ([...timeline.overlays.map((o) => o.font), ...timeline.captions.map((c) => c.font)].some(isExtraFont)) await ensureExtraFonts();
   const families = [...new Set([...timeline.overlays.map((o) => o.font), ...timeline.captions.map((c) => c.font)].map((f) => fontFamily(f).split(",")[0]))];
+  await fontCssReady();
   await Promise.all(families.map((f) => document.fonts.load(`700 64px ${f}`).catch(() => undefined)));
   await document.fonts.ready;
 

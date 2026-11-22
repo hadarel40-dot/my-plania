@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { FONTS_CSS } from "@/lib/editor/fonts";
+import { DeferredFonts } from "@/components/common/deferred-fonts";
 
 export const metadata: Metadata = {
   title: "Plania · עורך וסטודיו",
@@ -33,10 +34,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             הייצוא השלימה אותו בשם אחר, ולכן הייצוא נכשל ב-"Object not disposable". כאן כולן מקבלות אותו סמל */}
         <script dangerouslySetInnerHTML={{ __html: DISPOSE_POLYFILL }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="stylesheet" href={FONTS_CSS} />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Amatic+SC:wght@700&family=Bellefair&family=Frank+Ruhl+Libre:wght@500;700;900&display=swap" />
       </head>
-      <body>{children}</body>
+      <body>{children}<DeferredFonts hrefs={[FONTS_CSS]} /></body>
     </html>
   );
 }
