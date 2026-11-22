@@ -2,11 +2,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Check, Clapperboard, Lightbulb, Sparkles, Video } from "lucide-react";
+import { Check } from "lucide-react";
 import { ACCOUNTS, NICHES, labelOf, type Account, type Stage } from "@/lib/studio/config";
 import { db, studioCall, todayIL } from "@/lib/studio/client";
 import { Btn, Loading, Note, Panel, Tag, toast } from "@/components/studio/ui";
-import { TodayPost, WeekStrip } from "@/components/studio/today";
+import { TodayPost, WeekBoard } from "@/components/studio/today";
 import { cn } from "@/lib/utils";
 
 interface Rec { title: string; why: string; what_to_shoot: string; action: string; action_label: string; idea: string; account: string; niche: string; impact: string }
@@ -32,28 +32,15 @@ export default function HomePage() {
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-5 lg:grid-cols-[1.1fr_1fr]">
-        <Reset today={today} items={items} />
+      <WeekBoard today={today} />
+      <div className="grid gap-5 lg:grid-cols-[1fr_1.1fr]">
         <TodayPost today={today} />
+        <Reset today={today} items={items} />
       </div>
-      <WeekStrip today={today} />
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
-        {[
-          { href: "/studio/new", icon: <Clapperboard className="size-5" />, label: "ריל חדש", sub: "מהסרטונים בדרייב", main: true },
-          { href: "/studio/own-video", icon: <Video className="size-5" />, label: "סרטון שצילמתי", sub: "עריכה ושיבוץ" },
-          { href: "/studio/ideas", icon: <Lightbulb className="size-5" />, label: open ? `רעיונות (${open})` : "רעיונות", sub: "הצעות לשבוע" },
-          { href: "/studio/ideas#inspiration", icon: <Sparkles className="size-5" />, label: "השראה", sub: "מקישור, תמונה או סרטון" },
-        ].map((t) => (
-          <Link key={t.href} href={t.href}
-            className={cn("group flex min-h-[76px] items-center gap-3 rounded-2xl border p-3 transition", t.main ? "border-[#5E1D1D] bg-[#5E1D1D] text-[#FAF6F1] shadow-[0_10px_24px_-14px_rgba(94,29,29,0.9)]" : "border-[#E3D9CC] bg-[#FAF6F1] hover:border-[#5E1D1D]/50")}>
-            <span className={cn("grid size-10 shrink-0 place-items-center rounded-xl", t.main ? "bg-white/15" : "bg-[#EFD9DD] text-[#5E1D1D]")}>{t.icon}</span>
-            <span className="min-w-0">
-              <span className="block text-[14px] font-bold leading-tight">{t.label}</span>
-              <span className={cn("block truncate text-[11px]", t.main ? "text-[#FAF6F1]/75" : "text-[#6A6158]")}>{t.sub}</span>
-            </span>
-          </Link>
-        ))}
-      </div>
+      <p className="text-center text-[12px] text-[#9A8C85]">
+        <Link href="/studio/own-video" className="font-bold text-[#5E1D1D] underline underline-offset-4">צילמת סרטון בעצמך?</Link> מכניסים אותו לשבוע מכאן.
+        {open ? <> · <Link href="/studio/ideas" className="font-bold text-[#5E1D1D] underline underline-offset-4">{open} רעיונות מחכים</Link></> : null}
+      </p>
     </div>
   );
 }

@@ -167,3 +167,77 @@ export function WeekStrip({ today }: { today: string }) {
     </section>
   );
 }
+
+const DAY_NAME = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
+const longDate = (iso: string) => new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "long" }).format(new Date(`${iso}T12:00:00`));
+
+/**
+ * השבוע, בגדול ובנקי: כותרת, שורה בכתב יד, ושבעה ימים עם התמונות של הפוסטים.
+ * בטלפון מחליקים בין הימים. לוחצים על פוסט כדי לפתוח אותו, ועל יום ריק כדי לשבץ בו משהו.
+ */
+export function WeekBoard({ today }: { today: string }) {
+  const start = sundayOf(today);
+  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(start, i)), [start]);
+  const [data, setData] = useState<Awaited<ReturnType<typeof loadRange>> | null>(null);
+  useEffect(() => { loadRange(days[0], days[6]).then(setData); }, [days]);
+  const items = data?.items ?? [];
+  const types = new Set(items.map((x) => x.content_type || (x.draft_id ? data?.drafts[x.draft_id]?.data.content_type : null)).filter(Boolean));
+  return (
+    <section className="rounded-[28px] border border-[#E3D9CC] bg-[#FFFDFB] p-4 shadow-[0_24px_50px_-40px_rgba(94,29,29,0.6)] md:p-7">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="s-accent text-[34px] leading-none md:text-5xl">השבוע של {longDate(start)}</h1>
+          <p className="mt-1.5 text-[22px] leading-none text-[#B5848E] md:text-[26px]" style={{ fontFamily: '"Gveret Levin", "Assistant", sans-serif' }}>
+            {data ? (items.length ? `${items.length} פוסטים, ${types.size} מתוך 4 סוגי תוכן` : "עוד אין פוסטים השבוע") : "\u00a0"}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Link href="/studio/replan" className="inline-flex min-h-[40px] items-center rounded-xl border border-[#5E1D1D]/40 bg-white px-4 text-[13px] font-bold text-[#5E1D1D] hover:border-[#5E1D1D]">לתכנן מחדש</Link>
+          <Link href="/studio/new" className="inline-flex min-h-[40px] items-center rounded-xl bg-[#5E1D1D] px-4 text-[13px] font-bold text-[#FAF6F1] shadow-[0_6px_16px_-10px_rgba(94,29,29,0.9)]">+ ריל חדש</Link>
+        </div>
+      </div>
+
+      <div className="-mx-4 mt-6 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-7 md:overflow-visible md:px-0">
+        {days.map((d) => {
+          const list = items.filter((x) => x.planned_date === d);
+          const isToday = d === today;
+          return (
+            <div key={d} className="w-[44%] shrink-0 snap-start sm:w-[30%] md:w-auto">
+              <p className={cn("mb-2 flex items-center gap-1.5 text-[13px] font-bold", isToday ? "text-[#5E1D1D]" : "text-[#9A8C85]")}>
+                {DAY_NAME[new Date(`${d}T12:00:00`).getDay()]} {Number(d.slice(8))}
+                {isToday && <span className="rounded-full bg-[#5E1D1D] px-2 py-0.5 text-[10px] text-[#FAF6F1]">היום</span>}
+              </p>
+              {!data && <div className="aspect-[4/5] animate-pulse rounded-2xl bg-[#F2ECE4]" />}
+              {list.map((x) => {
+                const dr = x.draft_id ? data!.drafts[x.draft_id] : undefined;
+                const t = data!.thumbs[thumbPath(dr) ?? ""];
+                const type = x.content_type || dr?.data.content_type;
+                return (
+                  <Link key={x.id} href={dr ? `/studio/reel?id=${dr.id}` : "/studio/board"}
+                    className={cn("group mb-2.5 block overflow-hidden rounded-2xl border bg-white transition hover:-translate-y-0.5 hover:shadow-[0_16px_30px_-20px_rgba(94,29,29,0.7)]", isToday ? "border-[#5E1D1D] ring-2 ring-[#EFD9DD]" : "border-[#E3D9CC]")}>
+                    <div className="relative aspect-[4/5] overflow-hidden bg-[#F2ECE4]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      {t ? <img src={t} alt="" className="size-full object-cover transition duration-500 group-hover:scale-[1.04]" />
+                        : <p className="flex size-full items-center justify-center p-3 text-center text-[13px] font-bold leading-snug text-[#5E1D1D]" style={{ background: "linear-gradient(160deg,#F7E4E7,#EFD9DD)" }}>{x.hook || x.title}</p>}
+                      <span className="absolute right-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold text-[#5E1D1D] backdrop-blur">{FORMAT[x.format] ?? x.format}</span>
+                      {x.stage === "published" && <span className="absolute left-2 top-2 rounded-full bg-[#3E6B4F] px-2 py-0.5 text-[10px] font-bold text-white">פורסם</span>}
+                    </div>
+                    <div className="p-2.5">
+                      <p className="line-clamp-2 text-[13px] font-bold leading-snug text-[#2A2622]">{x.title}</p>
+                      {type && <p className="mt-1 text-[11px] font-semibold text-[#B5848E]">{labelOf(CONTENT_TYPES, type)}</p>}
+                    </div>
+                  </Link>
+                );
+              })}
+              {data && !list.length && (
+                <Link href="/studio/replan" className="flex aspect-[4/5] items-center justify-center rounded-2xl border-2 border-dashed border-[#E3D9CC] text-[13px] font-bold text-[#B5A79E] transition hover:border-[#B5848E] hover:text-[#5E1D1D]">
+                  + לשבץ
+                </Link>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
