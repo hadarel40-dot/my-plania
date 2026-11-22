@@ -39,7 +39,7 @@ function TemplateCard({ t }: { t: Template }) {
     <Panel className="flex flex-col">
       <div className="mb-1.5"><Tag tone="butter">{kindLabel(t)} · {GOAL_LABEL[goalOf(t)]}</Tag></div>
       <Title size="sm">{t.name}</Title>
-      <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-[#4E473E]">{t.why}</p>
+      <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-[#4E4540]">{t.why}</p>
       {open && (
         <div className="mt-3 space-y-2">
           {t.kind === "carousel" ? (
@@ -54,12 +54,12 @@ function TemplateCard({ t }: { t: Template }) {
               {t.structure.map((x, i) => <li key={i} className="flex gap-2"><span className="s-serif shrink-0">{i + 1}.</span><span>{x}</span></li>)}
             </ol>
           )}
-          {t.shots && <p className="text-[12px] text-[#6F675C]"><b>מצלמים: </b>{t.shots.join(" · ")}</p>}
-          <p className="text-[12px] text-[#6F675C]"><b>לדוגמה: </b>{t.example}</p>
+          {t.shots && <p className="text-[12px] text-[#6A6158]"><b>מצלמים: </b>{t.shots.join(" · ")}</p>}
+          <p className="text-[12px] text-[#6A6158]"><b>לדוגמה: </b>{t.example}</p>
         </div>
       )}
       <div className="mt-3 flex items-center gap-3 pt-1 md:mt-auto">
-        <Link href={hrefFor(t)} className="inline-flex flex-1 justify-center rounded-[5px] bg-[#1F1B16] px-3.5 py-2 text-[13px] font-bold text-[#FBF8F2]">להשתמש בתבנית</Link>
+        <Link href={hrefFor(t)} className="inline-flex flex-1 justify-center rounded-[5px] bg-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold text-[#FAF6F1]">להשתמש בתבנית</Link>
         <button type="button" onClick={() => setOpen(!open)} className="text-[12px] font-bold underline underline-offset-4">{open ? "פחות" : "השלבים"}</button>
       </div>
     </Panel>
@@ -95,21 +95,21 @@ export default function TemplatesPage() {
                 <p className="mt-1 text-[13px]">{t.reel_idea}</p>
                 <a href={t.source_url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-[11px] underline"><ExternalLink className="size-3" />{t.source_name}</a>
                 <Link href={tpl ? `/studio/reel?${new URLSearchParams({ template: tpl.id, idea: t.reel_idea, account: t.account, niche: t.niche, ...(tpl.kind === "carousel" ? { mode: "carousel" } : {}) })}` : `/studio/reel?${new URLSearchParams({ idea: t.reel_idea, account: t.account, niche: t.niche })}`}
-                  className="mt-3 inline-flex justify-center rounded-[5px] bg-[#1F1B16] px-3.5 py-2 text-[13px] font-bold text-[#FBF8F2]">לכתוב לפי הטרנד</Link>
+                  className="mt-3 inline-flex justify-center rounded-[5px] bg-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold text-[#FAF6F1]">לכתוב לפי הטרנד</Link>
               </Panel>
             ))}
           </div>
         )}
       </section>
 
-      <p className="mb-3 text-[12px] text-[#6F675C]">תבניות הרילס נמצאות גם בעורך הווידאו, בלשונית החכמה. בקרוסלה אפשר לכתוב עם AI או לבנות לבד בעורך הקרוסלות.</p>
+      <p className="mb-3 text-[12px] text-[#6A6158]">תבניות הרילס נמצאות גם בעורך הווידאו, בלשונית החכמה. בקרוסלה אפשר לכתוב עם AI או לבנות לבד בעורך הקרוסלות.</p>
       <div className="mb-4 flex flex-wrap gap-2">
         {([["all", "הכל"], ["reel", "רילס"], ["carousel", "קרוסלות"]] as const).map(([k, l]) => (
-          <button key={k} type="button" onClick={() => setTab(k)} className={cn("rounded-full border px-3 py-1.5 text-sm font-semibold", tab === k ? "border-[#1F1B16] bg-[#1F1B16] text-[#FBF8F2]" : "border-[#E2DACD] bg-[#FBF8F2]")}>{l}</button>
+          <button key={k} type="button" onClick={() => setTab(k)} className={cn("rounded-full border px-3 py-1.5 text-sm font-semibold", tab === k ? "border-[#5E1D1D] bg-[#5E1D1D] text-[#FAF6F1]" : "border-[#E3D9CC] bg-[#FAF6F1]")}>{l}</button>
         ))}
-        <span className="mx-1 self-center text-[#CFC7B9]">|</span>
+        <span className="mx-1 self-center text-[#D9CBBE]">|</span>
         {([["all", "כל מטרה"], ["saves", "לשמירות"], ["comments", "לתגובות"], ["connection", "לחיבור"]] as const).map(([k, l]) => (
-          <button key={k} type="button" onClick={() => setGoal(k)} className={cn("rounded-full border px-3 py-1.5 text-sm font-semibold", goal === k ? "border-[#1F1B16] bg-[#F6E7A6]" : "border-[#E2DACD] bg-[#FBF8F2]")}>{l}</button>
+          <button key={k} type="button" onClick={() => setGoal(k)} className={cn("rounded-full border px-3 py-1.5 text-sm font-semibold", goal === k ? "border-[#5E1D1D] bg-[#EFD9DD]" : "border-[#E3D9CC] bg-[#FAF6F1]")}>{l}</button>
         ))}
       </div>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{list.map((t) => <TemplateCard key={t.id} t={t} />)}</div>

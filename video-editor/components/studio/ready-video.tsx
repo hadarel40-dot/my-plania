@@ -54,8 +54,8 @@ export function ReadyVideo({ draft, title = "הריל", accent = "מוכן" }: {
     <Panel title={title} accent={accent} aside={draft.data.content_type ? <Tag tone="butter">{labelOf(CONTENT_TYPES, draft.data.content_type)}</Tag> : undefined}>
       <div className="grid gap-4 md:grid-cols-[260px_1fr]">
         {failed ? <Note tone="bad">לא הצלחתי לטעון את הסרטון. נסי לרענן.</Note> : url ? (
-          <video src={url} controls playsInline className="aspect-[9/16] w-full max-w-[260px] rounded-xl border border-[#E2DACD] bg-black" />
-        ) : <div className="aspect-[9/16] w-full max-w-[260px] animate-pulse rounded-xl bg-[#ECE7DE]" />}
+          <video src={url} controls playsInline className="aspect-[9/16] w-full max-w-[260px] rounded-xl border border-[#E3D9CC] bg-black" />
+        ) : <div className="aspect-[9/16] w-full max-w-[260px] animate-pulse rounded-xl bg-[#F0E8DF]" />}
         <div className="min-w-0">
           <div className="flex flex-wrap gap-2">
             <Btn disabled={!url} busy={sending} onClick={send}>לשלוח לאינסטגרם</Btn>

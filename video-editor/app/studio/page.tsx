@@ -38,12 +38,12 @@ export default function HomePage() {
       </div>
       <WeekStrip today={today} />
       <div className="flex flex-wrap gap-2">
-        <Link href="/studio/new" className="inline-flex items-center gap-2 rounded-full bg-[#1F1B16] px-4 py-2 text-[13px] font-bold text-[#FBF8F2]">+ ריל חדש</Link>
-        <Link href="/studio/own-video" className="inline-flex items-center gap-2 rounded-full border border-[#1F1B16] bg-[#FBF8F2] px-4 py-2 text-[13px] font-bold">+ סרטון שצילמתי</Link>
-        <Link href="/studio/ideas" className="inline-flex items-center gap-2 rounded-full border border-[#E2DACD] bg-[#FBF8F2] px-4 py-2 text-[13px] font-bold hover:bg-[#F4EFE6]">
+        <Link href="/studio/new" className="inline-flex items-center gap-2 rounded-full bg-[#5E1D1D] px-4 py-2 text-[13px] font-bold text-[#FAF6F1]">+ ריל חדש</Link>
+        <Link href="/studio/own-video" className="inline-flex items-center gap-2 rounded-full border border-[#5E1D1D] bg-[#FAF6F1] px-4 py-2 text-[13px] font-bold">+ סרטון שצילמתי</Link>
+        <Link href="/studio/ideas" className="inline-flex items-center gap-2 rounded-full border border-[#E3D9CC] bg-[#FAF6F1] px-4 py-2 text-[13px] font-bold hover:bg-[#F2ECE4]">
           <Lightbulb className="size-4" />הצעות לרעיונות{open ? ` (${open})` : ""}
         </Link>
-        <Link href="/studio/ideas#inspiration" className="inline-flex items-center gap-2 rounded-full border border-[#E2DACD] bg-[#FBF8F2] px-4 py-2 text-[13px] font-bold hover:bg-[#F4EFE6]">
+        <Link href="/studio/ideas#inspiration" className="inline-flex items-center gap-2 rounded-full border border-[#E3D9CC] bg-[#FAF6F1] px-4 py-2 text-[13px] font-bold hover:bg-[#F2ECE4]">
           <Sparkles className="size-4" />השראה מקישור, תמונה או סרטון
         </Link>
       </div>
@@ -90,26 +90,26 @@ function Reset({ today, items }: { today: string; items: Item[] | null }) {
     <Panel label={`היום · ${weekday}`} title="האיפוס" accent="שלך" aside={<Btn variant="ghost" busy={busy} onClick={() => load(true)}>לחשב מחדש</Btn>}>
       {error && <Note tone="bad">{error}</Note>}
       {busy && !recs ? <Loading>מסתכלת על הטרנדים, הלוח והביצועים...</Loading> : (
-        <ul className="divide-y divide-[#ECE7DE]">
+        <ul className="divide-y divide-[#F0E8DF]">
           {rows.map((r) => (
             <li key={r.k} className="py-2.5">
               <div className="flex items-start gap-3">
                 <button type="button" aria-label={done[r.k] ? "בטל סימון" : "סמני שבוצע"} onClick={() => toggle(r.k)}
                   className="-m-2.5 grid size-10 shrink-0 place-items-center">
-                  <span className={cn("grid size-5 place-items-center rounded-full border-[1.5px] border-[#1F1B16]", done[r.k] && "bg-[#1F1B16]")}>
-                    {done[r.k] && <Check className="size-3 text-[#FBF8F2]" />}
+                  <span className={cn("grid size-5 place-items-center rounded-full border-[1.5px] border-[#5E1D1D]", done[r.k] && "bg-[#5E1D1D]")}>
+                    {done[r.k] && <Check className="size-3 text-[#FAF6F1]" />}
                   </span>
                 </button>
-                <button type="button" className={cn("flex-1 text-right text-[15px] font-semibold", done[r.k] && "text-[#9A9184] line-through")} onClick={() => (r.rec ? setOpen(open === r.i ? null : r.i!) : null)}>
+                <button type="button" className={cn("flex-1 text-right text-[15px] font-semibold", done[r.k] && "text-[#9A8C85] line-through")} onClick={() => (r.rec ? setOpen(open === r.i ? null : r.i!) : null)}>
                   {r.title}
                   {r.rec && <span className="mr-2 align-middle"><Tag tone={r.rec.impact === "גבוהה" ? "butter" : undefined}>השפעה {r.rec.impact}</Tag></span>}
                 </button>
               </div>
               {r.rec && open === r.i && (
-                <div className="mr-8 mt-2 space-y-2 rounded-xl bg-[#F4EFE6] p-3 text-sm leading-relaxed">
+                <div className="mr-8 mt-2 space-y-2 rounded-xl bg-[#F2ECE4] p-3 text-sm leading-relaxed">
                   <p><span className="font-bold">למה: </span>{r.rec.why}</p>
                   {r.rec.what_to_shoot && <p><span className="font-bold">מה לצלם: </span>{r.rec.what_to_shoot}</p>}
-                  <p className="text-[11px] text-[#6F675C]">{labelOf(ACCOUNTS, r.rec.account)} · {labelOf(NICHES, r.rec.niche)}</p>
+                  <p className="text-[11px] text-[#6A6158]">{labelOf(ACCOUNTS, r.rec.account)} · {labelOf(NICHES, r.rec.niche)}</p>
                   <Btn onClick={() => act(r.rec!)}>{r.rec.action_label || "לפעולה"}</Btn>
                 </div>
               )}
@@ -117,7 +117,7 @@ function Reset({ today, items }: { today: string; items: Item[] | null }) {
           ))}
         </ul>
       )}
-      <p className="mt-2 text-[11px] text-[#6F675C]">לוחצים על משימה כדי לראות למה ומה לצלם. ההמלצות נשענות על הטרנדים, על הלוח, ועל נתוני אינסטגרם כשהם זמינים. בלי מספרים מומצאים.</p>
+      <p className="mt-2 text-[11px] text-[#6A6158]">לוחצים על משימה כדי לראות למה ומה לצלם. ההמלצות נשענות על הטרנדים, על הלוח, ועל נתוני אינסטגרם כשהם זמינים. בלי מספרים מומצאים.</p>
     </Panel>
   );
 }

@@ -22,9 +22,9 @@ export default function VoicePage() {
         {ACCOUNTS.map((a) => <Btn key={a.value} variant={account === a.value ? "solid" : "line"} onClick={() => setAccount(a.value)}>{a.label}</Btn>)}
       </PageHead>
       {!rows ? <Loading /> : <Editor key={account + (row?.built_at ?? "")} account={account} row={row} onSaved={load} />}
-      <section className="mt-6 rounded-2xl border border-[#E2DACD] bg-[#FBF8F2] p-4">
+      <section className="mt-6 rounded-2xl border border-[#E3D9CC] bg-[#FAF6F1] p-4">
         <h2 className="s-serif mb-1 text-xl">צבעים <span className="s-accent">ופונטים</span></h2>
-        <p className="mb-3 text-[13px] text-[#4E473E]">ערכת המותג של {ACCOUNTS.find((a) => a.value === account)?.label}. בכל קרוסלה, "פונטים וצבעים" ואז "להחיל את המותג".</p>
+        <p className="mb-3 text-[13px] text-[#4E4540]">ערכת המותג של {ACCOUNTS.find((a) => a.value === account)?.label}. בכל קרוסלה, "פונטים וצבעים" ואז "להחיל את המותג".</p>
         <BrandKitEditor key={account} account={account} />
       </section>
       <div className="mt-6"><Connections /></div>
@@ -39,7 +39,7 @@ function WordList({ label, values, onChange }: { label: string; values: string[]
     <Field label={label}>
       <div className="flex flex-wrap gap-1.5 rounded-lg border border-[#DDD4C6] bg-white/70 p-2">
         {values.map((v) => (
-          <span key={v} className="inline-flex items-center gap-1 border border-[#E2DACD] bg-[#FBF8F2] px-2 py-0.5 text-sm">
+          <span key={v} className="inline-flex items-center gap-1 border border-[#E3D9CC] bg-[#FAF6F1] px-2 py-0.5 text-sm">
             {v}<button type="button" aria-label={`להסיר ${v}`} onClick={() => onChange(values.filter((x) => x !== v))}><X className="size-3" /></button>
           </span>
         ))}
@@ -83,7 +83,7 @@ function Editor({ account, row, onSaved }: { account: Account; row?: Row; onSave
 
   return (
     <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
-      <Panel title={labelOf(ACCOUNTS, account)} aside={row?.built_at && <span className="text-[11px] text-[#6F675C]">נבנה {formatDate(row.built_at)}</span>}>
+      <Panel title={labelOf(ACCOUNTS, account)} aside={row?.built_at && <span className="text-[11px] text-[#6A6158]">נבנה {formatDate(row.built_at)}</span>}>
         {!row && <Note>עוד אין פרופיל לחשבון הזה. מוצג הקול הבסיסי מ-voice.md. אפשר לשמור אותו כמו שהוא או לבנות מהכיתובים.</Note>}
         <div className="mt-3 space-y-4">
           {area("tone", "טון", 3)}
@@ -98,10 +98,10 @@ function Editor({ account, row, onSaved }: { account: Account; row?: Row; onSave
       <div className="space-y-5">
         {(row?.pending?.length ?? 0) > 0 && <VoiceSuggestions account={account} suggestions={row!.pending} onDone={onSaved} />}
         <Panel title="לבנות מהכיתובים שלי">
-          <p className="mb-3 text-sm text-[#6F675C]">קורא עד 20 כיתובים אחרונים של החשבון (אם הוא מחובר), ומוסיף טקסטים שתדביקי כאן. מחליף את השדות בפרופיל, אז אחר כך כדאי לעבור ולתקן.</p>
+          <p className="mb-3 text-sm text-[#6A6158]">קורא עד 20 כיתובים אחרונים של החשבון (אם הוא מחובר), ומוסיף טקסטים שתדביקי כאן. מחליף את השדות בפרופיל, אז אחר כך כדאי לעבור ולתקן.</p>
           <textarea rows={6} className={inputCls} value={pasted} onChange={(e) => setPasted(e.target.value)} placeholder="אפשר להדביק כאן כיתובים או תמלולים שכתבת" />
           <Btn className="mt-3 w-full" variant="green" busy={busy === "build"} onClick={build}>לבנות את הפרופיל</Btn>
-          {note && <p className="mt-2 text-xs text-[#6F675C]">{note}</p>}
+          {note && <p className="mt-2 text-xs text-[#6A6158]">{note}</p>}
         </Panel>
       </div>
     </div>

@@ -8,7 +8,7 @@ export function ShareHint() {
   useEffect(() => { setPhone(canShareFiles()); }, []);
   if (phone === null) return null;
   return (
-    <p className="mt-2 text-[12px] text-[#6F675C]">
+    <p className="mt-2 text-[12px] text-[#6A6158]">
       {phone
         ? "נפתח חלון השיתוף. בוחרים אינסטגרם, מוסיפים מוזיקה, מדביקים את הכיתוב (כבר הועתק) ושומרים כטיוטה או מפרסמים."
         : "במחשב הקבצים יורדים. כדי לשלוח ישר לאינסטגרם, פותחים את הסטודיו בטלפון."}

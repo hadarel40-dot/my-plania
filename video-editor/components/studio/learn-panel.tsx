@@ -52,7 +52,7 @@ export function LearnPanel() {
   return (
     <Panel label="למידה" title="מה למדנו" accent="מהפוסטים שלך"
       aside={<span className="flex items-center gap-2"><Select value={account} onChange={setAccount} options={ACCOUNTS} /><Btn variant="line" busy={busy} onClick={run}>לעדכן</Btn></span>}>
-      {busy && !res && <p className="text-sm text-[#6F675C]">מחפשת את הפוסטים שפרסמת באינסטגרם...</p>}
+      {busy && !res && <p className="text-sm text-[#6A6158]">מחפשת את הפוסטים שפרסמת באינסטגרם...</p>}
       {res && !res.connected && (
         <Note tone="bad">@{account} לא מחובר לאינסטגרם בסטודיו, אז אין ממה ללמוד. צריך להוסיף אותו לטוקן של אינסטגרם (INSTAGRAM_ACCESS_TOKENS ב-Vercel), עם הרשאה לנתוני חשיפה.</Note>
       )}
@@ -63,14 +63,14 @@ export function LearnPanel() {
               <Lesson title="מה עובד" items={L.works} tone="green" />
               <Lesson title="להפסיק" items={L.stop} tone="red" />
               <Lesson title="לנסות השבוע" items={L.try_next} />
-              <p className="text-[11px] text-[#6F675C] md:col-span-3">מתוך {L.posts} פוסטים, עודכן ב-{formatDate(L.at.slice(0, 10))}. המסקנות האלה נכנסות לכל קרוסלה, ריל ותכנון שבוע מעכשיו.</p>
+              <p className="text-[11px] text-[#6A6158] md:col-span-3">מתוך {L.posts} פוסטים, עודכן ב-{formatDate(L.at.slice(0, 10))}. המסקנות האלה נכנסות לכל קרוסלה, ריל ותכנון שבוע מעכשיו.</p>
             </div>
           ) : (
             <Note>{linked.length < 3 ? `צריך לפחות 3 פוסטים שפורסמו מהסטודיו כדי ללמוד. כרגע: ${linked.length}. אחרי שתפרסמי, לוחצים "לעדכן", והסטודיו ימצא אותם לבד לפי הכיתוב.` : "עוד אין דפוס ברור. ממשיכים לפרסם ובודקים שוב."}</Note>
           )}
-          {!res.insightsAvailable && <p className="text-[12px] text-[#6F675C]">אין הרשאה לחשיפה, שמירות ושיתופים, אז הלמידה רק מלייקים ותגובות.</p>}
+          {!res.insightsAvailable && <p className="text-[12px] text-[#6A6158]">אין הרשאה לחשיפה, שמירות ושיתופים, אז הלמידה רק מלייקים ותגובות.</p>}
           {linked.length > 0 && (
-            <ul className="divide-y divide-[#ECE7DE]">
+            <ul className="divide-y divide-[#F0E8DF]">
               {linked.map((l) => (
                 <li key={l.draftId} className="flex flex-wrap items-center gap-2 py-2.5">
                   <div className="min-w-0 flex-1">
@@ -79,10 +79,10 @@ export function LearnPanel() {
                       <Tag>{l.format === "carousel" ? "קרוסלה" : "ריל"}</Tag>
                       {l.content_type && <Tag tone="butter">{labelOf(CONTENT_TYPES, l.content_type)}</Tag>}
                       {(l.edit || l.chosen_variant) && <Tag>גרסה {l.edit ? variantLabel(l.chosen_variant) : l.chosen_variant}</Tag>}
-                      <span className="text-[11px] text-[#6F675C]">פורסם {formatDate(l.post.posted_at.slice(0, 10))}</span>
+                      <span className="text-[11px] text-[#6A6158]">פורסם {formatDate(l.post.posted_at.slice(0, 10))}</span>
                     </p>
                   </div>
-                  <p className="text-[12px] tabular-nums text-[#4E473E]">
+                  <p className="text-[12px] tabular-nums text-[#4E4540]">
                     {[["חשיפה", l.post.stats.reach], ["צפיות", l.post.stats.views], ["שמירות", l.post.stats.saved], ["שיתופים", l.post.stats.shares], ["לייקים", l.post.stats.likes], ["תגובות", l.post.stats.comments]]
                       .filter(([, v]) => typeof v === "number").map(([k, v]) => `${k} ${num(v as number)}`).join(" · ")}
                   </p>
@@ -95,7 +95,7 @@ export function LearnPanel() {
               ))}
             </ul>
           )}
-          <p className="text-[11px] text-[#6F675C]">פוסט שהסטודיו לא מצא? מדביקים את הקישור שלו בפריט ב<Link href="/studio/board" className="underline">לוח</Link>, ולוחצים "לעדכן".</p>
+          <p className="text-[11px] text-[#6A6158]">פוסט שהסטודיו לא מצא? מדביקים את הקישור שלו בפריט ב<Link href="/studio/board" className="underline">לוח</Link>, ולוחצים "לעדכן".</p>
         </div>
       )}
     </Panel>
@@ -104,9 +104,9 @@ export function LearnPanel() {
 
 function Lesson({ title, items, tone }: { title: string; items: string[]; tone?: "green" | "red" }) {
   return (
-    <div className="rounded-xl border border-[#E2DACD] bg-white/70 p-3">
+    <div className="rounded-xl border border-[#E3D9CC] bg-white/70 p-3">
       <p className={tone === "green" ? "mb-1.5 text-sm font-bold text-[#3E6B4F]" : tone === "red" ? "mb-1.5 text-sm font-bold text-[#A3402F]" : "mb-1.5 text-sm font-bold"}>{title}</p>
-      {items.length ? <ul className="list-disc space-y-1 pr-4 text-[13px] leading-snug">{items.map((t, i) => <li key={i}>{t}</li>)}</ul> : <p className="text-[12px] text-[#6F675C]">עוד אין</p>}
+      {items.length ? <ul className="list-disc space-y-1 pr-4 text-[13px] leading-snug">{items.map((t, i) => <li key={i}>{t}</li>)}</ul> : <p className="text-[12px] text-[#6A6158]">עוד אין</p>}
     </div>
   );
 }

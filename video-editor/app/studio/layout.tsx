@@ -41,18 +41,22 @@ export default async function StudioLayout({ children }: { children: React.React
   };
 
   return (
-    <div className="studio fixed inset-0 overflow-y-auto bg-[#D6CFC3] text-[#1F1B16] [color-scheme:light]">
+    <div className="studio fixed inset-0 overflow-y-auto bg-[#E4D8CC] text-[#2A2622] [color-scheme:light]">
       <DeferredFonts hrefs={[fontsHref]} />
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Bellefair&display=swap" precedence="default" />
       <div className="mx-auto max-w-[1220px] px-2 py-3 md:px-6 md:py-8">
-        <div className="rounded-[26px] border border-[#CFC7B9] bg-[#ECE7DE] px-3 pb-8 pt-5 shadow-[0_12px_40px_-12px_rgba(31,27,22,0.35)] md:px-8">
+        <div className="rounded-[26px] border border-[#D9CBBE] bg-[#F0E8DF] px-3 pb-8 pt-5 shadow-[0_12px_40px_-12px_rgba(94,29,29,0.28)] md:px-8">
           <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="flex rounded-full border border-[#1F1B16] p-0.5 text-[11px] font-bold">
-                <span className="rounded-full bg-[#1F1B16] px-3 py-1 text-[#FBF8F2]">סטודיו</span>
-                <Link href="/" className="rounded-full px-3 py-1 hover:bg-[#FBF8F2]">עורך</Link>
+              <div className="flex rounded-full border border-[#5E1D1D] p-0.5 text-[11px] font-bold">
+                <span className="rounded-full bg-[#5E1D1D] px-3 py-1 text-[#FAF6F1]">סטודיו</span>
+                <Link href="/" className="rounded-full px-3 py-1 hover:bg-[#FAF6F1]">עורך</Link>
               </div>
-              <Link href="/studio"><h1 className="s-serif text-3xl leading-none md:text-[42px]">סטודיו <span className="s-accent">תוכן</span></h1></Link>
+              <Link href="/studio" className="flex items-end gap-3" aria-label="סטודיו התוכן של Plania's">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/brand/planias-logo.png" alt="Plania's" className="h-7 w-auto md:h-9" />
+                <span className="s-accent text-2xl leading-none text-[#5E1D1D] md:text-[30px]">סטודיו תוכן</span>
+              </Link>
             </div>
           </header>
           <StudioNav counts={counts} />

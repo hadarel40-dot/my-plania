@@ -82,8 +82,8 @@ export default function CarouselWeekPage() {
             <Field label="כמה קרוסלות"><Select value={count} onChange={setCount} options={["3", "4", "5", "6", "7"].map((n) => ({ value: n, label: n }))} /></Field>
             <Btn busy={busy} onClick={build}>{busy ? "עובדת..." : "צור שבוע"}</Btn>
           </div>
-          {progress && <p className="mt-3 text-sm text-[#4E473E]">{progress}</p>}
-          <p className="mt-3 text-[12px] text-[#6F675C]">כל קרוסלה לוקחת בערך חצי דקה. אפשר להתחיל לאשר כשהראשונה מוכנה.</p>
+          {progress && <p className="mt-3 text-sm text-[#4E4540]">{progress}</p>}
+          <p className="mt-3 text-[12px] text-[#6A6158]">כל קרוסלה לוקחת בערך חצי דקה. אפשר להתחיל לאשר כשהראשונה מוכנה.</p>
         </Panel>
       )}
       {queue.length > 0 && (
@@ -91,11 +91,11 @@ export default function CarouselWeekPage() {
           <div className="mb-4 flex flex-wrap items-center gap-1.5">
             {queue.map((q, i) => (
               <button key={q.draft.id} type="button" onClick={() => setAt(i)}
-                className={`rounded-full border px-3 py-1 text-[12px] font-bold ${i === at ? "border-[#1F1B16] bg-[#F6E7A6]" : "border-[#E2DACD] bg-[#FBF8F2]"}`}>
+                className={`rounded-full border px-3 py-1 text-[12px] font-bold ${i === at ? "border-[#5E1D1D] bg-[#EFD9DD]" : "border-[#E3D9CC] bg-[#FAF6F1]"}`}>
                 {formatDate(q.day)}{q.status === "placed" ? " ✓" : q.status === "skipped" ? " · דילוג" : ""}
               </button>
             ))}
-            {busy && <span className="text-[12px] text-[#6F675C]">{progress}</span>}
+            {busy && <span className="text-[12px] text-[#6A6158]">{progress}</span>}
           </div>
           {cur && (
             <div className="space-y-3">

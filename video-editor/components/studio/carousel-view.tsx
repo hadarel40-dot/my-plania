@@ -201,7 +201,7 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
           <div className="flex gap-3 overflow-x-auto pb-2">
             {images.map((src, i) => (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={src} alt={i === 0 ? shown!.alt : `שקופית ${i + 1}`} className="h-[300px] w-[240px] shrink-0 rounded-xl border border-[#E2DACD] object-cover shadow-[0_1px_2px_rgba(31,27,22,0.08)]" />
+              <img key={i} src={src} alt={i === 0 ? shown!.alt : `שקופית ${i + 1}`} className="h-[300px] w-[240px] shrink-0 rounded-xl border border-[#E3D9CC] object-cover shadow-[0_1px_2px_rgba(31,27,22,0.08)]" />
             ))}
           </div>
         )}
@@ -209,7 +209,7 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
           <Label>עיצוב:</Label>
           {([["photo", "תמונה"], ["cream", "שמנת"], ["ink", "כהה"], ["butter", "צהוב"]] as const).map(([v, l]) => (
             <button key={v} type="button" onClick={() => setStyle(v)}
-              className={`rounded-lg border px-2.5 py-1 text-[12px] font-semibold ${style === v ? "border-[#1F1B16] bg-[#1F1B16] text-[#FBF8F2]" : "border-[#E2DACD] bg-white/70"}`}>{l}</button>
+              className={`rounded-lg border px-2.5 py-1 text-[12px] font-semibold ${style === v ? "border-[#5E1D1D] bg-[#5E1D1D] text-[#FAF6F1]" : "border-[#E3D9CC] bg-white/70"}`}>{l}</button>
           ))}
           <button type="button" onClick={() => setDesignOpen(!designOpen)} className="ms-2 text-[12px] font-bold underline underline-offset-4">{designOpen ? "לסגור עיצוב" : "פונטים וצבעים"}</button>
         </div>
@@ -281,14 +281,14 @@ function SlideEditor({ edit, setEdit, images }: { edit: Carousel; setEdit: (c: C
   return (
     <Panel title="עריכת" accent="השקופיות" aside={<Tag>{slides.length} שקופיות</Tag>}>
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) upload(f); }} />
-      <p className="mb-3 text-[12px] text-[#6F675C]">כל שינוי מופיע בתצוגה למעלה. תמונה עובדת הכי טוב בשער ובשקופיות רעיון. מומלץ 6 עד 10 שקופיות.</p>
+      <p className="mb-3 text-[12px] text-[#6A6158]">כל שינוי מופיע בתצוגה למעלה. תמונה עובדת הכי טוב בשער ובשקופיות רעיון. מומלץ 6 עד 10 שקופיות.</p>
       <ol className="space-y-3">
         {slides.map((s, i) => (
-          <li key={i} className="rounded-xl bg-[#F4EFE6] p-3">
+          <li key={i} className="rounded-xl bg-[#F2ECE4] p-3">
             <div className="flex gap-3">
               {images?.[i] ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={images[i]} alt="" className="hidden h-[125px] w-[100px] shrink-0 rounded-lg border border-[#E2DACD] object-cover sm:block" />
+                <img src={images[i]} alt="" className="hidden h-[125px] w-[100px] shrink-0 rounded-lg border border-[#E3D9CC] object-cover sm:block" />
               ) : <div className="hidden h-[125px] w-[100px] shrink-0 rounded-lg border border-dashed border-[#DDD4C6] sm:block" />}
               <div className="min-w-0 flex-1">
                 <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
@@ -325,6 +325,6 @@ function SlideEditor({ edit, setEdit, images }: { edit: Carousel; setEdit: (c: C
 function IconBtn({ children, label, onClick, disabled }: { children: React.ReactNode; label: string; onClick: () => void; disabled?: boolean }) {
   return (
     <button type="button" title={label} aria-label={label} disabled={disabled} onClick={onClick}
-      className="rounded-md border border-[#E2DACD] bg-white/70 p-1 text-[#1F1B16] disabled:opacity-30">{children}</button>
+      className="rounded-md border border-[#E3D9CC] bg-white/70 p-1 text-[#2A2622] disabled:opacity-30">{children}</button>
   );
 }

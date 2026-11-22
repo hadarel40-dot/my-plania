@@ -47,7 +47,7 @@ export default function ReviewPage() {
                 {a.error ? <p className="text-xs text-[#A3402F]">{String(a.error)}</p> : (
                   <dl className="grid grid-cols-2 gap-3">
                     {([["פוסטים", a.posts], ["שמירות", a.saves], ["שיתופים", a.shares], ["תגובות", a.comments], ["לייקים", a.likes], ["שינוי בעוקבים", a.followers_change]] as const).map(([l, v]) => (
-                      <div key={l}><dt className="text-[11px] text-[#6F675C]">{l}</dt><dd className="s-serif text-xl">{stat(v)}</dd></div>
+                      <div key={l}><dt className="text-[11px] text-[#6A6158]">{l}</dt><dd className="s-serif text-xl">{stat(v)}</dd></div>
                     ))}
                   </dl>
                 )}
@@ -55,7 +55,7 @@ export default function ReviewPage() {
             ))}
             {reviews.length > 1 && (
               <Panel title="סקירות קודמות">
-                <ul className="space-y-1 text-sm">{reviews.map((r) => <li key={r.week_start}><button type="button" onClick={() => setPicked(r.week_start)} className={r.week_start === review.week_start ? "font-semibold text-[#1F1B16]" : "hover:text-[#1F1B16]"}>{formatDate(r.week_start)}</button></li>)}</ul>
+                <ul className="space-y-1 text-sm">{reviews.map((r) => <li key={r.week_start}><button type="button" onClick={() => setPicked(r.week_start)} className={r.week_start === review.week_start ? "font-semibold text-[#2A2622]" : "hover:text-[#2A2622]"}>{formatDate(r.week_start)}</button></li>)}</ul>
               </Panel>
             )}
           </div>

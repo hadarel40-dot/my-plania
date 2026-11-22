@@ -28,10 +28,10 @@ function ColorField({ label, value, onChange, palette }: { label: string; value:
     <div>
       <Label className="mb-1">{label}</Label>
       <div className="flex flex-wrap items-center gap-1.5">
-        <input type="color" value={value} onChange={(e) => onChange(e.target.value)} className="h-8 w-10 cursor-pointer rounded-md border border-[#E2DACD] bg-white p-0.5" aria-label={label} />
-        <input value={value} onChange={(e) => /^#[0-9a-f]{0,6}$/i.test(e.target.value) && onChange(e.target.value)} className="w-[86px] rounded-md border border-[#E2DACD] bg-white/70 px-2 py-1 font-mono text-[12px]" dir="ltr" />
+        <input type="color" value={value} onChange={(e) => onChange(e.target.value)} className="h-8 w-10 cursor-pointer rounded-md border border-[#E3D9CC] bg-white p-0.5" aria-label={label} />
+        <input value={value} onChange={(e) => /^#[0-9a-f]{0,6}$/i.test(e.target.value) && onChange(e.target.value)} className="w-[86px] rounded-md border border-[#E3D9CC] bg-white/70 px-2 py-1 font-mono text-[12px]" dir="ltr" />
         {palette.map((p) => (
-          <button key={p} type="button" title={p} onClick={() => onChange(p)} className={cn("size-6 rounded-full border", value.toLowerCase() === p.toLowerCase() ? "border-[#1F1B16] ring-2 ring-[#1F1B16]/30" : "border-[#E2DACD]")} style={{ background: p }} />
+          <button key={p} type="button" title={p} onClick={() => onChange(p)} className={cn("size-6 rounded-full border", value.toLowerCase() === p.toLowerCase() ? "border-[#5E1D1D] ring-2 ring-[#5E1D1D]/30" : "border-[#E3D9CC]")} style={{ background: p }} />
         ))}
       </div>
     </div>
@@ -54,7 +54,7 @@ function Range({ label, value, min, max, step, onChange, fmt }: { label: string;
   return (
     <div>
       <Label className="mb-1">{label} · {fmt(value)}</Label>
-      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} className="w-full accent-[#1F1B16]" />
+      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} className="w-full accent-[#5E1D1D]" />
     </div>
   );
 }
@@ -65,7 +65,7 @@ function Choice<T extends string>({ label, value, options, onChange }: { label: 
       <Label className="mb-1">{label}</Label>
       <div className="flex gap-1">
         {options.map(([v, l]) => (
-          <button key={v} type="button" onClick={() => onChange(v)} className={cn("rounded-lg border px-2.5 py-1 text-[12px] font-semibold", value === v ? "border-[#1F1B16] bg-[#1F1B16] text-[#FBF8F2]" : "border-[#E2DACD] bg-white/70")}>{l}</button>
+          <button key={v} type="button" onClick={() => onChange(v)} className={cn("rounded-lg border px-2.5 py-1 text-[12px] font-semibold", value === v ? "border-[#5E1D1D] bg-[#5E1D1D] text-[#FAF6F1]" : "border-[#E3D9CC] bg-white/70")}>{l}</button>
         ))}
       </div>
     </div>
@@ -90,7 +90,7 @@ export function DesignPanel({ account, theme, onChange, brandMode = false }: { a
   };
 
   return (
-    <div className="space-y-4 rounded-xl bg-[#F4EFE6] p-3">
+    <div className="space-y-4 rounded-xl bg-[#F2ECE4] p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-sm font-bold">{brandMode ? "ערכת המותג" : "עיצוב"}</span>
         {!brandMode && <div className="flex flex-wrap gap-1.5">
@@ -119,14 +119,14 @@ export function DesignPanel({ account, theme, onChange, brandMode = false }: { a
         <div className="flex flex-wrap items-center gap-1.5">
           {palette.map((p) => (
             <span key={p} className="group relative">
-              <span className="block size-7 rounded-full border border-[#E2DACD]" style={{ background: p }} title={p} />
-              {brand?.palette?.length ? <button type="button" aria-label="להסיר" onClick={() => save({ ...brand, palette: palette.filter((x) => x !== p) })} className="absolute -left-1 -top-1 hidden size-4 rounded-full bg-[#1F1B16] text-[10px] leading-4 text-white group-hover:block">×</button> : null}
+              <span className="block size-7 rounded-full border border-[#E3D9CC]" style={{ background: p }} title={p} />
+              {brand?.palette?.length ? <button type="button" aria-label="להסיר" onClick={() => save({ ...brand, palette: palette.filter((x) => x !== p) })} className="absolute -left-1 -top-1 hidden size-4 rounded-full bg-[#5E1D1D] text-[10px] leading-4 text-white group-hover:block">×</button> : null}
             </span>
           ))}
-          <input type="color" value={newColor} onChange={(e) => setNewColor(e.target.value)} className="h-7 w-9 cursor-pointer rounded-md border border-[#E2DACD] bg-white p-0.5" aria-label="צבע חדש" />
+          <input type="color" value={newColor} onChange={(e) => setNewColor(e.target.value)} className="h-7 w-9 cursor-pointer rounded-md border border-[#E3D9CC] bg-white p-0.5" aria-label="צבע חדש" />
           <Btn variant="ghost" onClick={() => !palette.includes(newColor) && save({ ...(brand ?? {}), palette: [...palette, newColor].slice(0, 10) })}>להוסיף לפלטה</Btn>
         </div>
-        <p className="mt-1 text-[11px] text-[#6F675C]">הפלטה והפונטים נשמרים לחשבון, ומופיעים בכל קרוסלה. "לשמור כמותג" שומר את כל העיצוב הנוכחי כברירת המחדל.</p>
+        <p className="mt-1 text-[11px] text-[#6A6158]">הפלטה והפונטים נשמרים לחשבון, ומופיעים בכל קרוסלה. "לשמור כמותג" שומר את כל העיצוב הנוכחי כברירת המחדל.</p>
       </div>
     </div>
   );
@@ -142,7 +142,7 @@ export function BrandKitEditor({ account }: { account: Account }) {
   return (
     <div className="space-y-2">
       <DesignPanel brandMode account={account} theme={theme} onChange={(t) => setDraft({ ...draft, ...t, palette: draft.palette })} />
-      <div className="grid gap-3 rounded-xl bg-[#F4EFE6] p-3 md:grid-cols-2">
+      <div className="grid gap-3 rounded-xl bg-[#F2ECE4] p-3 md:grid-cols-2">
         <div>
           <Label className="mb-1">קריאה לפעולה קבועה (בסוף כל כיתוב)</Label>
           <input className="w-full rounded-lg border border-[#DDD4C6] bg-white/70 px-3 py-2 text-sm" value={draft.cta ?? ""} onChange={(e) => setDraft({ ...draft, cta: e.target.value })} placeholder="למשל: הקישור בביו, 5 הדקות הראשונות בחינם" />
@@ -151,7 +151,7 @@ export function BrandKitEditor({ account }: { account: Account }) {
           <Label className="mb-1">תגיות קבועות</Label>
           <input className="w-full rounded-lg border border-[#DDD4C6] bg-white/70 px-3 py-2 text-sm" dir="auto" value={draft.hashtags ?? ""} onChange={(e) => setDraft({ ...draft, hashtags: e.target.value })} placeholder="#Plania #תכנוןארוחות #מהמבשליםהיום" />
         </div>
-        <p className="text-[11px] text-[#6F675C] md:col-span-2">כל קרוסלה חדשה מקבלת אוטומטית את העיצוב, הקריאה לפעולה והתגיות של החשבון. בקרוסלה קיימת: "פונטים וצבעים" ואז "להחיל את המותג".</p>
+        <p className="text-[11px] text-[#6A6158] md:col-span-2">כל קרוסלה חדשה מקבלת אוטומטית את העיצוב, הקריאה לפעולה והתגיות של החשבון. בקרוסלה קיימת: "פונטים וצבעים" ואז "להחיל את המותג".</p>
       </div>
       <Btn onClick={() => save({ ...draft, palette: brand?.palette ?? draft.palette })}>לשמור את ערכת המותג</Btn>
     </div>

@@ -35,19 +35,19 @@ export function MaterialsPanel({ draft, onChange }: { draft: Draft; onChange: (d
     <Panel label="חומרים" title="מה יש לך" accent="בדרייב"
       aside={<Btn variant={m ? "ghost" : "solid"} busy={busy === "find"} onClick={find}><HardDrive className="size-4" />{m ? "לחפש שוב" : "למצוא חומרים בדרייב"}</Btn>}>
       {!m ? (
-        <p className="text-sm text-[#4E473E]">אעבור על הסרטונים והתמונות בתיקייה שלך בדרייב, לפי שם, תאריך ותמונה ממוזערת, ואבחר לכל {draft.mode === "carousel" ? "שקופית" : "שוט"} קובץ. אם אין צילום מדויק, אבחר תחליף יצירתי שעובד, ואכתוב למה.</p>
+        <p className="text-sm text-[#4E4540]">אעבור על הסרטונים והתמונות בתיקייה שלך בדרייב, לפי שם, תאריך ותמונה ממוזערת, ואבחר לכל {draft.mode === "carousel" ? "שקופית" : "שוט"} קובץ. אם אין צילום מדויק, אבחר תחליף יצירתי שעובד, ואכתוב למה.</p>
       ) : (
         <>
           {m.matches.length === 0 ? <Note>אין עדיין סרטונים או תמונות בתיקייה בדרייב.</Note> : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {m.matches.map((x, i) => (
-                <div key={i} className="flex gap-3 rounded-xl border border-[#E2DACD] bg-white/70 p-2">
+                <div key={i} className="flex gap-3 rounded-xl border border-[#E3D9CC] bg-white/70 p-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={`/api/studio/drive-thumb?id=${x.file_id}`} alt="" className="h-20 w-14 shrink-0 rounded-lg bg-[#ECE7DE] object-cover" />
+                  <img src={`/api/studio/drive-thumb?id=${x.file_id}`} alt="" className="h-20 w-14 shrink-0 rounded-lg bg-[#F0E8DF] object-cover" />
                   <div className="min-w-0">
                     <Label>{x.target}</Label>
                     <p className="truncate text-[13px] font-semibold" title={byId[x.file_id]?.name}>{byId[x.file_id]?.name}</p>
-                    <p className="text-[12px] leading-snug text-[#4E473E]">{x.reason}</p>
+                    <p className="text-[12px] leading-snug text-[#4E4540]">{x.reason}</p>
                     {byId[x.file_id]?.duration ? <Tag>{byId[x.file_id].duration} ש׳</Tag> : null}
                   </div>
                 </div>
@@ -55,7 +55,7 @@ export function MaterialsPanel({ draft, onChange }: { draft: Draft; onChange: (d
             </div>
           )}
           {m.missing.length > 0 && (
-            <div className="mt-3 rounded-xl bg-[#F4EFE6] p-3">
+            <div className="mt-3 rounded-xl bg-[#F2ECE4] p-3">
               <Label className="mb-1">אם בא לך לצלם משהו חדש, זה ישפר</Label>
               <ul className="space-y-0.5 text-[13px]">{m.missing.map((x) => <li key={x}>· {x}</li>)}</ul>
             </div>

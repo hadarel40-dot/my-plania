@@ -97,7 +97,7 @@ export function TodayPost({ today }: { today: string }) {
     <Panel label={isToday ? "מה עולה היום" : `הבא בתור · ${formatDate(next.planned_date)}`} title={next.title}
       aside={<span className="flex flex-wrap gap-1"><Tag>{FORMAT[next.format] ?? next.format}</Tag>{type && <Tag tone="butter">{labelOf(CONTENT_TYPES, type)}</Tag>}</span>}>
       <div className="flex gap-4">
-        <div className={cn("w-[120px] shrink-0 overflow-hidden rounded-xl border border-[#E2DACD] bg-[#F4EFE6]", next.format === "carousel" ? "aspect-[4/5]" : "aspect-[9/16]")}>
+        <div className={cn("w-[120px] shrink-0 overflow-hidden rounded-xl border border-[#E3D9CC] bg-[#F2ECE4]", next.format === "carousel" ? "aspect-[4/5]" : "aspect-[9/16]")}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {thumb ? <img src={thumb} alt="" className="size-full object-cover" /> : <p className="p-2 text-[11px] font-bold">{next.hook}</p>}
         </div>
@@ -108,14 +108,14 @@ export function TodayPost({ today }: { today: string }) {
               {variants > 1 && <Link href="/studio/pick" className="inline-flex min-h-[36px] items-center text-[13px] underline underline-offset-4">להחליף גרסה</Link>}
               <div className="flex flex-wrap gap-2">
                 {readyVideo(d) && <SendNow path={readyVideo(d)!.path} caption={caption} name={next.title} />}
-                <Link href={`/studio/reel?id=${d.id}`} className={cn("inline-flex min-h-[40px] items-center rounded-[5px] px-3.5 py-2 text-[13px] font-bold", readyVideo(d) ? "border border-[#1F1B16]" : "bg-[#1F1B16] text-[#FBF8F2]")}>
+                <Link href={`/studio/reel?id=${d.id}`} className={cn("inline-flex min-h-[40px] items-center rounded-[5px] px-3.5 py-2 text-[13px] font-bold", readyVideo(d) ? "border border-[#5E1D1D]" : "bg-[#5E1D1D] text-[#FAF6F1]")}>
                   {readyVideo(d) ? "לפתוח" : d.data.edit || d.data.carousel || d.project_id ? "לפתוח ולשלוח לאינסטגרם" : "לפתוח את התסריט ולצלם"}
                 </Link>
               </div>
             </>
           ) : <p className="text-sm">עוד אין טיוטה לפוסט הזה.</p>}
           {caption && <Btn variant="line" onClick={() => navigator.clipboard.writeText(caption).then(() => toast("הכיתוב הועתק"))}>להעתיק כיתוב</Btn>}
-          <p className="text-[11px] text-[#6F675C]">הסטודיו לא מפרסם בעצמו.</p>
+          <p className="text-[11px] text-[#6A6158]">הסטודיו לא מפרסם בעצמו.</p>
         </div>
       </div>
     </Panel>
@@ -129,7 +129,7 @@ export function WeekStrip({ today }: { today: string }) {
   const [data, setData] = useState<Awaited<ReturnType<typeof loadRange>> | null>(null);
   useEffect(() => { loadRange(days[0], days[6]).then(setData); }, [days]);
   return (
-    <section className="rounded-2xl border border-[#E2DACD] bg-[#FBF8F2] p-3">
+    <section className="rounded-2xl border border-[#E3D9CC] bg-[#FAF6F1] p-3">
       <div className="mb-2 flex items-center justify-between">
         <Label>השבוע</Label>
         <Link href="/studio/board" className="text-[12px] font-bold underline underline-offset-4">ללוח המלא</Link>
@@ -138,20 +138,20 @@ export function WeekStrip({ today }: { today: string }) {
         {days.map((d, i) => {
           const list = data?.items.filter((x) => x.planned_date === d) ?? [];
           return (
-            <div key={d} className={cn("min-w-0 rounded-xl p-1", d === today && "bg-[#F6E7A6]/50")}>
-              <p className={cn("mb-1 text-center text-[11px] font-bold", d === today ? "text-[#1F1B16]" : "text-[#6F675C]")}>{DAY[i]} {Number(d.slice(8))}</p>
+            <div key={d} className={cn("min-w-0 rounded-xl p-1", d === today && "bg-[#EFD9DD]/50")}>
+              <p className={cn("mb-1 text-center text-[11px] font-bold", d === today ? "text-[#2A2622]" : "text-[#6A6158]")}>{DAY[i]} {Number(d.slice(8))}</p>
               {list.map((x) => {
                 const dr = x.draft_id ? data!.drafts[x.draft_id] : undefined;
                 const t = data!.thumbs[thumbPath(dr) ?? ""];
                 return (
-                  <Link key={x.id} href={dr ? `/studio/reel?id=${dr.id}` : "/studio/board"} title={x.title} className="mb-1 block overflow-hidden rounded-lg border border-[#E2DACD] bg-[#F4EFE6]">
+                  <Link key={x.id} href={dr ? `/studio/reel?id=${dr.id}` : "/studio/board"} title={x.title} className="mb-1 block overflow-hidden rounded-lg border border-[#E3D9CC] bg-[#F2ECE4]">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     {t ? <img src={t} alt="" className="aspect-square w-full object-cover" /> : <p className="line-clamp-3 p-1 text-[10px] font-semibold leading-tight">{x.title}</p>}
                     <p className="truncate px-1 py-0.5 text-[10px] font-bold">{FORMAT[x.format] ?? x.format}</p>
                   </Link>
                 );
               })}
-              {!list.length && <div className="aspect-square rounded-lg border border-dashed border-[#E2DACD]" />}
+              {!list.length && <div className="aspect-square rounded-lg border border-dashed border-[#E3D9CC]" />}
             </div>
           );
         })}

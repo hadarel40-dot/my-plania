@@ -14,12 +14,12 @@ export function Connections() {
   const row = (ok: boolean, title: string, detail: React.ReactNode) => (
     <li className="flex gap-3 py-2.5">
       {ok ? <Check className="mt-0.5 size-5 shrink-0 text-[#3E6B4F]" /> : <X className="mt-0.5 size-5 shrink-0 text-[#A3402F]" />}
-      <div className="text-sm leading-relaxed"><p className="font-bold">{title}</p><div className="text-[#4E473E]">{detail}</div></div>
+      <div className="text-sm leading-relaxed"><p className="font-bold">{title}</p><div className="text-[#4E4540]">{detail}</div></div>
     </li>
   );
   return (
     <Panel label="הגדרות" title="מה" accent="מחובר">
-      <ul className="divide-y divide-[#ECE7DE]">
+      <ul className="divide-y divide-[#F0E8DF]">
         {row(s.ai !== null, s.ai === "claude" ? "כתיבה: Claude" : s.ai === "gemini" ? "כתיבה: Gemini (חינמי)" : "כתיבה: לא מחובר",
           s.ai === "claude" ? "התסריטים, הקרוסלות, היועצת והטרנדים נכתבים ב-Claude, ו-Gemini נשאר כגיבוי." : (
             <>עובד בחינם, עם מכסה יומית שמתחדשת כל יום. הסטודיו בנוי כדי להיכנס בה: חיפוש טרנדים אחד ביום וטיוטה אוטומטית אחת. אם המכסה נגמרת, יופיע הסבר, וזה יחזור לעבוד מחר. אופציונלי, בתשלום לפי שימוש: מפתח מ-console.anthropic.com במשתנה <b>ANTHROPIC_API_KEY</b> ב-Vercel, לכתיבה ב-Claude בלי מכסה.</>

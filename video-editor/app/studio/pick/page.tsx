@@ -91,8 +91,8 @@ function PostCard({ row, onSaved }: { row: Row; onSaved: (d: Draft) => void }) {
   if (d.data.edit) {
     // ריל מהמנוע המשותף: הגרסאות מתחלפות בתוך הריל עצמו (ובעורך), עם תצוגה זהה
     return (
-      <Link href={`/studio/reel?id=${d.id}`} className="flex w-full flex-wrap items-center gap-2 rounded-2xl border border-[#E2DACD] bg-[#FBF8F2] px-4 py-3 hover:bg-[#F4EFE6]">
-        <span className="text-[12px] font-bold text-[#6F675C]">{row.planned_date ? formatDate(row.planned_date) : "בלי תאריך"}</span>
+      <Link href={`/studio/reel?id=${d.id}`} className="flex w-full flex-wrap items-center gap-2 rounded-2xl border border-[#E3D9CC] bg-[#FAF6F1] px-4 py-3 hover:bg-[#F2ECE4]">
+        <span className="text-[12px] font-bold text-[#6A6158]">{row.planned_date ? formatDate(row.planned_date) : "בלי תאריך"}</span>
         <span className="font-semibold">{row.title}</span>
         <span className="ms-auto"><Tag tone="green">גרסה {variantLabel(d.data.chosen_variant)}</Tag></span>
         <span className="text-[12px] underline underline-offset-4">להחליף בתוך הריל</span>
@@ -103,8 +103,8 @@ function PostCard({ row, onSaved }: { row: Row; onSaved: (d: Draft) => void }) {
   if (!open) {
     // פוסט שנבחר: שורה אחת
     return (
-      <button type="button" onClick={() => setOpen(true)} className="flex w-full flex-wrap items-center gap-2 rounded-2xl border border-[#E2DACD] bg-[#FBF8F2] px-4 py-3 text-right hover:bg-[#F4EFE6]">
-        <span className="text-[12px] font-bold text-[#6F675C]">{row.planned_date ? formatDate(row.planned_date) : "בלי תאריך"}</span>
+      <button type="button" onClick={() => setOpen(true)} className="flex w-full flex-wrap items-center gap-2 rounded-2xl border border-[#E3D9CC] bg-[#FAF6F1] px-4 py-3 text-right hover:bg-[#F2ECE4]">
+        <span className="text-[12px] font-bold text-[#6A6158]">{row.planned_date ? formatDate(row.planned_date) : "בלי תאריך"}</span>
         <span className="font-semibold">{row.title}</span>
         {type && <Tag tone="butter">{labelOf(CONTENT_TYPES, type)}</Tag>}
         <span className="ms-auto text-[13px]"><Tag tone="green">נבחר: {chosen?.id} · {chosen?.label}</Tag></span>
@@ -116,11 +116,11 @@ function PostCard({ row, onSaved }: { row: Row; onSaved: (d: Draft) => void }) {
   return (
     <Panel label={`${row.planned_date ? formatDate(row.planned_date) : "בלי תאריך"} · ${row.format === "carousel" ? "קרוסלה" : "ריל"}`} title={row.title}
       aside={<span className="flex flex-wrap items-center gap-1">{type && <Tag tone="butter">{labelOf(CONTENT_TYPES, type)}</Tag>}<Tag tone={explicit ? "green" : undefined}>{explicit ? `נבחר: ${chosenId}` : `ברירת מחדל: ${chosenId}`}</Tag>{explicit && <button type="button" className="text-[12px] underline" onClick={() => setOpen(false)}>לסגור</button>}</span>}>
-      <p className="mb-3 text-[12px] text-[#6F675C]">לוחצים על גרסה כדי לבחור בה. בלי בחירה, גרסה {variants[0]?.id} עולה כברירת מחדל.</p>
+      <p className="mb-3 text-[12px] text-[#6A6158]">לוחצים על גרסה כדי לבחור בה. בלי בחירה, גרסה {variants[0]?.id} עולה כברירת מחדל.</p>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {variants.map((v) => <VariantCard key={v.id} v={v} urls={urls} chosen={chosenId === v.id} onChoose={() => choose(v)} onReact={(r) => react(v, r)} onComment={(t) => comment(v, t)} />)}
       </div>
-      <div className="mt-3 text-[12px] text-[#6F675C]"><Link href={`/studio/reel?id=${d.id}`} className="underline">לפתוח את הטיוטה</Link></div>
+      <div className="mt-3 text-[12px] text-[#6A6158]"><Link href={`/studio/reel?id=${d.id}`} className="underline">לפתוח את הטיוטה</Link></div>
     </Panel>
   );
 }
@@ -141,15 +141,15 @@ function VariantCard({ v, urls, chosen, onChoose, onReact, onComment }: { v: Var
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className={cn("overflow-hidden rounded-xl border bg-[#FBF8F2]", chosen ? "border-2 border-[#3E6B4F] shadow-[0_0_0_3px_rgba(62,107,79,0.15)]" : "border-[#E2DACD]")}>
+    <div className={cn("overflow-hidden rounded-xl border bg-[#FAF6F1]", chosen ? "border-2 border-[#3E6B4F] shadow-[0_0_0_3px_rgba(62,107,79,0.15)]" : "border-[#E3D9CC]")}>
       <div role="button" tabIndex={0} onClick={onChoose} onKeyDown={(e) => e.key === "Enter" && onChoose()} className="relative cursor-pointer">
         {v.video ? (
           urls[v.video.path]
             ? <video src={urls[v.video.path]} controls playsInline preload="metadata" poster={v.video.cover ? urls[v.video.cover] : undefined} onClick={(e) => e.stopPropagation()} className="aspect-[9/16] w-full bg-black" />
-            : <div className="aspect-[9/16] w-full animate-pulse bg-[#ECE7DE]" />
+            : <div className="aspect-[9/16] w-full animate-pulse bg-[#F0E8DF]" />
         ) : v.carousel ? (
           // eslint-disable-next-line @next/next/no-img-element
-          cover ? <img src={cover} alt="שער" className="aspect-[4/5] w-full object-cover" /> : <div className="aspect-[4/5] w-full animate-pulse bg-[#ECE7DE]" />
+          cover ? <img src={cover} alt="שער" className="aspect-[4/5] w-full object-cover" /> : <div className="aspect-[4/5] w-full animate-pulse bg-[#F0E8DF]" />
         ) : null}
         {chosen && <span className="absolute right-2 top-2 rounded-md bg-[#3E6B4F] px-2 py-0.5 text-[11px] font-bold text-white">נבחר</span>}
         {v.carousel && <span className="absolute bottom-2 left-2 rounded-md bg-white/90 px-2 py-0.5 text-[11px] font-bold">{n} שקופיות</span>}
@@ -157,8 +157,8 @@ function VariantCard({ v, urls, chosen, onChoose, onReact, onComment }: { v: Var
       <div className="p-2.5">
         <button type="button" onClick={onChoose} className="block w-full text-right text-[13px] font-bold"><span className="s-serif me-1 text-base">{v.id}</span>{v.label}</button>
         <div className="mt-2 flex items-center gap-1.5">
-          <button type="button" aria-label="אהבתי" onClick={() => onReact("like")} className={cn("rounded-lg border p-1.5", v.reaction === "like" ? "border-[#3E6B4F] bg-[#E2ECDF]" : "border-[#E2DACD]")}><ThumbsUp className="size-4" /></button>
-          <button type="button" aria-label="לא אהבתי" onClick={() => onReact("dislike")} className={cn("rounded-lg border p-1.5", v.reaction === "dislike" ? "border-[#A3402F] bg-[#F4E1D2]" : "border-[#E2DACD]")}><ThumbsDown className="size-4" /></button>
+          <button type="button" aria-label="אהבתי" onClick={() => onReact("like")} className={cn("rounded-lg border p-1.5", v.reaction === "like" ? "border-[#3E6B4F] bg-[#E2ECDF]" : "border-[#E3D9CC]")}><ThumbsUp className="size-4" /></button>
+          <button type="button" aria-label="לא אהבתי" onClick={() => onReact("dislike")} className={cn("rounded-lg border p-1.5", v.reaction === "dislike" ? "border-[#A3402F] bg-[#F4E1D2]" : "border-[#E3D9CC]")}><ThumbsDown className="size-4" /></button>
           <button type="button" onClick={() => setWriting(!writing)} className="ms-auto text-[12px] underline underline-offset-4">{v.comment ? "ההערה שלך" : "הערה"}</button>
         </div>
         {writing && (

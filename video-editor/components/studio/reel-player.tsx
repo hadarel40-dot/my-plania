@@ -135,10 +135,10 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
     <Panel title="הריל" accent="שלך" aside={<span className="flex flex-wrap gap-1">{draft.data.content_type && <Tag tone="butter">{labelOf(CONTENT_TYPES, draft.data.content_type)}</Tag>}{fromEditor && <Tag tone="green">מסונכרן עם העורך</Tag>}</span>}>
       {(
         <div className="mb-3 flex flex-wrap items-center gap-1.5">
-          <span className="text-[12px] font-bold text-[#6F675C]">גרסה:</span>
+          <span className="text-[12px] font-bold text-[#6A6158]">גרסה:</span>
           {REEL_STYLES.map((s) => (
             <button key={s.id} type="button" onClick={() => chooseStyle(s.variant)}
-              className={cn("rounded-full border px-3 py-1 text-[12px] font-semibold", (variant ? styleForVariant(variant) === s.id : s.id === "pop") ? "border-[#1F1B16] bg-[#1F1B16] text-[#FBF8F2]" : "border-[#E2DACD] bg-white/70 hover:border-[#1F1B16]")}>
+              className={cn("rounded-full border px-3 py-1 text-[12px] font-semibold", (variant ? styleForVariant(variant) === s.id : s.id === "pop") ? "border-[#5E1D1D] bg-[#5E1D1D] text-[#FAF6F1]" : "border-[#E3D9CC] bg-white/70 hover:border-[#5E1D1D]")}>
               {s.variant} · {s.label}
             </button>
           ))}
@@ -160,7 +160,7 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
             {busy && (busy === "send" || busy === "download") && <Btn variant="ghost" onClick={() => abort.current?.abort()}>לעצור</Btn>}
           </div>
           <ShareHint />
-          <p className="text-[12px] text-[#6F675C]">{fromEditor ? "מוצג הפרויקט מהעורך: כל שינוי שם מופיע כאן מיד, וגם בקובץ שנשלח." : "זה בדיוק מה שייפתח בעורך ומה שייצא בקובץ. בעורך אפשר להחליף קטע או לשנות טקסט."}</p>
+          <p className="text-[12px] text-[#6A6158]">{fromEditor ? "מוצג הפרויקט מהעורך: כל שינוי שם מופיע כאן מיד, וגם בקובץ שנשלח." : "זה בדיוק מה שייפתח בעורך ומה שייצא בקובץ. בעורך אפשר להחליף קטע או לשנות טקסט."}</p>
           {ready && (
             <div className="rounded-xl border border-[#3E6B4F] bg-[#E2ECDF] p-3 text-sm">
               <p className="mb-1.5 font-bold">מוכן לאינסטגרם</p>
@@ -172,7 +172,7 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
               </ol>
               <div className="mt-2 flex flex-wrap gap-2">
                 <Btn variant="line" onClick={() => navigator.clipboard.writeText(caption).then(() => toast("הכיתוב הועתק"))}>להעתיק כיתוב שוב</Btn>
-                <a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center rounded-[5px] bg-[#1F1B16] px-3.5 py-2 text-[13px] font-bold text-[#FBF8F2]">לפתוח את אינסטגרם</a>
+                <a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center rounded-[5px] bg-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold text-[#FAF6F1]">לפתוח את אינסטגרם</a>
                 <Btn variant="ghost" onClick={() => setReady(null)}>לסגור</Btn>
               </div>
             </div>

@@ -95,7 +95,7 @@ export default function ReplanPage() {
       {hasOptions && (
         <div className="space-y-4">
           {dates.map((d) => (
-            <section key={d} className="rounded-2xl border border-[#E2DACD] bg-[#FBF8F2] p-3">
+            <section key={d} className="rounded-2xl border border-[#E3D9CC] bg-[#FAF6F1] p-3">
               <div className="mb-2 flex items-center justify-between">
                 <p className="font-bold">{DAY[new Date(`${d}T12:00:00`).getDay()]} · {formatDate(d)}</p>
                 <button type="button" onClick={() => generate(d)} disabled={!!busy} className="inline-flex items-center gap-1 text-[12px] font-bold underline underline-offset-4">
@@ -106,11 +106,11 @@ export default function ReplanPage() {
                 {current[d]?.length ? (
                   <Card on={pick[d] === KEEP} onClick={() => setPick((p) => ({ ...p, [d]: KEEP }))} label="להשאיר את מה שבלוח">
                     {current[d].map((i) => <p key={i.id} className="text-sm font-semibold">{i.title}</p>)}
-                    <p className="mt-1 text-[11px] text-[#6F675C]">{current[d].map((i) => `${i.format === "carousel" ? "קרוסלה" : "ריל"}${i.content_type ? ` · ${labelOf(CONTENT_TYPES, i.content_type)}` : ""}`).join(", ")}</p>
+                    <p className="mt-1 text-[11px] text-[#6A6158]">{current[d].map((i) => `${i.format === "carousel" ? "קרוסלה" : "ריל"}${i.content_type ? ` · ${labelOf(CONTENT_TYPES, i.content_type)}` : ""}`).join(", ")}</p>
                   </Card>
                 ) : (
                   <Card on={pick[d] === KEEP} onClick={() => setPick((p) => ({ ...p, [d]: KEEP }))} label="יום פנוי">
-                    <p className="text-[12px] text-[#6F675C]">לא לשבץ כלום ביום הזה</p>
+                    <p className="text-[12px] text-[#6A6158]">לא לשבץ כלום ביום הזה</p>
                   </Card>
                 )}
                 {(options[d] ?? []).map((o, i) => (
@@ -118,17 +118,17 @@ export default function ReplanPage() {
                     label={`${o.format === "carousel" ? "קרוסלה" : "ריל"} · ${labelOf(CONTENT_TYPES, o.content_type)}`}>
                     <p className="s-serif text-lg leading-snug">{o.hook}</p>
                     <p className="mt-1 text-[13px]">{o.idea}</p>
-                    <p className="mt-1 text-[11px] text-[#6F675C]">{o.why}</p>
+                    <p className="mt-1 text-[11px] text-[#6A6158]">{o.why}</p>
                   </Card>
                 ))}
               </div>
             </section>
           ))}
-          <div className="sticky bottom-3 flex flex-wrap items-center gap-3 rounded-2xl border border-[#1F1B16] bg-[#FBF8F2] p-3 shadow-[0_8px_24px_-10px_rgba(31,27,22,0.4)]">
+          <div className="sticky bottom-3 flex flex-wrap items-center gap-3 rounded-2xl border border-[#5E1D1D] bg-[#FAF6F1] p-3 shadow-[0_8px_24px_-10px_rgba(31,27,22,0.4)]">
             <Btn busy={busy === "build"} disabled={!changes} onClick={build}>{busy === "build" ? "בונה..." : `לבנות את השבוע (${changes} שינויים)`}</Btn>
-            {progress && <span className="text-[13px] text-[#4E473E]">{progress}</span>}
+            {progress && <span className="text-[13px] text-[#4E4540]">{progress}</span>}
             {built && <Link href="/studio/board" className="text-[13px] font-bold underline">ללוח</Link>}
-            <span className="text-[11px] text-[#6F675C]">קרוסלות נכתבות מיד. רילס נכנסים כרעיון עם הוק ומופקים מהסרטונים בדרייב.</span>
+            <span className="text-[11px] text-[#6A6158]">קרוסלות נכתבות מיד. רילס נכנסים כרעיון עם הוק ומופקים מהסרטונים בדרייב.</span>
           </div>
         </div>
       )}
@@ -138,7 +138,7 @@ export default function ReplanPage() {
 
 function Card({ on, onClick, label, children }: { on: boolean; onClick: () => void; label: string; children: React.ReactNode }) {
   return (
-    <button type="button" onClick={onClick} className={cn("relative rounded-xl border bg-white/70 p-3 text-right transition", on ? "border-2 border-[#1F1B16] shadow-[0_0_0_3px_rgba(246,231,166,0.8)]" : "border-[#E2DACD] hover:border-[#1F1B16]")}>
+    <button type="button" onClick={onClick} className={cn("relative rounded-xl border bg-white/70 p-3 text-right transition", on ? "border-2 border-[#5E1D1D] shadow-[0_0_0_3px_rgba(246,231,166,0.8)]" : "border-[#E3D9CC] hover:border-[#5E1D1D]")}>
       <span className="mb-1 flex items-center justify-between">
         <Tag tone={on ? "butter" : undefined}>{label}</Tag>
         {on && <Check className="size-4" />}

@@ -48,14 +48,14 @@ export function StudioNav({ counts }: { counts: NavCounts }) {
   const group = activeGroup(path);
   return (
     <nav aria-label="ניווט בסטודיו" className="space-y-2">
-      <div className="flex gap-1 overflow-x-auto rounded-2xl border border-[#E2DACD] bg-[#FBF8F2] p-1 shadow-[0_1px_2px_rgba(31,27,22,0.06)]">
+      <div className="flex gap-1 overflow-x-auto rounded-2xl border border-[#E3D9CC] bg-[#FAF6F1] p-1 shadow-[0_1px_2px_rgba(31,27,22,0.06)]">
         {GROUPS.map((g) => {
           const pending = 0;
           return (
             <Link key={g.key} href={g.href}
-              className={cn("relative flex-1 whitespace-nowrap rounded-xl px-3 py-2 text-center text-sm font-bold transition-colors", g === group ? "bg-[#1F1B16] text-[#FBF8F2]" : "text-[#1F1B16] hover:bg-[#F4EFE6]")}>
+              className={cn("relative flex-1 whitespace-nowrap rounded-xl px-3 py-2 text-center text-sm font-bold transition-colors", g === group ? "bg-[#5E1D1D] text-[#FAF6F1]" : "text-[#2A2622] hover:bg-[#F2ECE4]")}>
               {g.label}
-              {!!pending && <span className="absolute left-1.5 top-1 min-w-[18px] rounded-full bg-[#F6E7A6] px-1 text-[10px] leading-[18px] text-[#1F1B16]">{pending}</span>}
+              {!!pending && <span className="absolute left-1.5 top-1 min-w-[18px] rounded-full bg-[#EFD9DD] px-1 text-[10px] leading-[18px] text-[#2A2622]">{pending}</span>}
             </Link>
           );
         })}
@@ -67,9 +67,9 @@ export function StudioNav({ counts }: { counts: NavCounts }) {
             const n = s.count ? counts[s.count] : 0;
             return (
               <Link key={s.href} href={s.href}
-                className={cn("flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold", on ? "border-[#1F1B16] bg-[#F6E7A6]" : "border-[#E2DACD] bg-[#FBF8F2] hover:bg-[#F4EFE6]")}>
+                className={cn("flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold", on ? "border-[#5E1D1D] bg-[#EFD9DD]" : "border-[#E3D9CC] bg-[#FAF6F1] hover:bg-[#F2ECE4]")}>
                 {s.label}
-                {!!n && <span className="rounded-full bg-[#4E473E] px-1.5 text-[10px] font-bold leading-[16px] text-white">{n}</span>}
+                {!!n && <span className="rounded-full bg-[#4E4540] px-1.5 text-[10px] font-bold leading-[16px] text-white">{n}</span>}
               </Link>
             );
           })}
@@ -85,7 +85,7 @@ export function AdvisorButton() {
   if (path.startsWith("/studio/advisor")) return null;
   return (
     <Link href="/studio/advisor" aria-label="לשאול את היועצת"
-      className="fixed bottom-4 left-4 z-40 flex items-center gap-2 rounded-full bg-[#1F1B16] p-3 text-sm sm:bottom-5 sm:left-5 sm:px-4 font-bold text-[#FBF8F2] shadow-[0_8px_24px_-6px_rgba(31,27,22,0.5)] hover:bg-[#3A332B]">
+      className="fixed bottom-4 left-4 z-40 flex items-center gap-2 rounded-full bg-[#5E1D1D] p-3 text-sm sm:bottom-5 sm:left-5 sm:px-4 font-bold text-[#FAF6F1] shadow-[0_8px_24px_-6px_rgba(31,27,22,0.5)] hover:bg-[#4A1517]">
       <MessageCircle className="size-5 sm:size-4" /><span className="hidden sm:inline">יועצת</span>
     </Link>
   );

@@ -11,8 +11,8 @@ export default function CarouselsPage() {
   return (
     <>
       <PageHead label="יצירה" title="כל" accent="הקרוסלות" sub="קרוסלה היא רעיון אחד מפורק לשלבים: שער שמושך להחליק, רעיון אחד בכל שקופית, שקופית סיכום ששולחים לחברה, וקריאה אחת לפעולה.">
-        <Link href="/studio/carousel-week" className="rounded-[5px] bg-[#1F1B16] px-3.5 py-2 text-[13px] font-bold text-[#FBF8F2]">צור שבוע</Link>
-        <Link href="/studio/reel?mode=carousel" className="rounded-[5px] border border-[#1F1B16] px-3.5 py-2 text-[13px] font-bold">קרוסלה חדשה</Link>
+        <Link href="/studio/carousel-week" className="rounded-[5px] bg-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold text-[#FAF6F1]">צור שבוע</Link>
+        <Link href="/studio/reel?mode=carousel" className="rounded-[5px] border border-[#5E1D1D] px-3.5 py-2 text-[13px] font-bold">קרוסלה חדשה</Link>
       </PageHead>
       {!drafts ? <Loading /> : drafts.length === 0 ? <Note>עוד אין קרוסלות. "קרוסלה חדשה" כותבת אחת מרעיון.</Note> : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -22,7 +22,7 @@ export default function CarouselsPage() {
             return (
               <Link key={d.id} href={`/studio/reel?id=${d.id}`}>
                 <Panel className="h-full transition-shadow hover:shadow-md">
-                  <div className="mb-3 grid aspect-[4/5] place-items-center rounded-xl bg-[#F6E7A6] p-5">
+                  <div className="mb-3 grid aspect-[4/5] place-items-center rounded-xl bg-[#EFD9DD] p-5">
                     <p className="s-serif text-center text-2xl leading-tight">{c?.slides[0]?.headline ?? d.idea}</p>
                   </div>
                   <Label>{labelOf(ACCOUNTS, d.account)} · {c?.slides.length ?? 0} שקופיות · {formatDate(d.updated_at)}</Label>

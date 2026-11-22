@@ -42,7 +42,7 @@ export default function TrendsPage() {
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {[{ value: "all", label: "הכל" }, ...NICHES].map((n) => (
           <button key={n.value} type="button" onClick={() => setNiche(n.value)}
-            className={`rounded-full border px-3 py-1.5 text-sm ${niche === n.value ? "border-[#1F1B16] bg-[#1F1B16] text-[#FBF8F3]" : "border-[#E2DACD] hover:border-[#1F1B16]"}`}>{n.label}</button>
+            className={`rounded-full border px-3 py-1.5 text-sm ${niche === n.value ? "border-[#5E1D1D] bg-[#5E1D1D] text-[#FBF8F3]" : "border-[#E3D9CC] hover:border-[#5E1D1D]"}`}>{n.label}</button>
         ))}
         {(reports?.length ?? 0) > 1 && (
           <select value={report?.date ?? ""} onChange={(e) => setPicked(e.target.value)} className="mr-auto rounded-lg border border-[#DDD4C6] bg-white/70 px-2 py-1.5 text-sm">
@@ -59,7 +59,7 @@ export default function TrendsPage() {
               <br />זו הודעה שמורה מהחיפוש הקודם. "לחפש עכשיו" מריץ חיפוש חדש.
             </Note>
           )}
-          {report.dropped > 0 && <p className="mb-3 text-xs text-[#6F675C]">{report.dropped} טרנדים נפסלו בדוח הזה כי הקישור שלהם לא נטען.</p>}
+          {report.dropped > 0 && <p className="mb-3 text-xs text-[#6A6158]">{report.dropped} טרנדים נפסלו בדוח הזה כי הקישור שלהם לא נטען.</p>}
           {items.length === 0 ? <Note>אין טרנדים עם מקור מאומת בסינון הזה.</Note> : (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {items.map((t, i) => (
@@ -67,9 +67,9 @@ export default function TrendsPage() {
                   <div className="mb-2 flex flex-wrap gap-1.5"><Tag tone="wine">{TREND_KINDS[t.kind] ?? t.kind}</Tag><Tag>{labelOf(NICHES, t.niche)}</Tag></div>
                   <h2 className="s-serif mb-1.5 text-lg leading-snug">{dropForeign(t.title)}</h2>
                   <p className="mb-2 text-sm leading-relaxed">{t.summary}</p>
-                  <p className="mb-2 text-sm text-[#6F675C]"><span className="font-semibold text-[#1F1B16]">למה זה רלוונטי אלייך: </span>{t.why_relevant}</p>
+                  <p className="mb-2 text-sm text-[#6A6158]"><span className="font-semibold text-[#2A2622]">למה זה רלוונטי אלייך: </span>{t.why_relevant}</p>
                   <p className="mb-3 border-r-2 border-[#3E6B4F] pr-2 text-sm"><span className="font-semibold">רעיון לסרטון: </span>{t.reel_idea}</p>
-                  <a href={t.source_url} target="_blank" rel="noopener noreferrer" className="mb-3 inline-flex items-center gap-1 text-xs text-[#1F1B16] underline underline-offset-2">
+                  <a href={t.source_url} target="_blank" rel="noopener noreferrer" className="mb-3 inline-flex items-center gap-1 text-xs text-[#2A2622] underline underline-offset-2">
                     <ExternalLink className="size-3" />{t.source_name || "המקור"}
                   </a>
                   <Btn className="mt-auto" variant="line" onClick={() => router.push(`/studio/reel?${new URLSearchParams({ idea: t.reel_idea, account: t.account, niche: t.niche })}`)}>לכתוב את הריל הזה</Btn>

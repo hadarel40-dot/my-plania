@@ -20,10 +20,10 @@ export function VariantSwitch({ draft, onChange }: { draft: Draft; onChange: (d:
   };
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-[12px] font-bold text-[#6F675C]">גרסה:</span>
+      <span className="text-[12px] font-bold text-[#6A6158]">גרסה:</span>
       {variants.map((v) => (
         <button key={v.id} type="button" onClick={() => choose(v.id)} title={v.label}
-          className={cn("rounded-full border px-3 py-1 text-[12px] font-semibold", v.id === chosen ? "border-[#1F1B16] bg-[#1F1B16] text-[#FBF8F2]" : "border-[#E2DACD] bg-white/70 hover:border-[#1F1B16]")}>
+          className={cn("rounded-full border px-3 py-1 text-[12px] font-semibold", v.id === chosen ? "border-[#5E1D1D] bg-[#5E1D1D] text-[#FAF6F1]" : "border-[#E3D9CC] bg-white/70 hover:border-[#5E1D1D]")}>
           {v.id} · {v.label}
         </button>
       ))}

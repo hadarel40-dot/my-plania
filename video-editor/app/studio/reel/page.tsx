@@ -43,14 +43,14 @@ function ReelStudio() {
       </PageHead>
       <div className="grid gap-5 lg:grid-cols-[220px_1fr] xl:grid-cols-[220px_1fr_300px]">
         <aside className="order-2 lg:order-1">
-          <p className="mb-2 text-xs font-semibold text-[#6F675C]">{isCarousel ? "קרוסלות אחרונות" : "רילס אחרונים"}</p>
-          {!drafts ? <Loading /> : listed.length === 0 ? <p className="text-sm text-[#6F675C]">עוד אין טיוטות.</p> : (
+          <p className="mb-2 text-xs font-semibold text-[#6A6158]">{isCarousel ? "קרוסלות אחרונות" : "רילס אחרונים"}</p>
+          {!drafts ? <Loading /> : listed.length === 0 ? <p className="text-sm text-[#6A6158]">עוד אין טיוטות.</p> : (
             <ul className="space-y-1">
               {listed.map((d) => (
                 <li key={d.id}>
-                  <Link href={`/studio/reel?id=${d.id}`} className={`block rounded-lg border px-2.5 py-2 text-sm ${d.id === id ? "border-[#1F1B16] bg-[#FBF8F2]" : "border-transparent hover:border-[#E2DACD]"}`}>
+                  <Link href={`/studio/reel?id=${d.id}`} className={`block rounded-lg border px-2.5 py-2 text-sm ${d.id === id ? "border-[#5E1D1D] bg-[#FAF6F1]" : "border-transparent hover:border-[#E3D9CC]"}`}>
                     <span className="line-clamp-2 block">{d.idea}<b>{versionLabels(listed)[d.id] ?? ""}</b></span>
-                    <span className="mt-0.5 block text-[11px] text-[#6F675C]">{labelOf(ACCOUNTS, d.account)} · {formatDate(d.updated_at)}</span>
+                    <span className="mt-0.5 block text-[11px] text-[#6A6158]">{labelOf(ACCOUNTS, d.account)} · {formatDate(d.updated_at)}</span>
                   </Link>
                 </li>
               ))}
@@ -145,7 +145,7 @@ function IdeaForm({ params, onCreated }: { params: URLSearchParams; onCreated: (
           <Btn busy={busy} onClick={submit}>{busy ? (mode === "carousel" ? "כותבת את הקרוסלה..." : "כותבת שלושה הוקים...") : mode === "carousel" ? "כתבי לי קרוסלה" : "כתבי לי הוקים"}</Btn>
           {mode === "carousel" && <Btn variant="line" disabled={busy} onClick={blank}>{template ? "לבנות לבד מהתבנית" : "לבנות לבד"}</Btn>}
         </div>
-        {mode === "carousel" && <p className="text-[11px] text-[#6F675C]">"לבנות לבד" פותח את עורך הקרוסלות עם השקופיות של התבנית, בלי AI, ואת כותבת בעצמך.</p>}
+        {mode === "carousel" && <p className="text-[11px] text-[#6A6158]">"לבנות לבד" פותח את עורך הקרוסלות עם השקופיות של התבנית, בלי AI, ואת כותבת בעצמך.</p>}
       </div>
     </Panel>
   );
@@ -153,27 +153,27 @@ function IdeaForm({ params, onCreated }: { params: URLSearchParams; onCreated: (
 
 function HookCard({ hook, chosen, onPick }: { hook: Hook; chosen: boolean; onPick: () => void }) {
   return (
-    <div className={`rounded-xl border bg-[#FBF8F2] p-3 ${chosen ? "border-[#1F1B16]" : "border-[#E2DACD]"}`}>
+    <div className={`rounded-xl border bg-[#FAF6F1] p-3 ${chosen ? "border-[#5E1D1D]" : "border-[#E3D9CC]"}`}>
       <div className="mb-2 flex items-center justify-between gap-2">
         <Tag tone="wine">{hook.formula}</Tag>
         <span className={`s-serif text-2xl ${hook.ready ? "text-[#3E6B4F]" : "text-[#A3402F]"}`}>{hook.score}</span>
       </div>
-      <p className="text-[11px] text-[#6F675C]">אומרים</p>
+      <p className="text-[11px] text-[#6A6158]">אומרים</p>
       <p className="mb-2 font-semibold leading-snug">{hook.spoken}</p>
-      <p className="text-[11px] text-[#6F675C]">על המסך</p>
+      <p className="text-[11px] text-[#6A6158]">על המסך</p>
       <p className="s-serif mb-3 text-lg leading-snug">{hook.on_screen}</p>
       <ul className="mb-3 space-y-1.5">
         {Object.entries(hook.checks).map(([key, c]) => (
           <li key={key}>
             <div className="flex justify-between text-[11px]"><span className={key === hook.weakest ? "font-semibold text-[#A3402F]" : ""}>{CHECK_LABELS[key]}</span><span>{c.score}</span></div>
             <Meter value={c.score} />
-            <p className="text-[10px] text-[#6F675C]">{c.detail}</p>
+            <p className="text-[10px] text-[#6A6158]">{c.detail}</p>
           </li>
         ))}
       </ul>
       {hook.flags.map((f) => <p key={f} className="mb-1 text-xs text-[#A3402F]">{f}</p>)}
       {!hook.ready && <p className="mb-2 text-xs text-[#A3402F]">מתחת ל-50: ההוק לא מוכן. החלש ביותר: {CHECK_LABELS[hook.weakest]}.</p>}
-      {hook.why && <p className="mb-3 text-xs text-[#6F675C]">{hook.why}</p>}
+      {hook.why && <p className="mb-3 text-xs text-[#6A6158]">{hook.why}</p>}
       <Btn variant={chosen ? "solid" : "line"} className="w-full" onClick={onPick}>{chosen ? "ההוק שנבחר" : "לבחור את ההוק הזה"}</Btn>
     </div>
   );
@@ -236,7 +236,7 @@ function DraftView({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => 
   return (
     <>
       <Panel title={draft.idea} aside={<span className="flex gap-1">{templateById(draft.data.template) && <Tag tone="butter">{templateById(draft.data.template)!.name}</Tag>}<Tag>{draft.mode === "short" ? "ריל טקסט קצר" : "תסריט מלא"}</Tag></span>}>
-        <p className="text-xs text-[#6F675C]">{labelOf(ACCOUNTS, draft.account)} · {labelOf(NICHES, draft.niche)}{draft.facts ? ` · עובדות: ${draft.facts}` : " · לא הוזנו מספרים"}</p>
+        <p className="text-xs text-[#6A6158]">{labelOf(ACCOUNTS, draft.account)} · {labelOf(NICHES, draft.niche)}{draft.facts ? ` · עובדות: ${draft.facts}` : " · לא הוזנו מספרים"}</p>
       </Panel>
       {d.edit ? <ReelPlayer draft={draft} onChange={onChange} /> : <><VariantSwitch draft={draft} onChange={onChange} /><ReadyVideo draft={draft} /></>}
       {d.video && <DesignerChat draft={draft} onChange={onChange} />}
@@ -259,21 +259,21 @@ function DraftView({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => 
             aside={editing ? (
               <div className="flex gap-2"><Btn variant="ghost" onClick={() => setEditing(false)}>ביטול</Btn><Btn busy={busy === "edit"} onClick={saveEdits}>שמירה</Btn></div>
             ) : <Btn variant="ghost" onClick={() => setEditing(true)}>לתקן בקול שלי</Btn>}>
-            <ol className="divide-y divide-[#ECE7DE]">
+            <ol className="divide-y divide-[#F0E8DF]">
               {beats.map((b, i) => (
                 <li key={i} className="grid gap-2 py-2.5 sm:grid-cols-[92px_1fr]">
-                  <div className="text-[11px] text-[#6F675C]"><span className="block font-semibold text-[#1F1B16]">{ROLE[b.role] ?? b.role}</span>{b.start}-{b.end} ש׳</div>
+                  <div className="text-[11px] text-[#6A6158]"><span className="block font-semibold text-[#2A2622]">{ROLE[b.role] ?? b.role}</span>{b.start}-{b.end} ש׳</div>
                   <div>
                     {editing
                       ? <textarea rows={2} className={inputCls} value={lines[i] ?? ""} onChange={(e) => setLines((l) => l.map((x, j) => (j === i ? e.target.value : x)))} />
                       : b.line && <p className="font-semibold leading-snug">{b.line}</p>}
-                    <p className="mt-1 text-xs text-[#6F675C]">בפריים: {b.frame}</p>
+                    <p className="mt-1 text-xs text-[#6A6158]">בפריים: {b.frame}</p>
                     {b.card && <p className="mt-1 text-xs">על המסך: <span className="s-serif text-sm">{b.card}</span></p>}
                   </div>
                 </li>
               ))}
             </ol>
-            {d.cta && <p className="mt-3 border-t border-[#E2DACD] pt-3 text-sm"><span className="font-semibold">הקריאה לפעולה:</span> {d.cta}</p>}
+            {d.cta && <p className="mt-3 border-t border-[#E3D9CC] pt-3 text-sm"><span className="font-semibold">הקריאה לפעולה:</span> {d.cta}</p>}
             {d.script.caption_first_line && <p className="mt-1 text-sm"><span className="font-semibold">שורה ראשונה בכיתוב:</span> {d.script.caption_first_line}</p>}
           </Panel>
 
@@ -283,12 +283,12 @@ function DraftView({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => 
             <Panel title="טקסט על המסך">
               <ul className="space-y-1.5 text-sm">
                 {(d.cards ?? []).map((c, i) => (
-                  <li key={i} className="flex justify-between gap-3 border-b border-dashed border-[#E2DACD] pb-1.5">
-                    <span className="s-serif text-base">{c.text}</span><span className="shrink-0 text-[11px] text-[#6F675C]">{c.start}-{c.end} ש׳</span>
+                  <li key={i} className="flex justify-between gap-3 border-b border-dashed border-[#E3D9CC] pb-1.5">
+                    <span className="s-serif text-base">{c.text}</span><span className="shrink-0 text-[11px] text-[#6A6158]">{c.start}-{c.end} ש׳</span>
                   </li>
                 ))}
               </ul>
-              <p className="mt-3 text-[11px] text-[#6F675C]">עד שש מילים לכרטיס. האזור הבטוח: לא מעל y=230, לא מתחת ל-1440, ו-230 פיקסלים פנויים מימין.</p>
+              <p className="mt-3 text-[11px] text-[#6A6158]">עד שש מילים לכרטיס. האזור הבטוח: לא מעל y=230, לא מתחת ל-1440, ו-230 פיקסלים פנויים מימין.</p>
             </Panel>
             <SafeZonePreview cards={d.cards ?? []} />
           </div>
@@ -296,21 +296,21 @@ function DraftView({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => 
           <Panel title="מה לצלם" aside={<Tag tone="green">9:16 אנכי</Tag>}>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[640px] text-sm">
-                <thead><tr className="border-b border-[#E2DACD] text-right text-[11px] text-[#6F675C]">
+                <thead><tr className="border-b border-[#E3D9CC] text-right text-[11px] text-[#6A6158]">
                   {["#", "מה בפריים", "זווית", "שניות", "מה אומרים", "תנאי צילום", "בלי פנים"].map((h) => <th key={h} className="py-1.5 pl-2 font-semibold">{h}</th>)}
                 </tr></thead>
                 <tbody className="align-top">
                   {(d.shots ?? []).map((s) => (
-                    <tr key={s.n} className="border-b border-[#E2DACD]/60">
-                      <td className="s-serif py-2 pl-2">{s.n}</td><td className="pl-2">{s.frame}</td><td className="pl-2 text-[#6F675C]">{s.angle}</td>
-                      <td className="pl-2">{s.seconds}</td><td className="pl-2">{s.says || "בלי דיבור"}</td><td className="pl-2 text-[#6F675C]">{s.conditions}</td><td>{s.faceless}</td>
+                    <tr key={s.n} className="border-b border-[#E3D9CC]/60">
+                      <td className="s-serif py-2 pl-2">{s.n}</td><td className="pl-2">{s.frame}</td><td className="pl-2 text-[#6A6158]">{s.angle}</td>
+                      <td className="pl-2">{s.seconds}</td><td className="pl-2">{s.says || "בלי דיבור"}</td><td className="pl-2 text-[#6A6158]">{s.conditions}</td><td>{s.faceless}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
             {(d.checklist ?? []).length > 0 && (
-              <div className="mt-4 border-t border-[#E2DACD] pt-3">
+              <div className="mt-4 border-t border-[#E3D9CC] pt-3">
                 <p className="mb-1.5 text-sm font-semibold">מה צריך להיות בקליפ כדי שיהיה טוב</p>
                 <ul className="grid gap-1 text-sm sm:grid-cols-2">{d.checklist!.map((c) => <li key={c} className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0 text-[#3E6B4F]" />{c}</li>)}</ul>
               </div>
@@ -326,7 +326,7 @@ function DraftView({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => 
               : <Btn variant="green" busy={busy === "board"} onClick={toBoard}>לשמור בלוח כטיוטה</Btn>}
             <Btn variant="line" busy={busy === "editor"} onClick={toEditor}>{draft.project_id ? "לפתוח בעורך" : "לפתוח פרויקט בעורך"}</Btn>
           </div>
-          <p className="text-[11px] text-[#6F675C]">בעורך: כרטיסי הטקסט כבר על ציר הזמן בזמנים ובאזור הבטוח, והתסריט והשוטים בהערות. מעלים קליפים (מהטלפון או מדרייב), וכתוביות נוצרות שם מהקול.</p>
+          <p className="text-[11px] text-[#6A6158]">בעורך: כרטיסי הטקסט כבר על ציר הזמן בזמנים ובאזור הבטוח, והתסריט והשוטים בהערות. מעלים קליפים (מהטלפון או מדרייב), וכתוביות נוצרות שם מהקול.</p>
         </>
       )}
     </>
@@ -354,7 +354,7 @@ function ChecksPanel({ draft }: { draft: Draft }) {
         {checks.map((c) => (
           <li key={c.id} className="flex gap-2 text-sm">
             {c.info ? <span className="mt-0.5 size-4 shrink-0 border border-[#2A2622]/40" /> : c.pass ? <Check className="mt-0.5 size-4 shrink-0 text-[#3E6B4F]" /> : <X className="mt-0.5 size-4 shrink-0 text-[#A3402F]" />}
-            <span><span className="block font-semibold">{c.label}</span><span className="block text-xs text-[#6F675C]">{friendlyDetail(c.detail)}</span></span>
+            <span><span className="block font-semibold">{c.label}</span><span className="block text-xs text-[#6A6158]">{friendlyDetail(c.detail)}</span></span>
           </li>
         ))}
       </ul>
@@ -383,7 +383,7 @@ function CarouselDraft({ draft, onChange }: { draft: Draft; onChange: (d: Draft)
   return (
     <>
       <Panel title={draft.idea} aside={<span className="flex gap-1">{templateById(draft.data.template) && <Tag tone="butter">{templateById(draft.data.template)!.name}</Tag>}<Tag>קרוסלה</Tag></span>}>
-        <p className="text-xs text-[#6F675C]">{labelOf(ACCOUNTS, draft.account)} · {labelOf(NICHES, draft.niche)}{draft.facts ? ` · עובדות: ${draft.facts}` : " · לא הוזנו מספרים"}</p>
+        <p className="text-xs text-[#6A6158]">{labelOf(ACCOUNTS, draft.account)} · {labelOf(NICHES, draft.niche)}{draft.facts ? ` · עובדות: ${draft.facts}` : " · לא הוזנו מספרים"}</p>
       </Panel>
       <VariantSwitch draft={draft} onChange={onChange} />
       <ReadyVideo draft={draft} title="הקרוסלה" accent="המונפשת" />

@@ -55,9 +55,9 @@ export default function LibraryPage() {
       <PageHead label="ריכוז" title="כל" accent="התוכן" sub="מקום אחד לכל מה שיש: רעיונות, תסריטים, קרוסלות, פרויקטים בעורך וקבצים בדרייב." />
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {TABS.map((t) => (
-          <button key={t.key} type="button" onClick={() => setTab(t.key)} className={cn("rounded-full border px-3 py-1.5 text-sm font-semibold", tab === t.key ? "border-[#1F1B16] bg-[#1F1B16] text-[#FBF8F2]" : "border-[#E2DACD] bg-[#FBF8F2] hover:border-[#1F1B16]")}>{t.label}</button>
+          <button key={t.key} type="button" onClick={() => setTab(t.key)} className={cn("rounded-full border px-3 py-1.5 text-sm font-semibold", tab === t.key ? "border-[#5E1D1D] bg-[#5E1D1D] text-[#FAF6F1]" : "border-[#E3D9CC] bg-[#FAF6F1] hover:border-[#5E1D1D]")}>{t.label}</button>
         ))}
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="חיפוש" className="mr-auto w-48 rounded-lg border border-[#DDD4C6] bg-white/70 px-3 py-1.5 text-sm focus:border-[#1F1B16] focus:outline-none" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="חיפוש" className="mr-auto w-48 rounded-lg border border-[#DDD4C6] bg-white/70 px-3 py-1.5 text-sm focus:border-[#5E1D1D] focus:outline-none" />
       </div>
       {!items ? <Loading /> : (
         <div className="space-y-6">
@@ -88,7 +88,7 @@ export default function LibraryPage() {
           {section("editor") && (
             <Group title="פרויקטים בעורך" count={projs.length}>
               {emptyProjects > 0 && (
-                <button type="button" onClick={() => setShowEmpty(!showEmpty)} className="col-span-full text-right text-[12px] text-[#6F675C] underline underline-offset-4">
+                <button type="button" onClick={() => setShowEmpty(!showEmpty)} className="col-span-full text-right text-[12px] text-[#6A6158] underline underline-offset-4">
                   {showEmpty ? "להסתיר פרויקטים ריקים" : `${emptyProjects} פרויקטים ריקים מוסתרים. להציג`}
                 </button>
               )}
@@ -128,10 +128,10 @@ function Row({ href, title, meta, tags, thumb, external }: { href: string; title
   const body = (
     <Panel className="flex h-full items-center gap-3 px-3 py-2.5 transition-shadow hover:shadow-md">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      {thumb && <img src={thumb} alt="" className="h-14 w-10 shrink-0 rounded-md bg-[#ECE7DE] object-cover" />}
+      {thumb && <img src={thumb} alt="" className="h-14 w-10 shrink-0 rounded-md bg-[#F0E8DF] object-cover" />}
       <div className="min-w-0 flex-1">
         <p className="line-clamp-2 text-sm font-semibold leading-snug">{title}</p>
-        <p className="mt-0.5 text-[11px] text-[#6F675C]">{meta}</p>
+        <p className="mt-0.5 text-[11px] text-[#6A6158]">{meta}</p>
         {tags.length > 0 && <div className="mt-1 flex flex-wrap gap-1">{tags.map((t) => <Tag key={t}>{t}</Tag>)}</div>}
       </div>
     </Panel>

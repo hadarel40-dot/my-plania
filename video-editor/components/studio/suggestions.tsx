@@ -77,10 +77,10 @@ export function Inspiration({ onAdded }: { onAdded: (s: Suggestion[]) => void })
     <>
     <span id="inspiration" className="block scroll-mt-4" />
     <Panel label="השראה" title="ראית משהו" accent="שאהבת?">
-      <p className="mb-3 text-sm text-[#4E473E]">קישור לריל או לטיקטוק, צילום מסך, תמונה או סרטון. אבין מה עובד בו, ואהפוך אותו לרעיון שמתאים לך ולעסק.</p>
+      <p className="mb-3 text-sm text-[#4E4540]">קישור לריל או לטיקטוק, צילום מסך, תמונה או סרטון. אבין מה עובד בו, ואהפוך אותו לרעיון שמתאים לך ולעסק.</p>
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <Link2 className="size-4 shrink-0 text-[#6F675C]" />
+          <Link2 className="size-4 shrink-0 text-[#6A6158]" />
           <input dir="ltr" className={inputCls} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://www.instagram.com/reel/..." />
         </div>
         <textarea rows={2} className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder="מה אהבת בזה? (לא חובה, אבל עוזר)" />
@@ -152,19 +152,19 @@ function SuggestionCard({ s, busyDays, onDone }: { s: Suggestion; busyDays: Set<
       </div>
       <Title size="sm">{s.title}</Title>
       <p className="mt-1 text-sm leading-relaxed">{s.idea}</p>
-      <p className="mt-1 text-[12px] leading-relaxed text-[#6F675C]"><b>למה: </b>{s.why}</p>
+      <p className="mt-1 text-[12px] leading-relaxed text-[#6A6158]"><b>למה: </b>{s.why}</p>
 
       {s.hooks.length > 0 && (
         <div className="mt-3 space-y-1.5">
           <Label>הוקים · בחרי אחד</Label>
           {s.hooks.map((h, i) => (
-            <div key={i} className={cn("flex items-start gap-2 rounded-xl border px-2.5 py-2", pick === i ? "border-[#1F1B16] bg-white/80" : "border-[#E2DACD]")}>
+            <div key={i} className={cn("flex items-start gap-2 rounded-xl border px-2.5 py-2", pick === i ? "border-[#5E1D1D] bg-white/80" : "border-[#E3D9CC]")}>
               <button type="button" onClick={() => setPick(i)} className="min-w-0 flex-1 text-right">
                 <span className="block text-[14px] font-semibold leading-snug">{h.spoken}</span>
-                <span className="block text-[11px] text-[#6F675C]">על המסך: {h.on_screen} · {h.formula}</span>
+                <span className="block text-[11px] text-[#6A6158]">על המסך: {h.on_screen} · {h.formula}</span>
               </button>
-              <span className={cn("shrink-0 rounded-md px-1.5 text-[12px] font-bold", h.score >= 70 ? "bg-[#DCE8DF] text-[#2C4F39]" : h.score >= 50 ? "bg-[#ECE7DE]" : "bg-[#F3DCD5] text-[#8A3324]")}>{h.score}</span>
-              <button type="button" aria-label="אהבתי את ההוק" onClick={() => likeHook(i)} className="shrink-0 pt-0.5"><Heart className={cn("size-4", liked[i] ? "fill-[#A3402F] text-[#A3402F]" : "text-[#9A9184]")} /></button>
+              <span className={cn("shrink-0 rounded-md px-1.5 text-[12px] font-bold", h.score >= 70 ? "bg-[#DCE8DF] text-[#2C4F39]" : h.score >= 50 ? "bg-[#F0E8DF]" : "bg-[#F3DCD5] text-[#8A3324]")}>{h.score}</span>
+              <button type="button" aria-label="אהבתי את ההוק" onClick={() => likeHook(i)} className="shrink-0 pt-0.5"><Heart className={cn("size-4", liked[i] ? "fill-[#A3402F] text-[#A3402F]" : "text-[#9A8C85]")} /></button>
             </div>
           ))}
         </div>
@@ -184,11 +184,11 @@ function SuggestionCard({ s, busyDays, onDone }: { s: Suggestion; busyDays: Set<
             <div className="flex flex-wrap gap-1.5">
               {Array.from({ length: 7 }, (_, i) => addDays(today, i + 1)).map((d) => (
                 <button key={d} type="button" disabled={busy} onClick={() => save(d)}
-                  className={cn("rounded-lg border px-2 py-1 text-[12px] font-semibold", busyDays.has(d) ? "border-[#E2DACD] text-[#9A9184]" : "border-[#1F1B16] bg-white/80")}>
+                  className={cn("rounded-lg border px-2 py-1 text-[12px] font-semibold", busyDays.has(d) ? "border-[#E3D9CC] text-[#9A8C85]" : "border-[#5E1D1D] bg-white/80")}>
                   {DAYS[new Date(`${d}T12:00:00`).getDay()]} {formatDate(d)}{busyDays.has(d) ? " · תפוס" : ""}
                 </button>
               ))}
-              <button type="button" disabled={busy} onClick={() => save(null)} className="rounded-lg border border-dashed border-[#9A9184] px-2 py-1 text-[12px]">בלי תאריך</button>
+              <button type="button" disabled={busy} onClick={() => save(null)} className="rounded-lg border border-dashed border-[#9A8C85] px-2 py-1 text-[12px]">בלי תאריך</button>
             </div>
             <button type="button" className="mt-2 text-[12px] underline" onClick={() => setMode("")}>ביטול</button>
           </div>
@@ -197,7 +197,7 @@ function SuggestionCard({ s, busyDays, onDone }: { s: Suggestion; busyDays: Set<
           <div>
             <Label className="mb-1.5">למה לא? (כדי שאלמד)</Label>
             <div className="flex flex-wrap gap-1.5">
-              {REASONS.map((r) => <button key={r} type="button" disabled={busy} onClick={() => dismiss(r)} className="rounded-lg border border-[#E2DACD] bg-white/80 px-2 py-1 text-[12px] hover:border-[#1F1B16]">{r}</button>)}
+              {REASONS.map((r) => <button key={r} type="button" disabled={busy} onClick={() => dismiss(r)} className="rounded-lg border border-[#E3D9CC] bg-white/80 px-2 py-1 text-[12px] hover:border-[#5E1D1D]">{r}</button>)}
             </div>
             <button type="button" className="mt-2 text-[12px] underline" onClick={() => setMode("")}>ביטול</button>
           </div>
@@ -242,7 +242,7 @@ export function Suggestions({ compact = false }: { compact?: boolean }) {
         <div>
           <Label>כל בוקר, ובלחיצה</Label>
           <Title size="lg" accent="בשבילך">הצעות</Title>
-          <p className="mt-1 text-sm text-[#4E473E]">רעיונות עם הוקים, לפי הטרנדים, העסק, מה שעובד לך ומה שסימנת שאת אוהבת. שומרים ומשבצים ביום, או "לא בשבילי", ואני לומדת מזה.</p>
+          <p className="mt-1 text-sm text-[#4E4540]">רעיונות עם הוקים, לפי הטרנדים, העסק, מה שעובד לך ומה שסימנת שאת אוהבת. שומרים ומשבצים ביום, או "לא בשבילי", ואני לומדת מזה.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {!compact && <input className={cn(inputCls, "w-56")} value={focus} onChange={(e) => setFocus(e.target.value)} placeholder="מה את מקדמת השבוע? (לא חובה)" />}
