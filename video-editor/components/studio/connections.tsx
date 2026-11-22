@@ -4,7 +4,7 @@ import { Check, X } from "lucide-react";
 import { studioCall } from "@/lib/studio/client";
 import { Label, Loading, Panel } from "./ui";
 
-interface Status { ai: "claude" | "gemini" | null; gemini: boolean; instagram: boolean; drive: boolean; driveEmail: string | null; driveFolder: boolean; cron: boolean }
+interface Status { ai: "claude" | "gemini" | null; gemini: boolean; instagram: boolean; drive: boolean; driveEmail: string | null; driveProblem?: string | null; driveFolder: boolean; cron: boolean }
 
 /** מה מחובר ומה חסר, עם ההוראות לכל מה שחסר */
 export function Connections() {
@@ -28,6 +28,8 @@ export function Connections() {
         {row(s.cron, "הכנה אוטומטית כל בוקר", s.cron ? "פועלת כל בוקר: טרנדים, רעיונות, וטיוטה אחת משובצת ביום פנוי." : "חסר CRON_SECRET ב-Vercel.")}
         {row(s.drive, "דרייב", s.drive ? (
           <>מחובר דרך {s.driveEmail}. {s.driveFolder ? "יש תיקיית ברירת מחדל." : <>כדאי להוסיף ב-Vercel משתנה <b>GOOGLE_DRIVE_FOLDER</b> עם הקישור לתיקיית הסרטונים.</>}</>
+        ) : s.driveProblem && !s.driveProblem.includes("לא מוגדר") ? (
+          <>המפתח שמור ב-Vercel, אבל לא נקרא: <b>{s.driveProblem}</b>. מתקנים את הערך של GOOGLE_SERVICE_ACCOUNT_JSON ב-Vercel ועושים Redeploy.</>
         ) : (
           <ol className="mt-1 list-decimal space-y-1 pr-5">
             <li>נכנסים ל-console.cloud.google.com ויוצרים פרויקט (שם חופשי).</li>

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { BrainError } from "@/lib/ai/brain";
 import { computeMeta } from "@/lib/editor/project-meta";
 import type { Draft } from "@/lib/studio/config";
-import { driveAccessToken, driveConfigured, driveEmail, driveThumb, listDriveMedia } from "@/lib/studio/drive";
+import { driveAccessToken, driveConfigured, driveProblem, driveEmail, driveThumb, listDriveMedia } from "@/lib/studio/drive";
 import { adminStore, autoDraft, autoSuggest } from "@/lib/studio/auto";
 import { matchMaterials, writeCarousel, writeHooks, writeScript } from "@/lib/studio/engine";
 import { projectFromDraft } from "@/lib/studio/handoff";
@@ -93,6 +93,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
           instagram: instagramConfigured(),
           drive: driveConfigured(),
           driveEmail: driveEmail(),
+          driveProblem: driveProblem(),
           driveFolder: !!process.env.GOOGLE_DRIVE_FOLDER,
           cron: !!process.env.CRON_SECRET,
         });

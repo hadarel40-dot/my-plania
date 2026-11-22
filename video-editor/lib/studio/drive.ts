@@ -9,16 +9,37 @@ import { createSign } from "node:crypto";
  */
 interface ServiceAccount { client_email: string; private_key: string }
 
-function account(): ServiceAccount | null {
-  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!raw) return null;
-  try {
-    const sa = JSON.parse(raw) as ServiceAccount;
-    return sa.client_email && sa.private_key ? sa : null;
-  } catch {
-    return null;
+/**
+ * קורא את המפתח בכל צורה נפוצה שבה הוא מודבק: JSON רגיל, עטוף במרכאות, JSON בתוך מחרוזת,
+ * base64, או מפתח פרטי עם \n מילולי במקום ירידות שורה. מחזיר גם סיבה כשלא מצליח (בלי לחשוף את המפתח).
+ */
+type Parsed = { sa: ServiceAccount | null; problem: string | null };
+function parseAccount(): Parsed {
+  let raw = (process.env.GOOGLE_SERVICE_ACCOUNT_JSON ?? "").trim();
+  if (!raw) return { sa: null, problem: "המשתנה GOOGLE_SERVICE_ACCOUNT_JSON לא מוגדר" };
+  // עטוף בגרש או בגרש הפוך (מרכאות כפולות מטופלות למטה, כ-JSON בתוך מחרוזת)
+  if (/^['`]/.test(raw) && raw.at(-1) === raw[0]) raw = raw.slice(1, -1).trim();
+  if (!raw.startsWith("{") && !raw.startsWith('"')) {
+    try { const dec = Buffer.from(raw, "base64").toString("utf8").trim(); if (dec.startsWith("{")) raw = dec; } catch { /* לא base64 */ }
   }
+  let obj: unknown;
+  try {
+    obj = JSON.parse(raw);
+    if (typeof obj === "string") obj = JSON.parse(obj);
+  } catch {
+    // לפעמים ירידות השורה בתוך המפתח הפרטי נשברות בהדבקה
+    const fixed = raw.replace(/("private_key"\s*:\s*")([\s\S]*?)("\s*[,}])/, (_m, p1: string, key: string, p3: string) => p1 + key.replace(/\r?\n/g, "\\n") + p3);
+    try { obj = JSON.parse(fixed); } catch { return { sa: null, problem: "התוכן של GOOGLE_SERVICE_ACCOUNT_JSON הוא לא JSON תקין. צריך להדביק את כל הקובץ, מהסוגר { הראשון ועד } האחרון" }; }
+  }
+  const sa = obj as Partial<ServiceAccount> & { type?: string };
+  if (!sa?.client_email || !sa?.private_key) return { sa: null, problem: "בקובץ חסרים client_email או private_key. בדקי שהדבקת את קובץ המפתח (JSON) של חשבון השירות ולא קובץ אחר" };
+  return { sa: { client_email: sa.client_email, private_key: sa.private_key.replace(/\\n/g, "\n") }, problem: null };
 }
+
+function account(): ServiceAccount | null {
+  return parseAccount().sa;
+}
+export const driveProblem = () => parseAccount().problem;
 
 export const driveConfigured = () => !!account();
 export const driveEmail = () => account()?.client_email ?? null;
