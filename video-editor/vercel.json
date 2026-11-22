@@ -16,5 +16,11 @@
       "path": "/api/studio/cron?job=draft",
       "schedule": "15 5 * * *"
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "claude/**": false,
+      "claude/*": false
+    }
+  }
 }
