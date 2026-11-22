@@ -14,7 +14,9 @@ export const FONTS = [
   { family: "Frank Ruhl Libre", label: "Frank Ruhl · סריף קלאסי", weights: [500, 900] },
   { family: "David Libre", label: "David Libre · ספרותי", weights: [500, 700] },
   { family: "Bellefair", label: "Bellefair · אלגנטי", weights: [400] },
-  { family: "Amatic SC", label: "Amatic SC · כתב יד", weights: [700] },
+  { family: "Gveret Levin", label: "גברת לוין · כתב יד", weights: [400] },
+  { family: "Playpen Sans Hebrew", label: "Playpen · כתב יד עגול", weights: [400, 700] },
+  { family: "Amatic SC", label: "Amatic SC · כתב יד צר", weights: [700] },
   { family: "Karantina", label: "Karantina · צר ודרמטי", weights: [400, 700] },
   { family: "Noto Sans Hebrew", label: "Noto Sans · ניטרלי", weights: [500, 800] },
 ] as const;
@@ -57,5 +59,8 @@ export const PHOTO_DEFAULT: Required<Pick<Theme, "headFont" | "bodyFont" | "head
   headFont: "Assistant", bodyFont: "Amatic SC", headColor: "#F7C9D6", bodyColor: "#FFFFFF", bg: "#2A2622", accent: "#F7C9D6",
   overlay: 0.45, headScale: 1, bodyScale: 1, align: "right", position: "bottom",
 };
+
+/** כמה להגדיל טקסט בפונט הזה כדי שייראה באותו גודל כמו פונט רגיל (כתב יד נראה קטן יותר) */
+export const sizeFactor = (family?: string) => (family === "Amatic SC" ? 1.65 : family === "Gveret Levin" ? 1.2 : 1);
 
 export const fontStack = (family: string | undefined, fallback: string) => (family ? `"${family}", ${fallback}` : fallback);

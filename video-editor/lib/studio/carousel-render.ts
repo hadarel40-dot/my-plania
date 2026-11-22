@@ -1,6 +1,6 @@
 "use client";
 import type { Carousel, Slide } from "./config";
-import { PHOTO_DEFAULT, boldOf, fontStack, regularOf } from "./brand";
+import { PHOTO_DEFAULT, boldOf, fontStack, regularOf, sizeFactor } from "./brand";
 
 /**
  * שקופיות קרוסלה בגודל 1080x1350, נכתבות בדפדפן (שם עברית מימין לשמאל נכונה), בעיצוב הסטודיו:
@@ -206,7 +206,7 @@ async function renderPhotoSlide(c: Carousel, index: number, images: Record<numbe
   const headSize = Math.round((slide.kind === "cover" ? 112 : 84) * t.headScale);
   const recap = slide.kind === "recap";
   // כתב יד נראה קטן יותר באותו גודל, אז מגדילים אותו
-  const bodySize = Math.round((recap ? 52 : t.bodyFont === "Amatic SC" ? 80 : 48) * t.bodyScale);
+  const bodySize = Math.round((recap ? 52 : 48 * sizeFactor(t.bodyFont)) * t.bodyScale);
   ctx.font = `${hw} ${headSize}px ${HEAD}`;
   const head = wrap(ctx, slide.headline, W - P * 2);
   const rows = recap ? slide.body.split("\n").map((r) => r.replace(/^[-•·\d.\s]+/, "").trim()).filter(Boolean) : [];
