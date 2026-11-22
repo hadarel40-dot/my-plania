@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, ImagePlus, Plus, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ImagePlus, Plus, Trash2, Undo2, X } from "lucide-react";
 import type { Carousel, Draft, Slide } from "@/lib/studio/config";
 import { NEW_SLIDE } from "@/lib/studio/carousel-blank";
 import { downloadZip, renderAll } from "@/lib/studio/carousel-render";
@@ -32,7 +32,37 @@ function useStorageUrls(c: Carousel | undefined | null) {
 export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => void }) {
   const c = draft.data.carousel;
   const [images, setImages] = useState<string[] | null>(null);
-  const [edit, setEdit] = useState<Carousel | null>(null);
+  const [edit, setEditRaw] = useState<Carousel | null>(null);
+  // ביטול שינוי בעריכה: כל שינוי נשמר במחסנית. הקלדה רצופה נספרת כשינוי אחד
+  const undo = useRef<Carousel[]>([]);
+  const lastPush = useRef(0);
+  const [undoCount, setUndoCount] = useState(0);
+  const setEdit = (next: Carousel | null) => {
+    if (next === null) { undo.current = []; setUndoCount(0); setEditRaw(null); return; }
+    setEditRaw((cur) => {
+      if (cur && Date.now() - lastPush.current > 700) {
+        undo.current = [...undo.current.slice(-49), cur];
+        setUndoCount(undo.current.length);
+      }
+      lastPush.current = Date.now();
+      return next;
+    });
+  };
+  const undoLast = () => {
+    const prev = undo.current.pop();
+    setUndoCount(undo.current.length);
+    if (prev) { lastPush.current = 0; setEditRaw(prev); }
+  };
+  useEffect(() => {
+    if (!edit) return;
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement;
+      // בתוך שדה טקסט, Ctrl+Z של הדפדפן מבטל הקלדה; מחוץ לשדה, מבטל את השינוי האחרון בקרוסלה
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !["INPUT", "TEXTAREA"].includes(el.tagName)) { e.preventDefault(); undoLast(); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [edit]); // eslint-disable-line react-hooks/exhaustive-deps
   const [busy, setBusy] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const shown = edit ?? c;
@@ -76,6 +106,18 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
     catch (e) { toast((e as Error).message, true); }
     finally { setBusy(""); }
   };
+  const history = draft.data.carousel_history ?? [];
+  const revert = async () => {
+    if (!history.length) return;
+    setBusy("revert");
+    try {
+      const { data, error } = await db().from("studio_drafts").update({ data: { ...draft.data, carousel: history[0], carousel_history: history.slice(1) } }).eq("id", draft.id).select("*").single();
+      if (error) throw new Error(error.message);
+      onChange(data as Draft);
+      toast("חזרתי לגרסה הקודמת");
+    } catch (e) { toast((e as Error).message, true); }
+    finally { setBusy(""); }
+  };
   const save = async () => {
     if (!edit) return;
     if (!edit.slides.length) return toast("צריך לפחות שקופית אחת", true);
@@ -117,11 +159,13 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
           <div className="flex flex-wrap gap-2">
             {edit ? (
               <>
-                <Btn variant="ghost" onClick={() => setEdit(null)}>ביטול</Btn>
+                <Btn variant="line" disabled={!undoCount} onClick={undoLast}><Undo2 className="size-4" />ביטול שינוי</Btn>
+                <Btn variant="ghost" onClick={() => setEdit(null)}>יציאה בלי לשמור</Btn>
                 <Btn busy={busy === "save"} onClick={save}>שמירה</Btn>
               </>
             ) : (
               <>
+                {history.length > 0 && <Btn variant="line" busy={busy === "revert"} onClick={revert}><Undo2 className="size-4" />לחזור לגרסה הקודמת</Btn>}
                 <Btn variant="ghost" busy={busy === "regen"} onClick={regen}>לכתוב מחדש עם AI</Btn>
                 <Btn variant="line" onClick={() => setEdit(structuredClone(c))}>לערוך</Btn>
                 <Btn busy={busy === "zip"} onClick={async () => { setBusy("zip"); try { await downloadZip(c, draft.idea, photos); } finally { setBusy(""); } }}>להוריד את התמונות</Btn>

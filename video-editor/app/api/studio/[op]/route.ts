@@ -59,7 +59,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
         const { draftId } = z.object({ draftId: uuid }).parse(body);
         const draft = await loadDraft(draftId);
         const voice = await voiceWithPrefs(draft.account);
-        return NextResponse.json({ draft: await saveDraft(draft.id, await writeCarousel(draft, voice)) });
+        const next = await writeCarousel(draft, voice);
+        // הגרסה הקודמת נשמרת, כדי שאפשר יהיה לחזור אליה
+        const prev = draft.data.carousel;
+        if (prev) next.carousel_history = [prev, ...(draft.data.carousel_history ?? [])].slice(0, 5);
+        return NextResponse.json({ draft: await saveDraft(draft.id, next) });
       }
       case "drive-match": {
         const { draftId, folder } = z.object({ draftId: uuid, folder: z.string().max(300).optional() }).parse(body);

@@ -115,6 +115,8 @@ export interface DraftData {
   /** תבנית מוכנה (lib/studio/templates.ts) */
   template?: string;
   carousel?: Carousel;
+  /** הקרוסלות שלפני כל "לכתוב מחדש עם AI", האחרונה ראשונה (עד 5), כדי שאפשר לחזור אחורה */
+  carousel_history?: Carousel[];
   materials?: Materials;
   hooks?: Hook[];
   chosen?: number;
