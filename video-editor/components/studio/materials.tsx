@@ -35,10 +35,10 @@ export function MaterialsPanel({ draft, onChange }: { draft: Draft; onChange: (d
     <Panel label="חומרים" title="מה יש לך" accent="בדרייב"
       aside={<Btn variant={m ? "ghost" : "solid"} busy={busy === "find"} onClick={find}><HardDrive className="size-4" />{m ? "לחפש שוב" : "למצוא חומרים בדרייב"}</Btn>}>
       {!m ? (
-        <p className="text-sm text-[#4E473E]">אעבור על הסרטונים והתמונות בתיקייה שלך בדרייב, לפי שם, תאריך ותמונה ממוזערת, ואתאים לכל {draft.mode === "carousel" ? "שקופית" : "שוט"} את מה שמתאים לו. מה שאין, ייכתב כ"חסר לצלם".</p>
+        <p className="text-sm text-[#4E473E]">אעבור על הסרטונים והתמונות בתיקייה שלך בדרייב, לפי שם, תאריך ותמונה ממוזערת, ואבחר לכל {draft.mode === "carousel" ? "שקופית" : "שוט"} קובץ. אם אין צילום מדויק, אבחר תחליף יצירתי שעובד, ואכתוב למה.</p>
       ) : (
         <>
-          {m.matches.length === 0 ? <Note>לא מצאתי בדרייב קבצים שמתאימים באמת.</Note> : (
+          {m.matches.length === 0 ? <Note>אין עדיין סרטונים או תמונות בתיקייה בדרייב.</Note> : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {m.matches.map((x, i) => (
                 <div key={i} className="flex gap-3 rounded-xl border border-[#E2DACD] bg-white/70 p-2">
@@ -56,7 +56,7 @@ export function MaterialsPanel({ draft, onChange }: { draft: Draft; onChange: (d
           )}
           {m.missing.length > 0 && (
             <div className="mt-3 rounded-xl bg-[#F4EFE6] p-3">
-              <Label className="mb-1">חסר לצלם</Label>
+              <Label className="mb-1">אם בא לך לצלם משהו חדש, זה ישפר</Label>
               <ul className="space-y-0.5 text-[13px]">{m.missing.map((x) => <li key={x}>· {x}</li>)}</ul>
             </div>
           )}

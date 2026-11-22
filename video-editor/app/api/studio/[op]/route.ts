@@ -71,7 +71,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
         const draft = await loadDraft(draftId);
         const files = await listDriveMedia(folder, 80);
         if (!files.length) throw new StudioError("לא מצאתי סרטונים או תמונות בתיקייה. בדקי שהיא משותפת עם חשבון השירות.", 404);
-        const thumbs = await Promise.all(files.map((f, i) => (i < 24 ? driveThumb(f) : Promise.resolve(null))));
+        // יותר תמונות ממוזערות, כדי שהבחירה תהיה לפי מה שרואים ולא רק לפי שם הקובץ
+        const thumbs = await Promise.all(files.map((f, i) => (i < 40 ? driveThumb(f) : Promise.resolve(null))));
         const materials = await matchMaterials(draft, files, thumbs);
         return NextResponse.json({ draft: await saveDraft(draft.id, { ...draft.data, materials }) });
       }

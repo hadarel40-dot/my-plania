@@ -308,14 +308,30 @@ ${targets.join("\n")}
 ${list}
 
 אחרי הטקסט יש תמונות ממוזערות של חלק מהקבצים, כל אחת עם המספר שלה.
-לכל שוט או שקופית, בחרי את הקובץ שהכי מתאים לפי מה שרואים בתמונה ולפי השם. target כתוב בדיוק כמו ברשימה למעלה (למשל "שוט 2" או "שקופית 1"). file_index הוא המספר של הקובץ. reason במשפט קצר: למה הוא מתאים.
-בשקופיות: רק לשער ולשקופיות שתמונה תחזק. לא חובה לכל שקופית.
-אם אין קובץ שבאמת מתאים, לא בוחרים, וכותבים ב-missing מה חסר לצלם, ספציפי. לא ממציאים התאמה.` }];
+חובה לבחור קובץ לכל שוט ולכל שקופית ברשימה, בלי יוצא מן הכלל. target כתוב בדיוק כמו ברשימה למעלה (למשל "שוט 2" או "שקופית 1"). file_index הוא המספר של הקובץ.
+תהיי יצירתית: אם אין צילום מדויק, בוחרים את הכי קרוב באווירה, בפעולה או בנושא. למשל ידיים במטבח במקום ידיים כותבות, סיר מבעבע במקום "מה מכינים היום", שולחן עם מחשב במקום תכנון, נוף או שקיעה לשקופית רגשית או לסוף.
+reason במשפט קצר ואמיתי: מה רואים בקובץ ולמה הוא עובד כאן. בתחליף כותבים שזה תחליף ("תחליף: ...").
+לא לחזור על אותו קובץ אם יש מספיק קבצים שונים.
+missing לא חובה: רק אם צילום חדש ספציפי ישפר מאוד, הצעה קצרה. זה בנוסף לבחירה, לא במקומה.` }];
   thumbs.forEach((t, i) => { if (t) parts.push({ text: `#${i}` }, { image: t }); });
   const raw = cleanDeep(await askBrain({ prefer: "claude", schema: MatchSchema, system: "את עורכת וידאו שמכירה את הארכיון של היוצרת ומוצאת לכל שוט את הצילום שמתאים לו.", parts }));
   const matches = raw.matches
     .filter((m) => files[m.file_index])
     .map((m) => ({ target: m.target, file_id: files[m.file_index].id, reason: m.reason }));
+  // רשת ביטחון: שוט או שקופית שנשארו בלי קובץ מקבלים קובץ שעוד לא שימש (וידאו לשוט, תמונה לשקופית)
+  const key = (t: string) => t.match(/(שוט|שקופית)\s*\d+/)?.[0] ?? t;
+  const covered = new Set(matches.map((m) => key(m.target)));
+  const taken = new Set(matches.map((m) => m.file_id));
+  const wantVideo = draft.mode !== "carousel";
+  const pool = [...files.filter((f) => f.mimeType.startsWith(wantVideo ? "video/" : "image/")), ...files.filter((f) => !f.mimeType.startsWith(wantVideo ? "video/" : "image/"))];
+  for (const t of targets) {
+    const k = key(t);
+    if (covered.has(k)) continue;
+    const f = pool.find((x) => !taken.has(x.id)) ?? pool[0];
+    if (!f) break;
+    taken.add(f.id);
+    matches.push({ target: k, file_id: f.id, reason: "תחליף: נבחר מהקבצים האחרונים בתיקייה. אפשר להחליף בעורך" });
+  }
   const used = new Set(matches.map((m) => m.file_id));
   return {
     files: files.filter((f) => used.has(f.id)).map((f) => ({ id: f.id, name: f.name, mimeType: f.mimeType, duration: f.videoMediaMetadata?.durationMillis ? Math.round(Number(f.videoMediaMetadata.durationMillis) / 100) / 10 : undefined })),
