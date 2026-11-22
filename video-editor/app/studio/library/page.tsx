@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ACCOUNTS, FORMATS, STAGES, labelOf, type Draft } from "@/lib/studio/config";
-import { db, formatDate, studioCall } from "@/lib/studio/client";
+import { db, formatDate, studioCall, versionLabels } from "@/lib/studio/client";
 import { Label, Loading, Note, PageHead, Panel, Tag } from "@/components/studio/ui";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +39,7 @@ export default function LibraryPage() {
   }, [tab, drive]);
 
   const match = (s: string) => !q.trim() || s.toLowerCase().includes(q.trim().toLowerCase());
+  const versions = useMemo(() => versionLabels(drafts), [drafts]);
   const reels = useMemo(() => drafts.filter((d) => d.mode !== "carousel" && match(d.idea)), [drafts, q]); // eslint-disable-line react-hooks/exhaustive-deps
   const carousels = useMemo(() => drafts.filter((d) => d.mode === "carousel" && match(d.idea)), [drafts, q]); // eslint-disable-line react-hooks/exhaustive-deps
   const ideas = (items ?? []).filter((i) => i.stage === "idea" && match(i.title));
@@ -72,7 +73,7 @@ export default function LibraryPage() {
           {section("reels") && (
             <Group title="תסריטים לרילס" count={reels.length}>
               {reels.slice(0, tab === "all" ? 9 : 200).map((d) => (
-                <Row key={d.id} href={`/studio/reel?id=${d.id}`} title={d.idea} meta={`${labelOf(ACCOUNTS, d.account)} · ${d.data.script?.total_seconds ? `${d.data.script.total_seconds} שניות · ` : d.data.video?.seconds ? `${d.data.video.seconds} שניות · ` : ""}${formatDate(d.updated_at)}`}
+                <Row key={d.id} href={`/studio/reel?id=${d.id}`} title={`${d.idea}${versions[d.id] ?? ""}`} meta={`${labelOf(ACCOUNTS, d.account)} · ${d.data.script?.total_seconds ? `${d.data.script.total_seconds} שניות · ` : d.data.video?.seconds ? `${d.data.video.seconds} שניות · ` : ""}${formatDate(d.updated_at)}`}
                   tags={[...(d.data.hooks?.[d.data.chosen ?? 0] ? [`הוק ${d.data.hooks[d.data.chosen ?? 0].score}`] : []), ...(d.data.materials ? ["יש חומרים"] : []), ...(d.project_id ? ["בעורך"] : [])]} />
               ))}
             </Group>
@@ -80,7 +81,7 @@ export default function LibraryPage() {
           {section("carousels") && (
             <Group title="קרוסלות" count={carousels.length}>
               {carousels.slice(0, tab === "all" ? 9 : 200).map((d) => (
-                <Row key={d.id} href={`/studio/reel?id=${d.id}`} title={d.idea} meta={`${labelOf(ACCOUNTS, d.account)} · ${d.data.carousel?.slides.length ?? 0} שקופיות · ${formatDate(d.updated_at)}${d.data.carousel?.slides[0]?.headline && d.data.carousel.slides[0].headline !== d.idea ? ` · שער: ${d.data.carousel.slides[0].headline}` : ""}`} tags={[]} />
+                <Row key={d.id} href={`/studio/reel?id=${d.id}`} title={`${d.idea}${versions[d.id] ?? ""}`} meta={`${labelOf(ACCOUNTS, d.account)} · ${d.data.carousel?.slides.length ?? 0} שקופיות · ${formatDate(d.updated_at)}${d.data.carousel?.slides[0]?.headline && d.data.carousel.slides[0].headline !== d.idea ? ` · שער: ${d.data.carousel.slides[0].headline}` : ""}`} tags={[]} />
               ))}
             </Group>
           )}

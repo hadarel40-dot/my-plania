@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { Check, X } from "lucide-react";
 import { ACCOUNTS, CHECK_LABELS, NICHES, labelOf, type Account, type Draft, type Hook, type Niche } from "@/lib/studio/config";
-import { db, editorHref, formatDate, studioCall } from "@/lib/studio/client";
+import { db, editorHref, formatDate, studioCall, versionLabels } from "@/lib/studio/client";
 import { Btn, Field, Loading, Meter, Note, PageHead, Panel, Select, Tag, inputCls, toast } from "@/components/studio/ui";
 import { SafeZonePreview } from "@/components/studio/safe-zone";
 import { VoiceSuggestions, type Suggestion } from "@/components/studio/voice-suggestions";
@@ -47,7 +47,7 @@ function ReelStudio() {
               {listed.map((d) => (
                 <li key={d.id}>
                   <Link href={`/studio/reel?id=${d.id}`} className={`block rounded-lg border px-2.5 py-2 text-sm ${d.id === id ? "border-[#1F1B16] bg-[#FBF8F2]" : "border-transparent hover:border-[#E2DACD]"}`}>
-                    <span className="line-clamp-2 block">{d.idea}</span>
+                    <span className="line-clamp-2 block">{d.idea}<b>{versionLabels(listed)[d.id] ?? ""}</b></span>
                     <span className="mt-0.5 block text-[11px] text-[#6F675C]">{labelOf(ACCOUNTS, d.account)} · {formatDate(d.updated_at)}</span>
                   </Link>
                 </li>

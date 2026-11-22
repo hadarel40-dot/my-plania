@@ -52,6 +52,20 @@ export interface Theme {
 /** ערכת המותג של חשבון: פלטת צבעים ופונטים קבועים */
 export interface BrandKit extends Theme {
   palette?: string[];
+  /** שורת הקריאה לפעולה שבסוף כל כיתוב (למשל: "הקישור בביו") */
+  cta?: string;
+  /** התגיות הקבועות, מופרדות ברווח */
+  hashtags?: string;
+}
+
+/** הכיתוב עם הקריאה לפעולה והתגיות של החשבון: התגיות שהמודל כתב מוחלפות בקבועות */
+export function applyCaptionDefaults(caption: string, kit?: BrandKit | null) {
+  if (!kit?.cta && !kit?.hashtags) return caption;
+  let text = caption.trim();
+  if (kit.hashtags) text = text.replace(/(\s*#[^\s#]+)+\s*$/u, "").trim();
+  if (kit.cta && !text.includes(kit.cta.trim())) text = `${text}\n${kit.cta.trim()}`;
+  if (kit.hashtags) text = `${text}\n\n${kit.hashtags.trim().split(/\s+/).map((h) => (h.startsWith("#") ? h : `#${h}`)).join(" ")}`;
+  return text;
 }
 
 /** המראה של הקרוסלות שלה (כמו בפוסט "וככה פלניה נולדה"): כותרת ורודה, כתב יד לבן */

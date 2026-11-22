@@ -32,3 +32,21 @@ export const num = (v: unknown) => (v === null || v === undefined || Number.isNa
 export function editorHref(projectId: string, template?: string | null) {
   return template && !template.startsWith("car-") ? `/p/${projectId}?template=st-${template}` : `/p/${projectId}`;
 }
+
+/**
+ * כפילויות: כמה טיוטות עם אותו רעיון מקבלות מספר גרסה לפי סדר היצירה (v1, v2...).
+ * מחזיר מיפוי מזהה -> " · v2" (ריק אם אין כפילות).
+ */
+export function versionLabels(drafts: { id: string; idea: string; mode?: string; created_at?: string }[]) {
+  const groups = new Map<string, typeof drafts>();
+  for (const d of drafts) {
+    const k = `${d.mode === "carousel" ? "c" : "r"}|${d.idea.trim().toLowerCase()}`;
+    groups.set(k, [...(groups.get(k) ?? []), d]);
+  }
+  const out: Record<string, string> = {};
+  for (const list of groups.values()) {
+    if (list.length < 2) continue;
+    [...list].sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? "")).forEach((d, i) => { out[d.id] = ` · v${i + 1}`; });
+  }
+  return out;
+}

@@ -4,6 +4,7 @@ import { askBrain, type BrainPart } from "@/lib/ai/brain";
 import type { DriveFile } from "./drive";
 import { templateBrief, templateById } from "./templates";
 import { cleanDeep } from "./clean";
+import { applyCaptionDefaults, type BrandKit } from "./brand";
 import { ACCOUNTS, NICHES, type Beat, type Carousel, type Materials, type Check, type Draft, type DraftData, type Hook, type ScreenCard } from "./config";
 import { scoreHook, words } from "./hookscore";
 
@@ -253,7 +254,7 @@ export function keepImages(prev: Carousel | undefined, next: Carousel): Carousel
   };
 }
 
-export async function writeCarousel(draft: Draft, voice: string): Promise<DraftData> {
+export async function writeCarousel(draft: Draft, voice: string, kit?: BrandKit | null): Promise<DraftData> {
   const handle = ACCOUNTS.find((a) => a.value === draft.account)?.label ?? "";
   const prompt = (retry: string) => `${context(draft, voice)}
 
@@ -278,7 +279,10 @@ alt: תיאור קצר של השער, לקוראי מסך.
     carousel = { ...raw, handle, style };
     checks = carouselChecks(carousel);
   }
-  return { ...draft.data, carousel: keepImages(draft.data.carousel, carousel), checks };
+  // ברירות המחדל של החשבון: עיצוב, קריאה לפעולה ותגיות
+  const { palette: _palette, cta: _cta, hashtags: _tags, ...theme } = kit ?? {}; // eslint-disable-line @typescript-eslint/no-unused-vars
+  const kept = keepImages(draft.data.carousel, { ...carousel, caption: applyCaptionDefaults(carousel.caption, kit), ...(Object.keys(theme).length && !draft.data.carousel?.theme ? { theme, style: "photo" as const } : {}) });
+  return { ...draft.data, carousel: kept, checks };
 }
 
 // ---------- חומרים מהדרייב
@@ -404,4 +408,29 @@ ${JSON.stringify(cards)}
 changes: מה לשנות. card הוא מספר הכרטיס (n), "האחרון" הוא ${cards.length || "האחרון"}. action: replace_clip (להחליף סרטון), edit_text (לשנות טקסט, detail הוא הטקסט החדש), remove_card, reorder, timing (מהירות, אורך), other.
 reply: משפט אחד שמאשר מה יקרה. לכתוב שהסרטון המעודכן יגיע בעיבוד הבא, לא עכשיו.` }],
   }));
+}
+
+// ---------- צור שבוע של קרוסלות
+
+const CarouselIdeasSchema = z.object({
+  ideas: z.array(z.object({ idea: z.string(), niche: z.enum(["travel", "business", "home", "meals"]), template: z.string() })),
+});
+
+/** רעיונות לקרוסלות לשבוע שלם, שונים זה מזה ומהקיים, לפי הקול, הטרנדים והתבניות */
+export async function carouselIdeas(account: Draft["account"], voice: string, count: number, existing: string[], trends: { title: string; reel_idea: string }[], templates: { id: string; name: string }[]) {
+  const niches = NICHES.filter((n) => n.account === account).map((n) => n.value);
+  const out = cleanDeep(await askBrain({
+    schema: CarouselIdeasSchema,
+    system: "את מנהלת הסושיאל שלה. מתכננת שבוע של קרוסלות שכל אחת שווה שמירה או שליחה לחברה. עברית מדוברת, בלי אימוג'י, בלי מקפים ארוכים, בלי מספרים מומצאים.",
+    parts: [{ text: `${voice}
+
+החשבון: ${account}. נישות מותרות: ${niches.join(", ")}.
+טרנדים מאומתים: ${JSON.stringify(trends.slice(0, 10))}
+כבר קיים (לא לחזור): ${JSON.stringify(existing.slice(0, 60))}
+תבניות קרוסלה: ${JSON.stringify(templates)}
+
+כתבי ${count} רעיונות לקרוסלות לשבוע הקרוב. כל רעיון במשפט אחד ספציפי (מה הצופה תקבל), מגוון בין ערך, סיפור, טעויות, צ'קליסט ומאחורי הקלעים.
+niche מהרשימה המותרת. template הוא id של תבנית מהרשימה שהכי מתאימה.` }],
+  }));
+  return out.ideas.slice(0, count).map((x) => ({ ...x, niche: niches.includes(x.niche) ? x.niche : niches[0] }));
 }

@@ -1,11 +1,13 @@
+import type { BrandKit } from "@/lib/studio/brand";
+import { TEMPLATES } from "@/lib/studio/templates";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { BrainError } from "@/lib/ai/brain";
 import { computeMeta } from "@/lib/editor/project-meta";
-import type { Draft } from "@/lib/studio/config";
+import type { Draft, TrendItem } from "@/lib/studio/config";
 import { driveAccessToken, driveConfigured, driveProblem, driveEmail, driveThumb, listDriveMedia } from "@/lib/studio/drive";
 import { adminStore, autoDraft, autoSuggest } from "@/lib/studio/auto";
-import { editCarouselByChat, understandReelRequest, matchMaterials, writeCarousel, writeHooks, writeScript } from "@/lib/studio/engine";
+import { carouselIdeas, editCarouselByChat, understandReelRequest, matchMaterials, writeCarousel, writeHooks, writeScript } from "@/lib/studio/engine";
 import { projectFromDraft } from "@/lib/studio/handoff";
 import { advise, buildVoice, inspire, planToday, planWeek, preferencesBlock, type Feedback, researchTrends, suggestFromEdit, weeklyStats, writeReview } from "@/lib/studio/insights";
 import { instagramConfigured, loadAccounts } from "@/lib/studio/instagram";
@@ -34,6 +36,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
       const { data: fb } = await supabase.from("studio_feedback").select("kind, text, verdict, reason").order("created_at", { ascending: false }).limit(60);
       return `${voiceBlock(await getVoice(supabase, account), account)}\n\n${preferencesBlock((fb ?? []) as Feedback[])}`;
     };
+    const brandOf = async (account: Draft["account"]) => {
+      const { data } = await supabase.from("studio_voice").select("profile").eq("account", account).maybeSingle();
+      return ((data?.profile as { brand?: BrandKit } | undefined)?.brand) ?? null;
+    };
     const saveDraft = async (id: string, data: Draft["data"]) => {
       const { data: saved, error } = await supabase.from("studio_drafts").update({ data }).eq("id", id).select("*").single();
       if (error) throw new StudioError(error.message, 500);
@@ -59,11 +65,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
         const { draftId } = z.object({ draftId: uuid }).parse(body);
         const draft = await loadDraft(draftId);
         const voice = await voiceWithPrefs(draft.account);
-        const next = await writeCarousel(draft, voice);
+        const next = await writeCarousel(draft, voice, await brandOf(draft.account));
         // הגרסה הקודמת נשמרת, כדי שאפשר יהיה לחזור אליה
         const prev = draft.data.carousel;
         if (prev) next.carousel_history = [prev, ...(draft.data.carousel_history ?? [])].slice(0, 5);
         return NextResponse.json({ draft: await saveDraft(draft.id, next) });
+      }
+      case "carousel-ideas": {
+        const { account: acc, count } = z.object({ account, count: z.number().int().min(1).max(7) }).parse(body);
+        const [{ data: trend }, { data: drafts }] = await Promise.all([
+          supabase.from("studio_trends").select("items").eq("status", "done").order("date", { ascending: false }).limit(1).maybeSingle(),
+          supabase.from("studio_drafts").select("idea").eq("account", acc).order("updated_at", { ascending: false }).limit(80),
+        ]);
+        const ideas = await carouselIdeas(acc, await voiceWithPrefs(acc), count, (drafts ?? []).map((d) => d.idea as string),
+          ((trend?.items ?? []) as TrendItem[]).filter((t) => t.account === acc).map((t) => ({ title: t.title, reel_idea: t.reel_idea })),
+          TEMPLATES.filter((t) => t.kind === "carousel").map((t) => ({ id: t.id, name: t.name })));
+        return NextResponse.json({ ideas });
       }
       case "designer": {
         // צ'אט עם המעצב: קרוסלה משתנה מיד (עם חזרה אחורה), בריל הבקשה נשמרת לעיבוד הבא

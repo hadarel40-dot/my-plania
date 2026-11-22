@@ -84,7 +84,7 @@ export function DesignPanel({ account, theme, onChange, brandMode = false }: { a
   const [newColor, setNewColor] = useState("#F7C9D6");
   const applyBrand = () => {
     if (!brand) return;
-    const { palette: _p, ...rest } = brand; // eslint-disable-line @typescript-eslint/no-unused-vars
+    const { palette: _p, cta: _c, hashtags: _h, ...rest } = brand; // eslint-disable-line @typescript-eslint/no-unused-vars
     onChange({ ...(theme ?? {}), ...rest });
     toast("הוחל עיצוב המותג");
   };
@@ -138,10 +138,21 @@ export function BrandKitEditor({ account }: { account: Account }) {
   const [draft, setDraft] = useState<BrandKit | null>(null);
   useEffect(() => { setDraft(brand); }, [brand]);
   if (!draft) return null;
-  const { palette: _p, ...theme } = draft; // eslint-disable-line @typescript-eslint/no-unused-vars
+  const { palette: _p, cta: _c, hashtags: _h, ...theme } = draft; // eslint-disable-line @typescript-eslint/no-unused-vars
   return (
     <div className="space-y-2">
       <DesignPanel brandMode account={account} theme={theme} onChange={(t) => setDraft({ ...draft, ...t, palette: draft.palette })} />
+      <div className="grid gap-3 rounded-xl bg-[#F4EFE6] p-3 md:grid-cols-2">
+        <div>
+          <Label className="mb-1">קריאה לפעולה קבועה (בסוף כל כיתוב)</Label>
+          <input className="w-full rounded-lg border border-[#DDD4C6] bg-white/70 px-3 py-2 text-sm" value={draft.cta ?? ""} onChange={(e) => setDraft({ ...draft, cta: e.target.value })} placeholder="למשל: הקישור בביו, 5 הדקות הראשונות בחינם" />
+        </div>
+        <div>
+          <Label className="mb-1">תגיות קבועות</Label>
+          <input className="w-full rounded-lg border border-[#DDD4C6] bg-white/70 px-3 py-2 text-sm" dir="auto" value={draft.hashtags ?? ""} onChange={(e) => setDraft({ ...draft, hashtags: e.target.value })} placeholder="#Plania #תכנוןארוחות #מהמבשליםהיום" />
+        </div>
+        <p className="text-[11px] text-[#6F675C] md:col-span-2">כל קרוסלה חדשה מקבלת אוטומטית את העיצוב, הקריאה לפעולה והתגיות של החשבון. בקרוסלה קיימת: "פונטים וצבעים" ואז "להחיל את המותג".</p>
+      </div>
       <Btn onClick={() => save({ ...draft, palette: brand?.palette ?? draft.palette })}>לשמור את ערכת המותג</Btn>
     </div>
   );
