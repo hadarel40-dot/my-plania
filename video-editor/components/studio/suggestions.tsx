@@ -74,6 +74,8 @@ export function Inspiration({ onAdded }: { onAdded: (s: Suggestion[]) => void })
     }
   };
   return (
+    <>
+    <span id="inspiration" className="block scroll-mt-4" />
     <Panel label="השראה" title="ראית משהו" accent="שאהבת?">
       <p className="mb-3 text-sm text-[#4E473E]">קישור לריל או לטיקטוק, צילום מסך, תמונה או סרטון. אבין מה עובד בו, ואהפוך אותו לרעיון שמתאים לך ולעסק.</p>
       <div className="space-y-2">
@@ -89,6 +91,7 @@ export function Inspiration({ onAdded }: { onAdded: (s: Suggestion[]) => void })
         </div>
       </div>
     </Panel>
+    </>
   );
 }
 

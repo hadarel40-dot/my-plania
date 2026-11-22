@@ -1,4 +1,5 @@
 "use client";
+import { dropForeign } from "@/lib/studio/clean";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ExternalLink } from "lucide-react";
@@ -64,7 +65,7 @@ export default function TrendsPage() {
               {items.map((t, i) => (
                 <Panel key={i} className="flex flex-col">
                   <div className="mb-2 flex flex-wrap gap-1.5"><Tag tone="wine">{TREND_KINDS[t.kind] ?? t.kind}</Tag><Tag>{labelOf(NICHES, t.niche)}</Tag></div>
-                  <h2 className="s-serif mb-1.5 text-lg leading-snug">{t.title}</h2>
+                  <h2 className="s-serif mb-1.5 text-lg leading-snug">{dropForeign(t.title)}</h2>
                   <p className="mb-2 text-sm leading-relaxed">{t.summary}</p>
                   <p className="mb-2 text-sm text-[#6F675C]"><span className="font-semibold text-[#1F1B16]">למה זה רלוונטי אלייך: </span>{t.why_relevant}</p>
                   <p className="mb-3 border-r-2 border-[#3E6B4F] pr-2 text-sm"><span className="font-semibold">רעיון לסרטון: </span>{t.reel_idea}</p>

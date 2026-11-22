@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { StudioNav, type NavCounts } from "@/components/studio/nav";
+import { AdvisorButton, StudioNav, type NavCounts } from "@/components/studio/nav";
 import { supabaseEnabled } from "@/lib/supabase/env";
 import { getUser } from "@/lib/supabase/server";
 
@@ -54,6 +54,7 @@ export default async function StudioLayout({ children }: { children: React.React
           </header>
           <StudioNav counts={counts} />
           <main className="mt-6">{children}</main>
+          <AdvisorButton />
         </div>
       </div>
     </div>

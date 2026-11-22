@@ -89,7 +89,7 @@ export function WeekGrid({ account = "all" }: { account?: string }) {
       </div>
 
       <div className="overflow-x-auto pb-1">
-        <div className="grid min-w-[760px] grid-cols-[72px_repeat(7,minmax(0,1fr))] gap-2">
+        <div className="grid min-w-[760px] grid-cols-[84px_repeat(7,minmax(0,1fr))] gap-2">
           <div />
           {days.map((d, i) => (
             <div key={d} className={cn("rounded-lg px-2 py-1 text-center text-[12px] font-bold", d === today ? "bg-[#1F1B16] text-[#FBF8F2]" : "text-[#4E473E]")}>
@@ -119,7 +119,7 @@ export function WeekGrid({ account = "all" }: { account?: string }) {
 function Row({ label, Icon, children }: { label: string; Icon: typeof PlaySquare; children: React.ReactNode }) {
   return (
     <>
-      <div className="flex flex-col items-center justify-center gap-1 text-[11px] font-bold text-[#6F675C]"><Icon className="size-4" />{label}</div>
+      <div className="flex flex-col items-center justify-center gap-1 rounded-xl bg-[#F4EFE6] px-1 py-2 text-[13px] font-bold text-[#1F1B16]"><Icon className="size-5" />{label}</div>
       {children}
     </>
   );
@@ -137,7 +137,8 @@ function Cell({ item, draft, thumb }: { item: Item; draft?: Draft; thumb?: strin
         {thumb ? <img src={thumb} alt="" className="absolute inset-0 size-full object-cover" /> : (
           <div className="absolute inset-0 flex items-center bg-[#F4EFE6] p-2 text-[11px] font-bold leading-snug text-[#1F1B16]">{item.hook || item.title}</div>
         )}
-        <span className="absolute right-1.5 top-1.5 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-[#1F1B16]" style={{ background: STAGE_TONE[item.stage] ?? "#ECE7DE" }}>{STAGE_LABEL[item.stage] ?? item.stage}</span>
+        {/* תג שלב רק כשהוא אומר משהו: טיוטה ורעיון הם ברירת המחדל */}
+        {!["idea", "draft"].includes(item.stage) && <span className="absolute right-1.5 top-1.5 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-[#1F1B16]" style={{ background: STAGE_TONE[item.stage] ?? "#ECE7DE" }}>{STAGE_LABEL[item.stage] ?? item.stage}</span>}
         {waiting && <span className="absolute left-1.5 top-1.5 rounded-md bg-[#1F1B16] px-1.5 py-0.5 text-[10px] font-bold text-[#FBF8F2]">{variants} גרסאות</span>}
         <span className="absolute bottom-1.5 right-1.5 rounded-md bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-[#1F1B16]">
           {item.format === "carousel" ? "קרוסלה" : item.format === "reel" ? "ריל" : item.format === "story" ? "סטורי" : "תמונה"}{type ? ` · ${labelOf(CONTENT_TYPES, type)}` : ""}
