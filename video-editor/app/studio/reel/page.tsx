@@ -10,6 +10,7 @@ import { SafeZonePreview } from "@/components/studio/safe-zone";
 import { VoiceSuggestions, type Suggestion } from "@/components/studio/voice-suggestions";
 import { CarouselView } from "@/components/studio/carousel-view";
 import { ReadyVideo } from "@/components/studio/ready-video";
+import { DesignerChat } from "@/components/studio/designer-chat";
 import { MaterialsPanel } from "@/components/studio/materials";
 import { TEMPLATES, templateById } from "@/lib/studio/templates";
 import { blankCarousel } from "@/lib/studio/carousel-blank";
@@ -236,6 +237,7 @@ function DraftView({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => 
         <p className="text-xs text-[#6F675C]">{labelOf(ACCOUNTS, draft.account)} · {labelOf(NICHES, draft.niche)}{draft.facts ? ` · עובדות: ${draft.facts}` : " · לא הוזנו מספרים"}</p>
       </Panel>
       <ReadyVideo draft={draft} />
+      {d.video && <DesignerChat draft={draft} onChange={onChange} />}
 
       {(!d.video || !!d.hooks?.length) && <Panel title="שלושה הוקים" aside={<Btn variant="ghost" busy={busy === "hooks"} onClick={rehook}>הוקים חדשים</Btn>}>
         {d.hooks?.length ? (
@@ -383,6 +385,7 @@ function CarouselDraft({ draft, onChange }: { draft: Draft; onChange: (d: Draft)
       </Panel>
       <ReadyVideo draft={draft} title="הקרוסלה" accent="המונפשת" />
       <CarouselView draft={draft} onChange={onChange} />
+      {draft.data.carousel && <DesignerChat draft={draft} onChange={onChange} />}
       {draft.data.carousel && <MaterialsPanel draft={draft} onChange={onChange} />}
       <div className="xl:hidden"><ChecksPanel draft={draft} /></div>
       {itemId ? <Link href="/studio/board" className="inline-block rounded-[5px] border border-[#3E6B4F] px-3 py-2 text-sm font-semibold text-[#3E6B4F]">נמצא בלוח התוכן</Link>

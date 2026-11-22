@@ -5,7 +5,7 @@ import { computeMeta } from "@/lib/editor/project-meta";
 import type { Draft } from "@/lib/studio/config";
 import { driveAccessToken, driveConfigured, driveProblem, driveEmail, driveThumb, listDriveMedia } from "@/lib/studio/drive";
 import { adminStore, autoDraft, autoSuggest } from "@/lib/studio/auto";
-import { matchMaterials, writeCarousel, writeHooks, writeScript } from "@/lib/studio/engine";
+import { editCarouselByChat, understandReelRequest, matchMaterials, writeCarousel, writeHooks, writeScript } from "@/lib/studio/engine";
 import { projectFromDraft } from "@/lib/studio/handoff";
 import { advise, buildVoice, inspire, planToday, planWeek, preferencesBlock, type Feedback, researchTrends, suggestFromEdit, weeklyStats, writeReview } from "@/lib/studio/insights";
 import { instagramConfigured, loadAccounts } from "@/lib/studio/instagram";
@@ -64,6 +64,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
         const prev = draft.data.carousel;
         if (prev) next.carousel_history = [prev, ...(draft.data.carousel_history ?? [])].slice(0, 5);
         return NextResponse.json({ draft: await saveDraft(draft.id, next) });
+      }
+      case "designer": {
+        // צ'אט עם המעצב: קרוסלה משתנה מיד (עם חזרה אחורה), בריל הבקשה נשמרת לעיבוד הבא
+        const { draftId, message } = z.object({ draftId: uuid, message: z.string().min(2).max(800) }).parse(body);
+        const draft = await loadDraft(draftId);
+        const chat = [...(draft.data.chat ?? []), { role: "me" as const, text: message, at: new Date().toISOString() }];
+        if (draft.mode === "carousel") {
+          const { carousel, reply } = await editCarouselByChat(draft, await voiceWithPrefs(draft.account), message);
+          const history = draft.data.carousel ? [draft.data.carousel, ...(draft.data.carousel_history ?? [])].slice(0, 5) : draft.data.carousel_history;
+          return NextResponse.json({ draft: await saveDraft(draft.id, { ...draft.data, carousel, carousel_history: history, chat: [...chat, { role: "designer", text: reply, at: new Date().toISOString() }] }) });
+        }
+        const { reply, changes } = await understandReelRequest(draft, message);
+        const requests = [...(draft.data.requests ?? []), { text: message, changes, status: "pending" as const, at: new Date().toISOString() }];
+        return NextResponse.json({ draft: await saveDraft(draft.id, { ...draft.data, requests, chat: [...chat, { role: "designer", text: reply, at: new Date().toISOString() }] }) });
       }
       case "drive-match": {
         const { draftId, folder } = z.object({ draftId: uuid, folder: z.string().max(300).optional() }).parse(body);

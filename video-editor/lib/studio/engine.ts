@@ -340,3 +340,68 @@ missing לא חובה: רק אם צילום חדש ספציפי ישפר מאו�
     checked_at: new Date().toISOString(),
   };
 }
+
+// ---------- צ'אט עם המעצב
+
+const CarouselEditSchema = z.object({
+  reply: z.string(),
+  slides: z.array(z.object({ kind: z.enum(["cover", "stake", "point", "recap", "cta"]), headline: z.string(), body: z.string(), keep_image_of: z.number().int().nullable() })),
+  caption: z.string(),
+});
+
+/**
+ * שינוי קטן בקרוסלה לפי בקשה בעברית פשוטה ("השער ארוך מדי", "תחליפי את שקופית 3", "בלי השקופית האחרונה").
+ * התמונות נשמרות: לכל שקופית חדשה נאמר מאיזו שקופית קודמת לקחת את התמונה.
+ */
+export async function editCarouselByChat(draft: Draft, voice: string, message: string): Promise<{ carousel: Carousel; reply: string }> {
+  const c = draft.data.carousel;
+  if (!c) throw new Error("עוד אין קרוסלה לערוך");
+  const before = c.slides.map((s, i) => ({ n: i + 1, kind: s.kind, headline: s.headline, body: s.body, has_image: !!s.image }));
+  const out = cleanDeep(await askBrain({
+    prefer: "claude", schema: CarouselEditSchema,
+    system: "את המעצבת שלה. מקבלת בקשה קטנה על קרוסלה ומבצעת בדיוק אותה, בלי לשנות דברים שלא ביקשה. עברית מדוברת בקול שלה, בלי אימוג'י, בלי מקפים ארוכים, בלי מספרים מומצאים.",
+    parts: [{ text: `${voice}
+
+הקרוסלה עכשיו (n הוא מספר השקופית):
+${JSON.stringify(before)}
+הכיתוב: ${c.caption}
+
+הבקשה שלה: "${message}"
+
+החזירי את הקרוסלה אחרי השינוי:
+- slides: כל השקופיות לפי הסדר החדש. מה שלא ביקשה לשנות נשאר מילה במילה.
+- keep_image_of: מספר השקופית הקודמת (n) שהתמונה שלה עוברת לשקופית הזאת. בדרך כלל אותו מספר. אם ביקשה תמונה אחרת לשקופית, תני תמונה של שקופית אחרת שמתאימה יותר. null רק לשקופית חדשה לגמרי, ואז היא תקבל תמונה אוטומטית.
+- caption: הכיתוב (משתנה רק אם ביקשה).
+- reply: משפט אחד, מה שינית.` }],
+  }));
+  const slides = out.slides.map((s) => {
+    const src = s.keep_image_of ? c.slides[s.keep_image_of - 1] : undefined;
+    return { kind: s.kind, headline: s.headline, body: s.body, ...(src?.image ? { image: src.image } : {}) };
+  });
+  return { carousel: keepImages(c, { ...c, slides, caption: out.caption }), reply: out.reply };
+}
+
+const ReelRequestSchema = z.object({
+  reply: z.string(),
+  changes: z.array(z.object({
+    card: z.number().int().nullable(),
+    action: z.enum(["replace_clip", "edit_text", "remove_card", "reorder", "timing", "other"]),
+    detail: z.string(),
+  })),
+});
+
+/** בקשה על ריל: מבינים מה לשנות (כרטיס, פעולה), והסרטון מתעדכן בעיבוד הבא (רינדור הווידאו נעשה בתהליך השבועי) */
+export async function understandReelRequest(draft: Draft, message: string) {
+  const cards = (draft.data.cards ?? []).map((c, i) => ({ n: i + 1, text: c.text, from: c.start, to: c.end }));
+  return cleanDeep(await askBrain({
+    schema: ReelRequestSchema,
+    system: "את עורכת הווידאו שלה. מבינה בקשה קצרה על ריל ומתרגמת אותה לשינויים מדויקים. עברית פשוטה, בלי אימוג'י.",
+    parts: [{ text: `הכרטיסים בריל (n, הטקסט, משנייה עד שנייה):
+${JSON.stringify(cards)}
+
+הבקשה שלה: "${message}"
+
+changes: מה לשנות. card הוא מספר הכרטיס (n), "האחרון" הוא ${cards.length || "האחרון"}. action: replace_clip (להחליף סרטון), edit_text (לשנות טקסט, detail הוא הטקסט החדש), remove_card, reorder, timing (מהירות, אורך), other.
+reply: משפט אחד שמאשר מה יקרה. לכתוב שהסרטון המעודכן יגיע בעיבוד הבא, לא עכשיו.` }],
+  }));
+}

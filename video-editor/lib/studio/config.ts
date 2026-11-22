@@ -106,7 +106,14 @@ export interface ReadyVideo { path: string; cover?: string; seconds?: number }
 /** גרסה אחת של פוסט (ריל או קרוסלה). היא בוחרת אחת ומשאירה הערה על כל גרסה */
 export interface Variant { id: string; label: string; video?: ReadyVideo; carousel?: Carousel; comment?: string; reaction?: "like" | "dislike" }
 
+/** הודעה בצ'אט עם המעצב */
+export interface ChatMessage { role: "me" | "designer"; text: string; at: string }
+/** בקשת שינוי בריל, שמחכה לעיבוד (רינדור הווידאו) */
+export interface ReelRequest { text: string; changes: { card: number | null; action: string; detail: string }[]; status: "pending" | "done"; at: string }
+
 export interface DraftData {
+  chat?: ChatMessage[];
+  requests?: ReelRequest[];
   /** כמה גרסאות לבחירה, והגרסה שנבחרה */
   variants?: Variant[];
   chosen_variant?: string;

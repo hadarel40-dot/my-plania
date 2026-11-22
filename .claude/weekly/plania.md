@@ -68,6 +68,14 @@
    (בלי `out/` ובלי `publish.sql`, הם ב-gitignore).
 8. לשלוח לה את הסרטונים והשקופיות (SendUserFile) ולכתוב בעברית: מה הוכן, לאיזה יום, ושתגיד מה אהבה ומה פחות.
 
+## בקשות מהמעצב (לפני הכול)
+
+בכל ריצה, וגם כשהיא מבקשת בצ'אט: `select id, idea, data->'requests' from studio_drafts where data->'requests' @> '[{"status":"pending"}]';`
+לכל בקשה פתוחה (changes: card, action, detail): לעדכן את plan.json של אותו שבוע (clip אחר מאותן תיקיות, טקסט חדש, הסרת כרטיס, סדר),
+לרנדר מחדש רק את הריל הזה, להעלות (publish.mjs, או העלאה ידנית של ה-mp4 לאותו נתיב חדש), לעדכן ב-studio_drafts את data.video
+(ואת הגרסה ב-variants), לסמן את הבקשה `"status":"done"`, ולהוסיף לצ'אט (data.chat) הודעת designer קצרה: מה שונה.
+בקרוסלות הבקשות מתבצעות מיד באתר, אין מה לעבד.
+
 ## משוב
 
 כשהיא אומרת מה אהבה או לא: לרשום ב-`content/weekly/feedback.md` (תאריך, פוסט, מה אהבה, מה לא, למה),
