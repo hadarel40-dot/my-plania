@@ -70,7 +70,7 @@ for (const post of plan.posts) {
       if (v.cover) slides = slides.map((sl, i) => (i === 0 ? { ...sl, ...v.cover } : sl));
       const out2 = [];
       for (const sl of slides) out2.push({ kind: sl.kind, headline: sl.headline, body: sl.body, ...(sl.photo ? { image: { kind: "storage", path: await photo(sl.photo) } } : {}) });
-      variant.carousel = { slides: out2, caption: post.caption, alt: post.alt, handle: "@plania.il", style: "photo" };
+      variant.carousel = { slides: out2, caption: post.caption, alt: post.alt, handle: "@plania.il", style: "photo", ...(plan.brand ? { theme: plan.brand } : {}) };
     }
     variants.push(variant);
     console.log("uploaded", vid);

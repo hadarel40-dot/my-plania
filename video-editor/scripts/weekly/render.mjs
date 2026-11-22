@@ -23,6 +23,11 @@ fs.mkdirSync(out, { recursive: true });
 const fontsCss = ".lat{font-family:'Assistant'!important;font-weight:700}.b .lat,.body .lat{font-size:.7em}\n" + fs.readFileSync(path.join(HERE, "fonts/fonts.css"), "utf8").replace(/url\((f\d\.ttf)\)/g, (_, f) => `url(file://${path.join(HERE, "fonts", f)})`);
 
 const PINK = "#F7C9D6";
+// ערכת המותג (plan.brand, מתוך studio_voice.profile.brand של החשבון): פונטים, צבעים, גודל, החשכה, יישור ומיקום
+const T = { headFont: "Assistant", bodyFont: "Amatic SC", headColor: PINK, bodyColor: "#FFFFFF", bg: "#2A2622", accent: PINK, overlay: 0.45, headScale: 1, bodyScale: 1, align: "right", position: "bottom", ...(plan.brand ?? {}) };
+const SIZE = (f) => (f === "Amatic SC" ? 1 : f === "Gveret Levin" ? 0.75 : 0.62); // ביחס לגודל של Amatic
+const BRAND_FONTS = [...new Set([T.headFont, T.bodyFont])].filter((f) => !["Assistant", "Amatic SC", "Frank Ruhl Libre"].includes(f));
+const brandLink = BRAND_FONTS.length ? `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?${BRAND_FONTS.map((f) => `family=${f.replace(/ /g, "+")}:wght@400;700`).join("&")}&display=block">` : "";
 // מילים באנגלית (Plania) בגופן הרגיל: בגופן כתב היד הן יוצאות באותיות גדולות
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/[A-Za-z][A-Za-z.]*/g, (m) => `<span class="lat">${m}</span>`);
 const photoUrl = (p) => (p ? `file://${path.resolve(photoDir, `${p}.jpg`)}` : "");
@@ -34,24 +39,25 @@ function html(slide, i, n, { w, h, layer, safe }) {
   const rows = recap ? slide.body.split("\n").filter(Boolean) : [];
   // באזור הבטוח של ריל: הטקסט בין 230 ל-1440, והצד הימני (הכפתורים של אינסטגרם בעברית בצד שמאל, אבל משאירים שוליים בשני הצדדים)
   const pad = safe ? "padding: 300px 140px 520px 120px;" : "padding: 110px 100px;";
-  const align = isCover || slide.kind === "cta" ? "justify-content:center;" : safe ? "justify-content:center;" : "justify-content:flex-end;";
-  const bg = layer !== "text" ? (slide.photo ? `background:#1F1B16 url('${photoUrl(slide.photo)}') center/cover no-repeat;` : "background:#2A2622;") : "background:transparent;";
-  const shade = layer === "all" && slide.photo ? `<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,12,.25),rgba(20,16,12,.62))"></div>` : "";
+  const where = isCover || slide.kind === "cta" || safe ? "center" : T.position;
+  const align = `justify-content:${where === "center" ? "center" : where === "top" ? "flex-start" : "flex-end"};text-align:${T.align};`;
+  const bg = layer !== "text" ? (slide.photo ? `background:#1F1B16 url('${photoUrl(slide.photo)}') center/cover no-repeat;` : `background:${T.bg};`) : "background:transparent;";
+  const shade = layer === "all" && slide.photo && T.overlay > 0 ? `<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,12,${(T.overlay * 0.55).toFixed(2)}),rgba(20,16,12,${Math.min(0.9, T.overlay * 1.38).toFixed(2)}))"></div>` : "";
   const text = layer === "bg" ? "" : `
     <div class="t" style="position:absolute;inset:0;display:flex;flex-direction:column;${align}${pad}">
       ${!safe && !isCover ? `<div class="num">${i + 1}/${n}</div>` : ""}
-      <div class="h" style="font-size:${isCover ? (safe ? 118 : 112) : safe ? 96 : 84}px">${esc(slide.headline)}</div>
-      ${recap ? `<ul>${rows.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>` : slide.body ? `<div class="b" style="font-size:${safe ? 92 : 80}px">${esc(slide.body)}</div>` : ""}
+      <div class="h" style="font-size:${Math.round((isCover ? (safe ? 118 : 112) : safe ? 96 : 84) * T.headScale)}px">${esc(slide.headline)}</div>
+      ${recap ? `<ul>${rows.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>` : slide.body ? `<div class="b" style="font-size:${Math.round((safe ? 92 : 80) * SIZE(T.bodyFont) * T.bodyScale)}px">${esc(slide.body)}</div>` : ""}
       ${!safe ? `<div class="handle">@plania.il</div>` : ""}
     </div>`;
-  return `<!doctype html><html dir="rtl"><head><meta charset="utf-8"><style>
+  return `<!doctype html><html dir="rtl"><head><meta charset="utf-8">${brandLink}<style>
     ${fontsCss}
     html,body{margin:0;width:${w}px;height:${h}px;overflow:hidden;background:transparent}
     .s{position:relative;width:${w}px;height:${h}px;${bg}}
-    .h{font-family:'Assistant';font-weight:800;color:${PINK};line-height:1.05;text-shadow:0 3px 18px rgba(0,0,0,.45)}
-    .b{font-family:'Amatic SC';font-weight:700;color:#fff;line-height:1.05;margin-top:22px;text-shadow:0 3px 14px rgba(0,0,0,.5)}
-    ul{margin:30px 0 0;padding:0 50px 0 0;font-family:'Assistant';font-weight:600;font-size:${safe ? 58 : 52}px;color:#fff;line-height:1.5;text-shadow:0 2px 10px rgba(0,0,0,.5)}
-    li::marker{color:${PINK}}
+    .h{font-family:'${T.headFont}','Assistant';font-weight:800;color:${T.headColor};line-height:1.05;text-shadow:0 3px 18px rgba(0,0,0,.45)}
+    .b{font-family:'${T.bodyFont}','Assistant';font-weight:700;color:${T.bodyColor};line-height:1.05;margin-top:22px;text-shadow:0 3px 14px rgba(0,0,0,.5)}
+    ul{margin:30px 0 0;padding:0 50px 0 0;font-family:'Assistant';font-weight:600;font-size:${safe ? 58 : 52}px;color:${T.bodyColor};line-height:1.5;text-shadow:0 2px 10px rgba(0,0,0,.5)}
+    li::marker{color:${T.accent}}
     .num{position:absolute;top:70px;left:100px;font-family:'Assistant';font-weight:800;font-size:30px;color:rgba(255,255,255,.8);direction:ltr}
     .handle{position:absolute;bottom:60px;left:100px;font-family:'Assistant';font-weight:800;font-size:30px;color:rgba(255,255,255,.85);direction:ltr}
   </style></head><body><div class="s">${shade}${text}</div></body></html>`;
