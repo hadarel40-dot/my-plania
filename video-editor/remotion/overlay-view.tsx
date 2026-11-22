@@ -1,4 +1,4 @@
-import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { Img, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import type { Overlay } from "@/lib/editor/types";
 import { fontFamily } from "@/lib/editor/fonts";
 
@@ -71,6 +71,14 @@ export function OverlayView({ overlay: o, durationInFrames }: { overlay: Overlay
   }
 
   const fontSize = o.size * unit;
+  if (o.kind === "image" && o.src) {
+    // צילום מסך שקופץ מעל הסרטון: פינות עגולות, מסגרת לבנה וצל
+    return (
+      <div style={{ position: "absolute", left: o.x * width, top: o.y * height, transform: `translate(-50%, -50%) translate(${dx}px, ${dy}px) rotate(${rotate}deg) scale(${Math.max(0, scale)})`, opacity }}>
+        <Img src={o.src} crossOrigin="anonymous" style={{ width: fontSize, display: "block", borderRadius: fontSize * 0.06, border: `${Math.max(3, fontSize * 0.012)}px solid #fff`, boxShadow: "0 20px 50px rgba(0,0,0,.45)" }} />
+      </div>
+    );
+  }
   return (
     <div
       style={{

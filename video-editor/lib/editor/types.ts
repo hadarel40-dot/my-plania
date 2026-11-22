@@ -149,8 +149,10 @@ export interface Overlay {
   /** אנימציה שהעורך הקפיץ ברגע חשוב בדיבור (מתחלפת כשמשנים את כמות האנימציות) */
   moment?: boolean;
   id: string;
-  kind: "text" | "emoji";
+  kind: "text" | "emoji" | "image";
   text: string;
+  /** תמונה (למשל צילום מסך) כשהשכבה היא תמונה; size הוא הרוחב */
+  src?: string;
   start: number;
   end: number;
   /** מרכז הפריט, יחסי לגודל המסגרת (0..1) */

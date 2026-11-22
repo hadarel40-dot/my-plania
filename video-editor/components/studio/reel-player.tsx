@@ -6,7 +6,8 @@ import { timelineDuration } from "@/lib/editor/timeline-utils";
 import type { MediaAsset } from "@/lib/editor/types";
 import { CONTENT_TYPES, labelOf, type Draft } from "@/lib/studio/config";
 import { db } from "@/lib/studio/client";
-import { REEL_COLORS, REEL_FONTS, REEL_STYLES, buildReelTimeline, styleForVariant, type CaptionStyleId, type ReelDesign } from "@/lib/studio/reel-timeline";
+import { REEL_COLORS, REEL_FONTS, REEL_STYLES, STICKERS, TRANSITIONS, buildReelTimeline, stickerFor, styleForVariant, type CaptionStyleId, type ReelDesign } from "@/lib/studio/reel-timeline";
+import { ensureExtraFonts } from "@/lib/editor/fonts";
 import { canShareFiles, shareToInstagram } from "@/lib/studio/share";
 import { MEDIA_BUCKET } from "@/lib/supabase/env";
 import { Btn, Panel, Tag, inputCls, toast } from "./ui";
@@ -58,7 +59,16 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
     signAssets(buildReelTimeline(kit).assets).then((a) => live && setAssets(a)).catch(() => live && setAssets({}));
     return () => { live = false; };
   }, [kit]);
-  const timeline = useMemo(() => buildReelTimeline(kit, style, design).timeline, [kit, style, design]);
+  const [shotUrls, setShotUrls] = useState<Record<string, string>>({});
+  const shotKey = (design.shots ?? []).map((s) => s.path).join("|");
+  useEffect(() => {
+    const paths = (design.shots ?? []).map((s) => s.path).filter((p) => !shotUrls[p]);
+    if (!paths.length) return;
+    db().storage.from(MEDIA_BUCKET).createSignedUrls(paths, 6 * 60 * 60).then(({ data }) =>
+      setShotUrls((u) => ({ ...u, ...Object.fromEntries((data ?? []).flatMap((d) => (d.path && d.signedUrl ? [[d.path, d.signedUrl]] : []))) })));
+  }, [shotKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (showDesign) void ensureExtraFonts(); }, [showDesign]);
+  const timeline = useMemo(() => buildReelTimeline(kit, style, design, shotUrls).timeline, [kit, style, design, shotUrls]);
   const inputProps = useMemo<CompositionProps | null>(() => (assets ? { timeline, assets, override: null } : null), [timeline, assets]);
   const frames = Math.max(1, Math.ceil(timelineDuration(timeline) * timeline.fps));
 
@@ -148,11 +158,11 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
             {showDesign && (
               <div className="space-y-5 border-t border-[#E3D9CC] px-4 py-4">
                 <Group title="כותרת ראשית">
-                  <Row label="גופן">{REEL_FONTS.map((f) => <FontChip key={f.id} f={f} on={(design.headFont ?? design.font ?? (style === "editorial" ? "frank" : "assistant")) === f.id} onClick={() => setD({ headFont: f.id })} />)}</Row>
+                  <Row label="גופן" scroll>{REEL_FONTS.map((f) => <FontChip key={f.id} f={f} on={(design.headFont ?? design.font ?? (style === "editorial" ? "frank" : "assistant")) === f.id} onClick={() => setD({ headFont: f.id })} />)}</Row>
                   <Row label="צבע"><Swatches value={design.main ?? "#FFFFFF"} onPick={(c) => setD({ main: c })} /></Row>
                 </Group>
                 <Group title="כותרת משנית">
-                  <Row label="גופן">{REEL_FONTS.map((f) => <FontChip key={f.id} f={f} on={(design.bodyFont ?? design.font ?? "assistant") === f.id} onClick={() => setD({ bodyFont: f.id })} />)}</Row>
+                  <Row label="גופן" scroll>{REEL_FONTS.map((f) => <FontChip key={f.id} f={f} on={(design.bodyFont ?? design.font ?? "assistant") === f.id} onClick={() => setD({ bodyFont: f.id })} />)}</Row>
                   <Row label="צבע"><Swatches value={design.body ?? design.accent ?? "#F7C9D6"} onPick={(c) => setD({ body: c })} /></Row>
                 </Group>
                 <Group title="משחקי אותיות">
@@ -161,7 +171,7 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
                     <Chip on={!(design.emphasis ?? style === "editorial")} onClick={() => setD({ emphasis: false })}>בלי</Chip>
                   </Row>
                   {(design.emphasis ?? style === "editorial") && (
-                    <Row label="הגופן של המילה המודגשת">{REEL_FONTS.map((f) => <FontChip key={f.id} f={f} on={(design.emFont ?? (style === "editorial" ? "gveret" : design.headFont ?? design.font ?? "assistant")) === f.id} onClick={() => setD({ emFont: f.id })} />)}</Row>
+                    <Row label="הגופן של המילה המודגשת" scroll>{REEL_FONTS.map((f) => <FontChip key={f.id} f={f} on={(design.emFont ?? (style === "editorial" ? "gveret" : design.headFont ?? design.font ?? "assistant")) === f.id} onClick={() => setD({ emFont: f.id })} />)}</Row>
                   )}
                   <Row label="צבע ההדגשה"><Swatches value={design.accent ?? "#F7C9D6"} onPick={(c) => setD({ accent: c })} /></Row>
                   <Row label="ירידות שורה">
@@ -171,6 +181,18 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
                     {([[undefined, "כמו בגרסה"], ["calm", "רגוע"], ["bounce", "קופץ"], ["type", "מכונת כתיבה"], ["zoom", "זום"]] as const).map(([v, l]) => <Chip key={l} on={design.play === v} onClick={() => setD({ play: v })}>{l}</Chip>)}
                   </Row>
                   <p className="text-[11px] text-[#9A8C85]">כדי לבחור בעצמך איזו מילה מודגשת, שמים אותה בין כוכביות בטקסט, למשל: ככה *באמת* עורכים.</p>
+                </Group>
+                <Group title="מעברים בין הקטעים">
+                  <Row label="סוג המעבר">
+                    {TRANSITIONS.map((t) => <Chip key={t.id} on={(design.transition ?? "fade") === t.id} onClick={() => setD({ transition: t.id })}>{t.label}</Chip>)}
+                  </Row>
+                </Group>
+                <Group title="אנימציות קופצות">
+                  <Row label="לפי הטקסט בכל כרטיס">
+                    <Chip on={!!design.stickers} onClick={() => setD({ stickers: true })}>עם</Chip>
+                    <Chip on={!design.stickers} onClick={() => setD({ stickers: false })}>בלי</Chip>
+                  </Row>
+                  <p className="text-[11px] text-[#9A8C85]">כל כרטיס מקבל אנימציה שמתאימה למילים בו (אוכל, שבוע, זמן, רעיון...). אפשר לבחור אחרת לכל כרטיס למטה, ב"כל כרטיס בנפרד".</p>
                 </Group>
                 <Group title="גודל ומיקום">
                   <Row label="גודל">
@@ -185,7 +207,7 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
             )}
           </div>
 
-          <TextsEditor draft={draft} onChange={onChange} />
+          <TextsEditor draft={draft} onChange={onChange} design={design} setD={setD} globalStyle={style} />
 
           <div className="space-y-2">
             <Btn busy={busy === "send"} onClick={send} className="min-h-[48px] w-full text-[15px]">{busy === "send" ? `מכינה את הקובץ ${progress}%` : canShareFiles() ? "לשלוח לאינסטגרם" : "להוריד ולשלוח"}</Btn>
@@ -232,51 +254,117 @@ function FontChip({ f, on, onClick }: { f: { id: string; label: string; family: 
   return <Chip on={on} onClick={onClick}><span style={{ fontFamily: `"${f.family}"` }} className="text-[15px]">{f.label}</span></Chip>;
 }
 
-/** לשנות את הטקסטים: כותרת ראשית ומשנית לכל כרטיס. נשמר בריל, ואפשר לבטל מהצ'אט עם המעצב */
-function TextsEditor({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => void }) {
+/**
+ * כל כרטיס בנפרד: הטקסט (כותרת ראשית ומשנית), הסגנון והמיקום שלו, אנימציה קופצת וצילום מסך.
+ * משחק מלא בלי לערוך מאפס. הטקסטים נשמרים בריל, והשאר בעיצוב.
+ */
+function TextsEditor({ draft, onChange, design, setD, globalStyle }: { draft: Draft; onChange: (d: Draft) => void; design: ReelDesign; setD: (p: Partial<ReelDesign> | null) => void; globalStyle: CaptionStyleId }) {
   const kit = draft.data.edit!;
   const [open, setOpen] = useState(false);
   const [cards, setCards] = useState(kit.cards.map((c) => ({ head: c.headline ?? c.text, body: c.headline ? c.body ?? "" : "" })));
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState("");
   useEffect(() => setCards(kit.cards.map((c) => ({ head: c.headline ?? c.text, body: c.headline ? c.body ?? "" : "" }))), [kit]);
   const dirty = cards.some((c, i) => c.head !== (kit.cards[i].headline ?? kit.cards[i].text) || c.body !== (kit.cards[i].headline ? kit.cards[i].body ?? "" : ""));
   const save = async () => {
-    setBusy(true);
+    setBusy("save");
     const edit = { ...kit, cards: kit.cards.map((c, i) => ({ ...c, text: cards[i].head, headline: cards[i].head, body: cards[i].body })) };
     const history = [kit, ...(draft.data.edit_history ?? [])].slice(0, 6);
     const { data, error } = await db().from("studio_drafts").update({ data: { ...draft.data, edit, edit_history: history } }).eq("id", draft.id).select("*").single();
-    setBusy(false);
+    setBusy("");
     if (error) return toast(error.message, true);
     onChange(data as Draft);
     toast("הטקסטים עודכנו");
   };
+  const setCard = (n: number, patch: { style?: CaptionStyleId; place?: "top" | "middle" | "bottom" }) => {
+    const cur = design.perCard?.[String(n)] ?? {};
+    const next = { ...cur, ...patch };
+    setD({ perCard: { ...(design.perCard ?? {}), [String(n)]: next } });
+  };
+  const setSticker = (n: number, s: string | null) => {
+    const m = { ...(design.cardStickers ?? {}) };
+    if (s === null) delete m[String(n)]; else m[String(n)] = s;
+    setD({ cardStickers: m });
+  };
+  const addShot = async (n: number, file: File) => {
+    setBusy(`shot${n}`);
+    try {
+      const bmp = await createImageBitmap(file);
+      const { data: u } = await db().auth.getUser();
+      if (!u.user) throw new Error("צריך להתחבר מחדש");
+      const ext = (file.name.split(".").pop() || "png").toLowerCase();
+      const path = `${u.user.id}/studio/${draft.id}/shot-${Date.now()}.${ext}`;
+      const { error } = await db().storage.from(MEDIA_BUCKET).upload(path, file, { contentType: file.type || "image/png" });
+      if (error) throw new Error(error.message);
+      setD({ shots: [...(design.shots ?? []), { card: n, path, w: bmp.width, h: bmp.height, place: "middle" }] });
+      toast("צילום המסך נוסף");
+    } catch (e) { toast((e as Error).message, true); }
+    finally { setBusy(""); }
+  };
+  const removeShot = (path: string) => setD({ shots: (design.shots ?? []).filter((s) => s.path !== path) });
+
   return (
     <div className="rounded-2xl border border-[#E3D9CC] bg-white/70">
-      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex w-full items-center justify-between px-4 py-3 text-[14px] font-bold text-[#5E1D1D]">
-        לשנות טקסט: כותרת ראשית ומשנית
+      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex w-full items-center justify-between px-4 py-3 text-right text-[14px] font-bold text-[#5E1D1D]">
+        כל כרטיס בנפרד: טקסט, סגנון, אנימציה, צילום מסך
         <span className="text-xl leading-none">{open ? "−" : "+"}</span>
       </button>
       {open && (
         <div className="space-y-3 border-t border-[#E3D9CC] px-4 py-4">
-          {cards.map((c, i) => (
-            <div key={i} className="space-y-1.5 rounded-xl bg-[#FAF6F1] p-3">
-              <p className="text-[11px] font-bold text-[#9A8C85]">כרטיס {i + 1}</p>
-              <input className={inputCls} value={c.head} placeholder="כותרת ראשית" onChange={(e) => setCards((x) => x.map((y, j) => (j === i ? { ...y, head: e.target.value } : y)))} />
-              <input className={cn(inputCls, "text-[14px]")} value={c.body} placeholder="כותרת משנית (לא חובה)" onChange={(e) => setCards((x) => x.map((y, j) => (j === i ? { ...y, body: e.target.value } : y)))} />
-            </div>
-          ))}
-          <Btn busy={busy} disabled={!dirty} onClick={save} className="w-full">לשמור את הטקסטים</Btn>
+          {cards.map((c, i) => {
+            const n = i + 1;
+            const pc = design.perCard?.[String(n)] ?? {};
+            const auto = design.stickers ? stickerFor(`${c.head} ${c.body}`) : "";
+            const chosen = design.cardStickers?.[String(n)];
+            const shots = (design.shots ?? []).filter((s) => s.card === n);
+            return (
+              <div key={i} className="space-y-2 rounded-xl bg-[#FAF6F1] p-3">
+                <p className="text-[12px] font-black text-[#5E1D1D]">כרטיס {n}</p>
+                <input className={inputCls} value={c.head} placeholder="כותרת ראשית" onChange={(e) => setCards((x) => x.map((y, j) => (j === i ? { ...y, head: e.target.value } : y)))} />
+                <input className={cn(inputCls, "text-[14px]")} value={c.body} placeholder="כותרת משנית (לא חובה)" onChange={(e) => setCards((x) => x.map((y, j) => (j === i ? { ...y, body: e.target.value } : y)))} />
+                <Row label="סגנון לכרטיס הזה" scroll>
+                  <Chip on={!pc.style} onClick={() => setCard(n, { style: undefined })}>כמו בגרסה</Chip>
+                  {REEL_STYLES.map((st) => <Chip key={st.id} on={pc.style === st.id} onClick={() => setCard(n, { style: st.id })}>{st.variant} · {st.label.split(":")[0]}</Chip>)}
+                </Row>
+                <Row label="מיקום">
+                  <Chip on={!pc.place} onClick={() => setCard(n, { place: undefined })}>כמו בכולם</Chip>
+                  {([["top", "למעלה"], ["middle", "באמצע"], ["bottom", "למטה"]] as const).map(([v, l]) => <Chip key={v} on={pc.place === v} onClick={() => setCard(n, { place: v })}>{l}</Chip>)}
+                </Row>
+                <Row label="אנימציה קופצת" scroll>
+                  <Chip on={chosen === undefined} onClick={() => setSticker(n, null)}>{design.stickers ? `לפי הטקסט ${auto || "(אין)"}` : "בלי"}</Chip>
+                  {design.stickers && <Chip on={chosen === ""} onClick={() => setSticker(n, "")}>בלי</Chip>}
+                  {STICKERS.map((e) => <Chip key={e} on={chosen === e} onClick={() => setSticker(n, e)}><span className="text-lg">{e}</span></Chip>)}
+                </Row>
+                <div>
+                  <p className="mb-1.5 text-[12px] font-bold text-[#6A6158]">צילום מסך שקופץ</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {shots.map((s) => (
+                      <span key={s.path} className="inline-flex items-center gap-1.5 rounded-xl border border-[#E3D9CC] bg-white px-2 py-1 text-[12px]">
+                        צילום מסך
+                        <button type="button" onClick={() => removeShot(s.path)} className="font-bold text-[#A3402F]" aria-label="להסיר את צילום המסך">×</button>
+                      </span>
+                    ))}
+                    <label className={cn("inline-flex min-h-[38px] cursor-pointer items-center rounded-xl border border-dashed border-[#B5848E] px-3 text-[13px] font-bold text-[#5E1D1D]", busy === `shot${n}` && "opacity-50")}>
+                      {busy === `shot${n}` ? "מעלה..." : "+ להוסיף צילום מסך"}
+                      <input type="file" accept="image/*" className="sr-only" disabled={!!busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void addShot(n, f); }} />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          <Btn busy={busy === "save"} disabled={!dirty} onClick={save} className="w-full">לשמור את הטקסטים</Btn>
+          <p className="text-[11px] text-[#9A8C85]">סגנון, מיקום, אנימציות וצילומי מסך נשמרים לבד.</p>
         </div>
       )}
     </div>
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({ label, children, scroll }: { label: string; children: React.ReactNode; scroll?: boolean }) {
   return (
     <div>
       <p className="mb-1.5 text-[12px] font-bold text-[#6A6158]">{label}</p>
-      <div className="flex flex-wrap gap-1.5">{children}</div>
+      <div className={cn("flex gap-1.5", scroll ? "-mx-3 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&>*]:shrink-0" : "flex-wrap")}>{children}</div>
     </div>
   );
 }
@@ -322,6 +410,21 @@ function StylePreview({ id, design }: { id: CaptionStyleId; design: ReelDesign }
           <span className="block text-[12px] font-black" style={{ color: main, fontFamily: `"${REEL_FONTS.find((f) => f.id === (design.headFont ?? design.font ?? "frank"))?.family ?? "Frank Ruhl Libre"}"` }}>ככה</span>
           <span className="block -rotate-6 text-[22px]" style={{ color: acc, fontFamily: `"${REEL_FONTS.find((f) => f.id === (design.emFont ?? "gveret"))?.family ?? "Gveret Levin"}"` }}>עורכים</span>
           <span className="mt-1 block text-[9px] font-bold" style={{ color: design.body ?? acc }}>בלי לשבת בלילה</span>
+        </span>
+      )}
+      {id === "marker" && (
+        <span className="absolute inset-x-1 top-[34%] text-center leading-tight">
+          <span className="inline-block -rotate-2 px-1 text-[12px] font-black text-[#2A2622]" style={{ background: acc }}>ככה עורכים</span>
+          <span className="mt-1 block text-[9px] font-bold" style={{ color: design.body ?? acc }}>בלי לשבת בלילה</span>
+        </span>
+      )}
+      {id === "neon" && <span className="absolute inset-0 flex items-center justify-center text-[18px] font-black" style={{ color: main, textShadow: `0 0 6px ${acc}, 0 0 14px ${acc}` }}>ככה</span>}
+      {id === "outline" && <span className="absolute inset-0 flex items-center justify-center text-[24px] font-black" style={{ color: "transparent", WebkitTextStroke: `1.2px ${main}` }}>ככה</span>}
+      {id === "stairs" && (
+        <span className="absolute inset-x-1 top-[26%] text-center font-black leading-none">
+          <span className="block -translate-x-2 text-[15px]" style={{ color: main }}>ככה</span>
+          <span className="block translate-x-2 text-[11px]" style={{ color: acc }}>עורכים</span>
+          <span className="block -translate-x-2 text-[15px]" style={{ color: main }}>תוכן</span>
         </span>
       )}
       {id === "lines" && (
