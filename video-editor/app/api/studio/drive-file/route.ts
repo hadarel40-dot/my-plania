@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { driveAccessToken, driveConfigured, listDriveMedia } from "@/lib/studio/drive";
+import { requireStudioAdmin } from "@/lib/studio/server";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -14,9 +15,10 @@ const CHUNK = 4 * 1024 * 1024;
  *   ?id=<fileId>&start=<byte>   חתיכה של עד 4MB מהקובץ, מהבייט start
  */
 export async function GET(request: Request) {
+  // התהליך השבועי נכנס עם הסוד, והמנהלת מהדשבורד עם החיבור שלה (בניית ריל מהדרייב בתכנון מחדש)
   const secret = process.env.CRON_SECRET;
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: "not allowed" }, { status: 401 });
+    try { await requireStudioAdmin(); } catch { return NextResponse.json({ error: "not allowed" }, { status: 401 }); }
   }
   if (!driveConfigured()) return NextResponse.json({ error: "drive not configured" }, { status: 400 });
   const url = new URL(request.url);

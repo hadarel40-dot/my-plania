@@ -7,8 +7,9 @@ import { MEDIA_BUCKET } from "@/lib/supabase/env";
 import { Btn, Label, Loading, Note, Panel, Tag, toast } from "./ui";
 import { cn } from "@/lib/utils";
 import { variantLabel } from "@/lib/studio/reel-timeline";
+import { ItemActions } from "./item-actions";
 
-interface Item { id: string; title: string; account: string; format: string; stage: string; planned_date: string | null; hook: string; caption: string; content_type?: string | null; draft_id: string | null }
+interface Item { id: string; title: string; account: string; format: string; stage: string; planned_date: string | null; hook: string; caption: string; notes?: string | null; content_type?: string | null; draft_id: string | null }
 
 const DAY = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"];
 const addDays = (iso: string, n: number) => { const d = new Date(`${iso}T12:00:00`); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
@@ -21,8 +22,27 @@ export function thumbPath(d?: Draft): string | null {
   const v = d.data.variants?.find((x) => x.id === d.data.chosen_variant) ?? d.data.variants?.[0];
   const video = v?.video ?? d.data.video;
   if (video?.cover) return video.cover;
-  const img = (v?.carousel ?? d.data.carousel)?.slides.find((s) => s.image?.kind === "storage")?.image;
-  return img?.kind === "storage" ? img.path : null;
+  const slides = (v?.carousel ?? d.data.carousel)?.slides ?? [];
+  const img = slides.find((s) => s.image?.kind === "storage")?.image;
+  if (img?.kind === "storage") return img.path;
+  // קרוסלה עם תמונות מהדרייב: התמונה של השקופית הראשונה שיש לה תמונה
+  const drive = slides.find((s) => s.image?.kind === "drive")?.image;
+  if (drive?.kind === "drive") return `drive:${drive.id}`;
+  const m = d.data.materials;
+  const first = [...(m?.matches ?? [])].sort((a, b) => (Number(a.target.match(/\d+/)?.[0]) || 99) - (Number(b.target.match(/\d+/)?.[0]) || 99))
+    .map((x) => m?.files.find((f) => f.id === x.file_id)).find((f) => f?.mimeType.startsWith("image/"));
+  return first ? `drive:${first.id}` : null;
+}
+
+/** כתובות לתמונות הממוזערות: קבצים בספרייה נחתמים, תמונות מהדרייב עוברות דרך השרת */
+export async function signThumbs(paths: string[]) {
+  const drive = paths.filter((p) => p.startsWith("drive:"));
+  const store = paths.filter((p) => !p.startsWith("drive:"));
+  const { data: signed } = store.length ? await db().storage.from(MEDIA_BUCKET).createSignedUrls(store, 6 * 60 * 60) : { data: [] };
+  return {
+    ...Object.fromEntries((signed ?? []).flatMap((s) => (s.path && s.signedUrl ? [[s.path, s.signedUrl]] : []))),
+    ...Object.fromEntries(drive.map((p) => [p, `/api/studio/drive-thumb?id=${encodeURIComponent(p.slice(6))}&size=600`])),
+  } as Record<string, string>;
 }
 
 /** פוסט מוכן: יש לו סרטון, קרוסלה, ריל מהסטודיו או פרויקט בעורך */
@@ -72,8 +92,7 @@ async function loadRange(from: string, to: string) {
   const { data: ds } = ids.length ? await db().from("studio_drafts").select("*").in("id", ids) : { data: [] };
   const drafts: Record<string, Draft> = Object.fromEntries((ds ?? []).map((d) => [d.id, d as Draft]));
   const paths = [...new Set(Object.values(drafts).map(thumbPath).filter(Boolean) as string[])];
-  const { data: signed } = paths.length ? await db().storage.from(MEDIA_BUCKET).createSignedUrls(paths, 6 * 60 * 60) : { data: [] };
-  const thumbs: Record<string, string> = Object.fromEntries((signed ?? []).flatMap((s) => (s.path && s.signedUrl ? [[s.path, s.signedUrl]] : [])));
+  const thumbs = await signThumbs(paths);
   return { items, drafts, thumbs };
 }
 
@@ -213,8 +232,8 @@ export function WeekBoard({ today }: { today: string }) {
                 const t = data!.thumbs[thumbPath(dr) ?? ""];
                 const type = x.content_type || dr?.data.content_type;
                 return (
-                  <Link key={x.id} href={dr ? `/studio/reel?id=${dr.id}` : "/studio/board"}
-                    className={cn("group mb-2.5 block overflow-hidden rounded-2xl border bg-white transition hover:-translate-y-0.5 hover:shadow-[0_16px_30px_-20px_rgba(94,29,29,0.7)]", isToday ? "border-[#5E1D1D] ring-2 ring-[#EFD9DD]" : "border-[#E3D9CC]")}>
+                  <div key={x.id} className={cn("mb-2.5 overflow-hidden rounded-2xl border bg-white transition hover:shadow-[0_16px_30px_-20px_rgba(94,29,29,0.7)]", x.stage === "published" ? "border-[#3E6B4F]" : isToday ? "border-[#5E1D1D] ring-2 ring-[#EFD9DD]" : "border-[#E3D9CC]")}>
+                  <Link href={dr ? `/studio/reel?id=${dr.id}` : "/studio/board"} className="group block">
                     <div className="relative aspect-[4/5] overflow-hidden bg-[#F2ECE4]">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       {t ? <img src={t} alt="" className="size-full object-cover transition duration-500 group-hover:scale-[1.04]" />
@@ -227,6 +246,8 @@ export function WeekBoard({ today }: { today: string }) {
                       {type && <p className="mt-1 text-[11px] font-semibold text-[#B5848E]">{labelOf(CONTENT_TYPES, type)}</p>}
                     </div>
                   </Link>
+                  <div className="px-2 pb-2"><ItemActions item={x} onChange={() => loadRange(days[0], days[6]).then(setData)} /></div>
+                  </div>
                 );
               })}
               {data && !list.length && (

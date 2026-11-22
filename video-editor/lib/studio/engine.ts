@@ -449,15 +449,51 @@ const UploadReelSchema = z.object({
  * ריל מהסרטונים שהיא העלתה. סרטון דיבור: הכתוביות הן מה שנאמר (לא משנים מילה), ורק הכותרת והכיתוב נכתבים.
  * סרטונים בלי דיבור: נכתבים כרטיסי טקסט קצרים לפי הרעיון, אחד לכל קטע או שניים.
  */
-export async function writeUploadReel(input: { voice: string; idea: string; transcript: string | null; cardCount: number }) {
+export async function writeUploadReel(input: { voice: string; idea: string; transcript: string | null; cardCount: number; hook?: string }) {
   return cleanDeep(await askBrain({
     prefer: "claude", schema: UploadReelSchema,
     system: "את מנהלת הסושיאל שלה. עברית מדוברת וחמה, בלי אימוג'י, בלי מקפים ארוכים, בלי מספרים מומצאים. את שם האפליקציה כותבים Plania.",
     parts: [{ text: `${input.voice}
 
 הרעיון של הריל (מה שהיא כתבה): ${input.idea || "לא כתבה, תסיקי מהדיבור"}
-${input.transcript ? `מה שהיא אומרת בסרטון: "${input.transcript}"\n\ncards: רשימה ריקה (הכתוביות הן הדיבור עצמו).` : `אין דיבור בסרטונים. cards: בדיוק ${input.cardCount} כרטיסים לפי הסדר: headline עד 6 מילים שעוצר גלילה (הראשון הוא ההוק), body עד 7 מילים או ריק.`}
+${input.transcript ? `מה שהיא אומרת בסרטון: "${input.transcript}"\n\ncards: רשימה ריקה (הכתוביות הן הדיבור עצמו).` : `אין דיבור בסרטונים. cards: בדיוק ${input.cardCount} כרטיסים לפי הסדר: headline עד 6 מילים שעוצר גלילה (הראשון הוא ההוק${input.hook ? `, והוא בדיוק: "${input.hook}"` : ""}), body עד 7 מילים או ריק.`}
 title: שם קצר לריל (עד 7 מילים).
 caption: כיתוב לפוסט: שורה ראשונה שמושכת, 2-4 שורות קצרות, שאלה אחת בסוף, ושלושה האשטגים רלוונטיים בשורה אחרונה.` }],
   }));
+}
+
+const PickSchema = z.object({ picks: z.array(z.object({ file_index: z.number().int(), reason: z.string() })) });
+
+/**
+ * ריל מהדרייב בלי צילום חדש: בוחרים מהארכיון שלה כמה סרטונים שמתאימים לרעיון, לפי הסדר של הריל
+ * (פתיחה שעוצרת, אמצע שמראה, סוף רגוע). exclude: סרטונים שכבר נבחרו לרילס אחרים באותו שבוע.
+ */
+export async function pickDriveClips(input: { idea: string; hook: string; files: DriveFile[]; thumbs: (string | null)[]; count: number; exclude: string[] }) {
+  const videos = input.files.map((f, i) => ({ f, i })).filter(({ f }) => f.mimeType.startsWith("video/") && !input.exclude.includes(f.id));
+  if (!videos.length) return [];
+  const list = videos.map(({ f, i }) => {
+    const dur = f.videoMediaMetadata?.durationMillis ? `${Math.round(Number(f.videoMediaMetadata.durationMillis) / 1000)} ש׳` : "";
+    return `#${i} | ${f.name}${f.description ? ` | ${f.description}` : ""}${dur ? ` | ${dur}` : ""}`;
+  }).join("\n");
+  const parts: BrainPart[] = [{ text: `הרעיון של הריל: ${input.idea}
+ההוק: ${input.hook}
+
+הסרטונים בדרייב שלה (מספר, שם, תיקייה, אורך):
+${list}
+
+אחרי הטקסט יש תמונות ממוזערות של חלק מהקבצים, כל אחת עם המספר שלה.
+בחרי בדיוק ${input.count} סרטונים שונים, לפי הסדר שבו יופיעו בריל: הראשון פותח ועוצר גלילה, האמצעיים מראים את הרעיון, האחרון רגוע וסוגר.
+מעדיפים סרטונים אנכיים, עם תנועה, ושקשורים לנושא. אם אין צילום מדויק, בוחרים את הכי קרוב באווירה.
+reason במשפט קצר: מה רואים ולמה זה מתאים.` }];
+  input.thumbs.forEach((t, i) => { if (t && videos.some((v) => v.i === i)) parts.push({ text: `#${i}` }, { image: t }); });
+  const raw = cleanDeep(await askBrain({ prefer: "claude", schema: PickSchema, system: "את עורכת וידאו שמכירה את הארכיון של היוצרת ובוחרת צילומים לריל.", parts }));
+  const ok = new Set(videos.map((v) => v.i));
+  const chosen: DriveFile[] = [];
+  for (const p of raw.picks) {
+    const f = ok.has(p.file_index) ? input.files[p.file_index] : undefined;
+    if (f && !chosen.includes(f)) chosen.push(f);
+  }
+  // רשת ביטחון: משלימים מהסרטונים האחרונים שלא נבחרו
+  for (const { f } of videos) { if (chosen.length >= input.count) break; if (!chosen.includes(f)) chosen.push(f); }
+  return chosen.slice(0, input.count);
 }

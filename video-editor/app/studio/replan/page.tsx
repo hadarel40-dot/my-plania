@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Check, RefreshCw } from "lucide-react";
 import { ACCOUNTS, CONTENT_TYPES, NICHES, labelOf, type Account, type ContentType, type Draft } from "@/lib/studio/config";
 import { db, formatDate, studioCall, todayIL } from "@/lib/studio/client";
+import { buildDriveReel } from "@/lib/studio/drive-reel";
 import { Btn, Field, Loading, Note, PageHead, Select, Tag, toast } from "@/components/studio/ui";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +18,8 @@ const KEEP = -1;
 /**
  * לתכנן את השבוע מחדש: לכל יום שלוש אפשרויות שונות (סוג תוכן, פורמט, זווית), ולידן מה שכבר בלוח.
  * בוחרים לכל יום, ו"לבנות את השבוע" משבץ. פוסט קיים שהוחלף לא נמחק: הוא יוצא מהיום ונשאר ברעיונות.
- * קרוסלות נכתבות מיד (בעיצוב ובתמונות מהדרייב). רילס נכנסים כרעיון עם הוק, ומופקים מהסרטונים בדרייב.
+ * קרוסלות נכתבות מיד (בעיצוב ובתמונות מהדרייב). רילס נבנים מיד מהסרטונים בדרייב (כרטיסים לפי הרעיון),
+ * ואם הדרייב לא זמין, הם נשארים כרעיון עם הוק.
  */
 export default function ReplanPage() {
   const [account, setAccount] = useState<Account>("plania.il");
@@ -52,6 +54,8 @@ export default function ReplanPage() {
     setBusy("build");
     try {
       const chosen = dates.filter((d) => pick[d] !== KEEP && options[d]?.[pick[d]]);
+      const used: string[] = [];
+      const failed: string[] = [];
       for (const [n, d] of chosen.entries()) {
         const o = options[d][pick[d]];
         setProgress(`${n + 1} מתוך ${chosen.length}: ${formatDate(d)} · ${o.title}`);
@@ -60,7 +64,7 @@ export default function ReplanPage() {
         const niche = NICHES.find((x) => x.account === account && (o.content_type === "value" ? x.value === "meals" : true))?.value ?? null;
         const { data: item, error } = await db().from("studio_items").insert({
           title: o.title, account, niche, format: o.format, stage: "idea", planned_date: d, hook: o.hook, content_type: o.content_type, template: o.template || null,
-          notes: `${o.idea}\n\nלמה: ${o.why}${o.format === "reel" ? "\n\nריל: יופק מהסרטונים בדרייב בעיבוד השבועי, או ב\"ריל חדש\"." : ""}`,
+          notes: `${o.idea}\n\nלמה: ${o.why}`,
         }).select("id").single();
         if (error) throw new Error(error.message);
         if (o.format === "carousel") {
@@ -70,11 +74,20 @@ export default function ReplanPage() {
           let draft = (await studioCall<{ draft: Draft }>("carousel", { draftId: dr.id })).draft;
           draft = await studioCall<{ draft: Draft }>("drive-match", { draftId: draft.id }).then((r) => r.draft).catch(() => draft);
           await db().from("studio_items").update({ draft_id: draft.id, stage: "draft", caption: draft.data.carousel?.caption ?? "" }).eq("id", item.id);
+        } else if (o.format === "reel") {
+          // ריל נבנה מיד מהסרטונים בדרייב. לא הצליח: נשאר רעיון עם הוק, ואפשר לבנות אותו אחר כך מהלוח
+          try {
+            const r = await buildDriveReel({
+              account, idea: o.idea, hook: o.hook, title: o.title, content_type: o.content_type, date: d, itemId: item.id, exclude: used,
+              onStep: (st) => setProgress(`${n + 1} מתוך ${chosen.length}: ${o.title} · ${st}`),
+            });
+            used.push(...r.used);
+          } catch { failed.push(o.title); }
         }
       }
       setProgress("");
       setBuilt(true);
-      toast("השבוע עודכן בלוח");
+      toast(failed.length ? `השבוע עודכן. ${failed.length === 1 ? "ריל אחד נשאר" : `${failed.length} רילס נשארו`} כרעיון (אפשר לבנות מהלוח)` : "השבוע עודכן בלוח", !!failed.length);
     } catch (e) { toast((e as Error).message, true); setProgress(""); }
     finally { setBusy(""); }
   };
@@ -128,7 +141,7 @@ export default function ReplanPage() {
             <Btn busy={busy === "build"} disabled={!changes} onClick={build}>{busy === "build" ? "בונה..." : `לבנות את השבוע (${changes} שינויים)`}</Btn>
             {progress && <span className="text-[13px] text-[#4E4540]">{progress}</span>}
             {built && <Link href="/studio/board" className="text-[13px] font-bold underline">ללוח</Link>}
-            <span className="text-[11px] text-[#6A6158]">קרוסלות נכתבות מיד. רילס נכנסים כרעיון עם הוק ומופקים מהסרטונים בדרייב.</span>
+            <span className="text-[11px] text-[#6A6158]">קרוסלות ורילס נבנים מיד, מהתמונות והסרטונים בדרייב.</span>
           </div>
         </div>
       )}

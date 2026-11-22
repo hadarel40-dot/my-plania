@@ -7,13 +7,21 @@ import { computeMeta } from "@/lib/editor/project-meta";
 import type { Draft, TrendItem } from "@/lib/studio/config";
 import { driveAccessToken, driveConfigured, driveProblem, driveEmail, driveThumb, listDriveMedia } from "@/lib/studio/drive";
 import { adminStore, autoDraft, autoSuggest } from "@/lib/studio/auto";
-import { carouselIdeas, editCarouselByChat, understandReelRequest, matchMaterials, writeCarousel, writeHooks, writeScript, writeUploadReel } from "@/lib/studio/engine";
+import { carouselIdeas, editCarouselByChat, understandReelRequest, matchMaterials, writeCarousel, pickDriveClips, writeHooks, writeScript, writeUploadReel } from "@/lib/studio/engine";
 import { projectFromDraft } from "@/lib/studio/handoff";
 import { applyReelChanges, type Segment } from "@/lib/studio/reel-edit";
 import { advise, buildVoice, inspire, planToday, planWeek, preferencesBlock, type Feedback, researchTrends, suggestFromEdit, weekOptions, weeklyStats, writeReview } from "@/lib/studio/insights";
 import { instagramConfigured, loadAccounts } from "@/lib/studio/instagram";
 import { learnFromPosts, matchPublished, saveLearnings } from "@/lib/studio/learn";
 import { StudioError, getVoice, requireStudioAdmin, todayIL, voiceBlock } from "@/lib/studio/server";
+
+/** הגרסה הרגועה כברירת מחדל (כמו בתהליך השבועי): רשימה ממוספרת, הוק קבוע, או קופסה לבנה */
+function calmVariant(type: string, cards: { headline: string }[]) {
+  if (/^\s*\d/.test(cards[0]?.headline ?? "")) return "K";
+  if (type === "story") return "I";
+  if (type === "value") return cards.length >= 4 ? "K" : "I";
+  return "J";
+}
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -122,6 +130,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
           date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
           clips: z.array(z.object({ path: z.string().max(300), w: z.number(), h: z.number(), seconds: z.number().positive() })).min(1).max(20),
           transcript: z.array(z.object({ start: z.number(), end: z.number(), text: z.string().max(400) })).max(300).default([]),
+          // מתכנון מחדש: ההוק והכותרת שנבחרו, ופריט קיים בלוח שהריל מתחבר אליו
+          hook: z.string().max(200).optional(), title: z.string().max(120).optional(), itemId: uuid.optional(), notes: z.string().max(400).optional(),
         }).parse(body);
         const talking = input.transcript.length > 0;
         // בלי דיבור: מכל סרטון לוקחים את האמצע, עד 3 שניות, כדי שהריל יזוז. עם דיבור: הסרטונים כמו שהם
@@ -134,8 +144,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
         const cardCount = Math.max(1, Math.min(6, Math.round(total / 2.6)));
         const written = await writeUploadReel({
           voice: await voiceWithPrefs(input.account), idea: input.idea,
-          transcript: talking ? input.transcript.map((t) => t.text).join(" ") : null, cardCount,
+          transcript: talking ? input.transcript.map((t) => t.text).join(" ") : null, cardCount, hook: input.hook,
         });
+        const title = (input.title || written.title || input.idea || "ריל מהסרטונים שלי").slice(0, 80);
         const cards = talking
           ? input.transcript.map((t) => ({ text: t.text, headline: t.text, body: "", start: +t.start.toFixed(2), end: +t.end.toFixed(2) }))
           : written.cards.slice(0, cardCount).map((c, i, all) => {
@@ -144,19 +155,24 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
             });
         const niche = input.account === "plania.il" ? "meals" : "business";
         const { data: dr, error } = await supabase.from("studio_drafts").insert({
-          idea: written.title || input.idea || "ריל מהסרטונים שלי", account: input.account, niche, mode: "full", facts: "",
+          idea: input.title || written.title || input.idea || "ריל מהסרטונים שלי", account: input.account, niche, mode: "full", facts: "",
           data: {
-            content_type: input.content_type, caption: written.caption, chosen_variant: talking ? "C" : "B",
+            content_type: input.content_type, caption: written.caption, chosen_variant: talking ? "C" : calmVariant(input.content_type, cards),
             edit: { segments, cards, ...(talking ? { sound: true } : {}) },
-            ...(talking ? { reel_design: { transition: "cut" } } : {}),
+            reel_design: talking ? { transition: "cut" } : { transition: "cut", motion: "off" },
           },
         }).select("id").single();
         if (error || !dr) throw new StudioError(error?.message ?? "לא נשמר", 500);
-        await supabase.from("studio_items").insert({
-          title: (written.title || input.idea || "ריל מהסרטונים שלי").slice(0, 80), account: input.account, niche, format: "reel", stage: "draft",
-          planned_date: input.date, content_type: input.content_type, draft_id: dr.id, caption: written.caption,
-          notes: talking ? "ריל מסרטון דיבור שהיא העלתה. הכתוביות מהדיבור." : "ריל מסרטונים שהיא העלתה.",
-        });
+        if (input.itemId) {
+          // פריט שכבר בלוח (מתכנון מחדש): מחברים אליו את הריל, בלי לשנות את היום או השלב שהיא קבעה מעבר לטיוטה
+          await supabase.from("studio_items").update({ draft_id: dr.id, stage: "draft", caption: written.caption }).eq("id", input.itemId).in("stage", ["idea", "draft"]);
+        } else {
+          await supabase.from("studio_items").insert({
+            title, account: input.account, niche, format: "reel", stage: "draft", hook: input.hook ?? "",
+            planned_date: input.date, content_type: input.content_type, draft_id: dr.id, caption: written.caption,
+            notes: input.notes ?? (talking ? "ריל מסרטון דיבור שהיא העלתה. הכתוביות מהדיבור." : "ריל מסרטונים שהיא העלתה."),
+          });
+        }
         return NextResponse.json({ draftId: dr.id, talking });
       }
       case "designer-undo": {
@@ -178,6 +194,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
         const thumbs = await Promise.all(files.map((f, i) => (i < 40 ? driveThumb(f) : Promise.resolve(null))));
         const materials = await matchMaterials(draft, files, thumbs);
         return NextResponse.json({ draft: await saveDraft(draft.id, { ...draft.data, materials }) });
+      }
+      case "drive-pick": {
+        // ריל מהדרייב: בוחרים סרטונים מהארכיון שמתאימים לרעיון. ההורדה וההעלאה קורות בדפדפן
+        const input = z.object({ idea: z.string().max(800), hook: z.string().max(200).default(""), count: z.number().int().min(1).max(6).default(4), exclude: z.array(z.string().max(100)).max(60).default([]) }).parse(body);
+        if (!driveConfigured()) throw new StudioError("דרייב עוד לא מחובר", 400);
+        // סרטונים גדולים מדי לא נבחרים: הם יורדים לדפדפן (גם בטלפון)
+        const files = (await listDriveMedia(null, 150)).filter((f) => f.mimeType.startsWith("video/") && Number(f.size ?? 0) < 120_000_000).slice(0, 100);
+        const thumbs = await Promise.all(files.map((f, i) => (i < 40 && f.mimeType.startsWith("video/") ? driveThumb(f) : Promise.resolve(null))));
+        const chosen = await pickDriveClips({ ...input, files, thumbs });
+        if (!chosen.length) throw new StudioError("לא מצאתי סרטונים בדרייב", 404);
+        return NextResponse.json({ files: chosen.map((f) => ({ id: f.id, name: f.name, mimeType: f.mimeType, size: Number(f.size ?? 0) })) });
       }
       case "drive-files": {
         const { folder } = z.object({ folder: z.string().max(300).optional() }).parse(body);
