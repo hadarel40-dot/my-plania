@@ -177,7 +177,8 @@ function SlideEditor({ edit, setEdit, images }: { edit: Carousel; setEdit: (c: C
     put(next);
   };
   const remove = (i: number) => put(slides.filter((_, j) => j !== i));
-  const addAfter = (i: number) => put([...slides.slice(0, i + 1), { ...NEW_SLIDE }, ...slides.slice(i + 1)]);
+  // שקופית חדשה מקבלת את התמונה של השקופית שלפניה: אף פעם לא שקופית בלי תמונה
+  const addAfter = (i: number) => put([...slides.slice(0, i + 1), { ...NEW_SLIDE, ...(slides[i]?.image ? { image: slides[i].image } : {}) }, ...slides.slice(i + 1)]);
 
   const upload = async (file: File) => {
     const i = target.current;

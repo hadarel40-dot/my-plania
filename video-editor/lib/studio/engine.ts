@@ -234,6 +234,25 @@ export function carouselChecks(c: Carousel): Check[] {
   return checks;
 }
 
+/**
+ * כתיבה מחדש לא מורידה תמונות (המשוב שלה): התמונות של הקרוסלה הקודמת עוברות לשקופיות החדשות.
+ * שער נשאר עם תמונת השער, השאר לפי הסדר, ואם יש יותר שקופיות מתמונות, התמונות חוזרות במעגל.
+ * גם הסגנון נשמר (קרוסלת "תמונה" נשארת "תמונה").
+ */
+export function keepImages(prev: Carousel | undefined, next: Carousel): Carousel {
+  const imgs = (prev?.slides ?? []).map((s) => s.image).filter((x): x is NonNullable<typeof x> => !!x);
+  if (!imgs.length) return next;
+  const cover = prev!.slides[0]?.image ?? imgs[0];
+  const rest = imgs.filter((x) => x !== cover);
+  const pool = rest.length ? rest : imgs;
+  let k = 0;
+  return {
+    ...next,
+    style: prev?.style ?? next.style,
+    slides: next.slides.map((s, i) => ({ ...s, image: s.image ?? (i === 0 ? cover : pool[k++ % pool.length]) })),
+  };
+}
+
 export async function writeCarousel(draft: Draft, voice: string): Promise<DraftData> {
   const handle = ACCOUNTS.find((a) => a.value === draft.account)?.label ?? "";
   const prompt = (retry: string) => `${context(draft, voice)}
@@ -259,7 +278,7 @@ alt: תיאור קצר של השער, לקוראי מסך.
     carousel = { ...raw, handle, style };
     checks = carouselChecks(carousel);
   }
-  return { ...draft.data, carousel, checks };
+  return { ...draft.data, carousel: keepImages(draft.data.carousel, carousel), checks };
 }
 
 // ---------- חומרים מהדרייב
