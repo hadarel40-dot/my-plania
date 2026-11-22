@@ -8,7 +8,7 @@ import type { ReelEditKit } from "./config";
  * כך מה שרואים בדשבורד ומה שנפתח בעורך זהים: אותם פונטים, אותו קצב, אותן אנימציות.
  * הגרסאות הן סגנונות כתוביות שונים על אותם קטעים.
  */
-export type CaptionStyleId = "pop" | "chips" | "lines" | "editorial" | "marker" | "neon" | "outline" | "stairs" | "hook" | "box";
+export type CaptionStyleId = "pop" | "chips" | "lines" | "editorial" | "marker" | "neon" | "outline" | "stairs" | "hook" | "box" | "list";
 export const REEL_STYLES: { id: CaptionStyleId; variant: string; label: string }[] = [
   { id: "pop", variant: "C", label: "מילה אחת גדולה בכל פעם" },
   { id: "chips", variant: "A", label: "כותרת בתיבה ורודה" },
@@ -20,6 +20,7 @@ export const REEL_STYLES: { id: CaptionStyleId; variant: string; label: string }
   { id: "stairs", variant: "H", label: "מדרגות: מילה בכל שורה" },
   { id: "hook", variant: "I", label: "כותרת קבועה, כמו מגזין" },
   { id: "box", variant: "J", label: "תיבה לבנה, טבעי לאינסטגרם" },
+  { id: "list", variant: "K", label: "רשימה ממוספרת שנדלקת" },
 ];
 /** השם של גרסה, זהה בכל מקום (דשבורד, "מה עולה היום") */
 export const variantLabel = (v?: string | null) => { const s = REEL_STYLES.find((x) => x.variant === (v ?? "C")) ?? REEL_STYLES[0]; return `${s.variant} · ${s.label}`; };
@@ -216,6 +217,45 @@ function captions(cards: ReelEditKit["cards"], style: CaptionStyleId, design: Re
     const body = c.headline ? c.body ?? "" : "";
     const dur = c.end - c.start;
 
+    if (style === "list") {
+      // רשימה: כותרת קבועה למעלה (המספר בצבע ההדגשה), תוכן עניינים קטן של כל הכרטיסים
+      // שהפריט הנוכחי נדלק בו, ושם הפריט בתיבה קטנה למטה. נבנה פעם אחת, בכרטיס הראשון
+      if (ci !== 0) return;
+      const last = cards[cards.length - 1]?.end ?? c.end;
+      const items = cards.length > 2 ? cards.slice(1) : cards;
+      const title = clean(headline);
+      const m = title.match(/^(\d+)\s+(.*)$/);
+      const ts = Math.round((title.length > 30 ? 54 : title.length > 20 ? 62 : 72) * k);
+      const titleLines = (t: string) => Math.max(1, Math.ceil((t.length * ts * 0.55) / 950));
+      if (m) {
+        out.push({ ...base, id: uid("ov"), hook: true, text: m[1], start: 0, end: last, y: 0.07, size: Math.round(ts * 1.25), font: "frank", weight: 900, color: ACC, stroke: false, shadow: "0 2px 10px rgba(0,0,0,.4)", animIn: "fade", animOut: "none" });
+        out.push({ ...base, id: uid("ov"), text: m[2], start: 0, end: last, y: +(0.07 + (ts * 1.3) / 1920).toFixed(4), size: ts, font: design.headFont ?? "heebo", weight: 900, color: HEAD, stroke: false, shadow: "0 2px 10px rgba(0,0,0,.4)", animIn: "fade", animOut: "none" });
+      } else {
+        out.push({ ...base, id: uid("ov"), hook: true, text: title, start: 0, end: last, y: 0.08, size: ts, font: design.headFont ?? "heebo", weight: 900, color: HEAD, stroke: false, shadow: "0 2px 10px rgba(0,0,0,.4)", animIn: "fade", animOut: "none" });
+      }
+      // תוכן העניינים: שתי עמודות, מימין לשמאל
+      const cols = items.length > 6 ? 2 : 1;
+      const perCol = Math.ceil(items.length / cols);
+      const fs = Math.round(26 * k);
+      const top = (m ? 0.07 + (ts * 1.3 + ts * 1.3 * titleLines(m[2])) / 1920 + (ts * 0.4) / 1920 : 0.08 + (ts * 1.3 * titleLines(title)) / 1920) + 0.012;
+      items.forEach((it, ii) => {
+        const col = Math.floor(ii / perCol), row = ii % perCol;
+        const y = +(top + row * ((fs * 1.55) / 1920)).toFixed(4);
+        const label = `${String(ii + 1).padStart(2, "0")}  ${clean(it.headline ?? it.text)}`.slice(0, 34);
+        // מיושר לימין העמודה (הטקסט ממורכז סביב x, אז מזיזים לפי הרוחב המשוער)
+        const right = cols === 2 ? (col === 0 ? 0.93 : 0.5) : 0.75;
+        const x = +(right - (label.length * fs * 0.5) / 1080 / 2).toFixed(4);
+        const common = { ...base, x, y, size: fs, font: "heebo", weight: 700 as const, stroke: false, shadow: "0 1px 6px rgba(0,0,0,.55)", animIn: "none" as const, animOut: "none" as const };
+        out.push({ ...common, id: uid("ov"), text: label, start: 0, end: last, color: "rgba(255,255,255,0.82)" });
+        out.push({ ...common, id: uid("ov"), text: label, start: it.start, end: it.end, color: dark(ACC) ? "#FFFFFF" : "#2A2622", background: ACC, shadow: undefined });
+      });
+      // שם הפריט הנוכחי, בתיבה קטנה למטה
+      items.forEach((it) => {
+        const t = clean(it.headline ?? it.text);
+        out.push({ ...base, id: uid("ov"), text: t, start: +(it.start + 0.1).toFixed(2), end: it.end, y: 0.8, size: Math.round(44 * k), font: design.bodyFont ?? "heebo", weight: 900, color: "#FFFFFF", background: "rgba(20,20,20,0.55)", stroke: false, animIn: "fade", animOut: "none" });
+      });
+      return;
+    }
     if (style === "hook") {
       // כותרת אחת שנשארת כל הסרטון, למעלה: שורה בסריף ושורה שנייה עדינה יותר. בלי קפיצות
       if (ci !== 0) return;
@@ -383,6 +423,7 @@ export function buildReelTimeline(kit: ReelEditKit, style: CaptionStyleId = "pop
 /** ערכות עיצוב מוכנות: כל אחת כיוון שלם (גרסה, גופנים, צבעים, כניסה, מעבר וגרפיקה) */
 export const DESIGN_PRESETS: { id: string; label: string; variant: string; design: ReelDesign }[] = [
   { id: "native", label: "טבעי לאינסטגרם", variant: "J", design: { headFont: "assistant", transition: "cut", motion: "off" } },
+  { id: "listicle", label: "רשימה שנדלקת", variant: "K", design: { headFont: "heebo", accent: "#F7C9D6", transition: "cut", motion: "off" } },
   { id: "editorial-hook", label: "כותרת מגזין קבועה", variant: "I", design: { headFont: "frank", bodyFont: "bellefair", main: "#FFFFFF", transition: "cut", motion: "off" } },
   { id: "clean", label: "נקי ומודרני", variant: "B", design: { headFont: "heebo", bodyFont: "heebo", main: "#FFFFFF", body: "#F7C9D6", accent: "#F7C9D6", play: "blur", transition: "fade", motion: "underline", emphasis: true } },
   { id: "magazine", label: "מגזין יוקרתי", variant: "D", design: { headFont: "frank", bodyFont: "assistant", emFont: "gveret", main: "#FAF6F1", body: "#F7C9D6", accent: "#F7C9D6", play: "wipe", transition: "zoom", motion: "circle" } },

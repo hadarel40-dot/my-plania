@@ -721,6 +721,14 @@ function StylePreview({ id, design }: { id: CaptionStyleId; design: ReelDesign }
           <span className="mt-1 block text-[9px] font-bold" style={{ color: design.body ?? acc }}>בלי לשבת בלילה</span>
         </span>
       )}
+      {id === "list" && (
+        <span className="absolute inset-x-1 top-[8%] text-center leading-tight">
+          <span className="block text-[13px] font-black" style={{ color: acc }}>7 <span style={{ color: main }}>דברים</span></span>
+          <span className="mt-1 grid grid-cols-2 gap-x-1 text-right text-[6px] font-bold text-white/80">
+            <span>01 תכנון</span><span>04 קניות</span><span style={{ color: acc }}>02 ארוחות</span><span>05 זמן</span><span>03 רשימה</span><span>06 סדר</span>
+          </span>
+        </span>
+      )}
       {id === "hook" && (
         <span className="absolute inset-x-1 top-[12%] text-center leading-tight" style={{ color: main }}>
           <span className="block text-[11px]" style={{ fontFamily: '"Frank Ruhl Libre"' }}>הפסקתי לתכנן תוכן.</span>
