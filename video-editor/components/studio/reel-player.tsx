@@ -535,7 +535,20 @@ function ShotControls({ shot, onChange, onRemove }: { shot: Shot; onChange: (p: 
           )}
         </div>
       </div>
-      {video && <p className="text-[11px] text-[#9A8C85]">הקלטת מסך מופיעה מתחת לטקסט, כדי שהכתוביות תמיד ייקראו.</p>}
+      {video && (
+        <>
+          <Row label="פריסה">
+            <Chip on={!shot.split} onClick={() => onChange({ split: undefined })}>חלון</Chip>
+            <Chip on={shot.split === "bottom"} onClick={() => onChange({ split: "bottom" })}>חצי מסך למטה</Chip>
+            <Chip on={shot.split === "top"} onClick={() => onChange({ split: "top" })}>חצי מסך למעלה</Chip>
+          </Row>
+          <Row label="מתי">
+            <Chip on={!shot.whole} onClick={() => onChange({ whole: false })}>בכרטיס הזה</Chip>
+            <Chip on={!!shot.whole} onClick={() => onChange({ whole: true })}>לאורך כל הריל</Chip>
+          </Row>
+          <p className="text-[11px] text-[#9A8C85]">"חצי מסך" ו"לאורך כל הריל" יחד: את למעלה, והמסך שמראה מה קורה למטה, כמו בסרטונים שאהבת. הקלטת מסך תמיד מתחת לטקסט.</p>
+        </>
+      )}
     </div>
   );
 }
@@ -706,6 +719,17 @@ function StylePreview({ id, design }: { id: CaptionStyleId; design: ReelDesign }
           <span className="block text-[12px] font-black" style={{ color: main, fontFamily: `"${REEL_FONTS.find((f) => f.id === (design.headFont ?? design.font ?? "frank"))?.family ?? "Frank Ruhl Libre"}"` }}>ככה</span>
           <span className="block -rotate-6 text-[22px]" style={{ color: acc, fontFamily: `"${REEL_FONTS.find((f) => f.id === (design.emFont ?? "gveret"))?.family ?? "Gveret Levin"}"` }}>עורכים</span>
           <span className="mt-1 block text-[9px] font-bold" style={{ color: design.body ?? acc }}>בלי לשבת בלילה</span>
+        </span>
+      )}
+      {id === "hook" && (
+        <span className="absolute inset-x-1 top-[12%] text-center leading-tight" style={{ color: main }}>
+          <span className="block text-[11px]" style={{ fontFamily: '"Frank Ruhl Libre"' }}>הפסקתי לתכנן תוכן.</span>
+          <span className="block text-[12px]" style={{ fontFamily: '"Bellefair"' }}>Claude עושה את זה.</span>
+        </span>
+      )}
+      {id === "box" && (
+        <span className="absolute inset-x-1.5 top-[52%] text-center">
+          <span className="inline-block rounded-md bg-white px-1.5 py-1 text-[10px] font-bold leading-tight text-[#111]">ככה נראה שבוע של תוכן, בלי לשבת בלילה</span>
         </span>
       )}
       {id === "marker" && (

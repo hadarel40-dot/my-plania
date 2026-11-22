@@ -8,7 +8,7 @@ import type { ReelEditKit } from "./config";
  * כך מה שרואים בדשבורד ומה שנפתח בעורך זהים: אותם פונטים, אותו קצב, אותן אנימציות.
  * הגרסאות הן סגנונות כתוביות שונים על אותם קטעים.
  */
-export type CaptionStyleId = "pop" | "chips" | "lines" | "editorial" | "marker" | "neon" | "outline" | "stairs";
+export type CaptionStyleId = "pop" | "chips" | "lines" | "editorial" | "marker" | "neon" | "outline" | "stairs" | "hook" | "box";
 export const REEL_STYLES: { id: CaptionStyleId; variant: string; label: string }[] = [
   { id: "pop", variant: "C", label: "מילה אחת גדולה בכל פעם" },
   { id: "chips", variant: "A", label: "כותרת בתיבה ורודה" },
@@ -18,6 +18,8 @@ export const REEL_STYLES: { id: CaptionStyleId; variant: string; label: string }
   { id: "neon", variant: "F", label: "ניאון זוהר" },
   { id: "outline", variant: "G", label: "אותיות חלולות" },
   { id: "stairs", variant: "H", label: "מדרגות: מילה בכל שורה" },
+  { id: "hook", variant: "I", label: "כותרת קבועה, כמו מגזין" },
+  { id: "box", variant: "J", label: "תיבה לבנה, טבעי לאינסטגרם" },
 ];
 /** השם של גרסה, זהה בכל מקום (דשבורד, "מה עולה היום") */
 export const variantLabel = (v?: string | null) => { const s = REEL_STYLES.find((x) => x.variant === (v ?? "C")) ?? REEL_STYLES[0]; return `${s.variant} · ${s.label}`; };
@@ -108,6 +110,10 @@ export interface Shot {
   scale?: "s" | "m" | "l";
   layer?: "front" | "back";
   tilt?: boolean;
+  /** הקלטת מסך: חלון, או חצי מסך (למטה או למעלה), כמו מסך מפוצל */
+  split?: "bottom" | "top";
+  /** לאורך כל הריל ולא רק בכרטיס */
+  whole?: boolean;
 }
 export const shotXY = (s: Shot) => {
   const p = s.pos ?? (s.place === "top" ? "tc" : s.place === "bottom" ? "bc" : "mc");
@@ -209,6 +215,25 @@ function captions(cards: ReelEditKit["cards"], style: CaptionStyleId, design: Re
     const headline = c.headline ?? c.text;
     const body = c.headline ? c.body ?? "" : "";
     const dur = c.end - c.start;
+
+    if (style === "hook") {
+      // כותרת אחת שנשארת כל הסרטון, למעלה: שורה בסריף ושורה שנייה עדינה יותר. בלי קפיצות
+      if (ci !== 0) return;
+      const last = cards[cards.length - 1]?.end ?? c.end;
+      const l1 = clean(headline);
+      const l2 = clean(body);
+      const s1 = Math.round((l1.length > 22 ? 64 : 78) * k);
+      const topY = design.place === "bottom" ? 0.7 : design.place === "middle" ? 0.45 : 0.115;
+      out.push({ ...base, id: uid("ov"), hook: true, text: l1, start: 0, end: last, y: topY, size: s1, font: design.headFont ?? "frank", weight: 400, color: HEAD, stroke: false, shadow: "0 2px 12px rgba(0,0,0,.45)", animIn: "fade", animOut: "none" });
+      if (l2) out.push({ ...base, id: uid("ov"), text: l2, start: 0.15, end: last, y: +(topY + (s1 * 1.25 * Math.max(1, Math.ceil((l1.length * s1 * 0.5) / 950))) / 1920).toFixed(4), size: Math.round(s1 * 1.06), font: design.bodyFont ?? "bellefair", weight: 400, color: design.body ?? HEAD, stroke: false, shadow: "0 2px 12px rgba(0,0,0,.45)", animIn: "fade", animOut: "none" });
+      return;
+    }
+    if (style === "box") {
+      // תיבה לבנה עם טקסט שחור, כמו הטקסט של אינסטגרם עצמו. כל כרטיס בתיבה אחת, בלי תנועה
+      const text = clean(body ? `${headline}\n${body}` : headline);
+      out.push({ ...base, id: uid("ov"), hook: ci === 0, text, start: +(c.start + 0.05).toFixed(2), end: c.end, y: +(0.6 + dy).toFixed(4), size: Math.round(54 * k), font: design.headFont ?? "assistant", weight: 700, color: "#111111", background: "#FFFFFF", stroke: false, animIn: "none", animOut: "none" });
+      return;
+    }
     const em = emphasis ? keyWord(headline) : "";
 
     if (style === "pop") {
@@ -343,10 +368,11 @@ export function buildReelTimeline(kit: ReelEditKit, style: CaptionStyleId = "pop
     if (!card) return;
     const id = `shot-${i + 1}`;
     assets[id] = { id, name: "הקלטת מסך", url: shotUrls[s.path], thumbnailUrl: null, duration: s.seconds ?? card.end - card.start, width: s.w, height: s.h, origin: "upload" };
-    const start = remap(card.start + 0.2);
-    const len = Math.max(0.5, Math.min(s.seconds ?? 99, remap(card.end) - start));
+    const reelEnd = laid.at(-1)?.end ?? 0;
+    const start = s.whole ? 0 : remap(card.start + 0.2);
+    const len = Math.max(0.5, Math.min(s.seconds ?? 99, (s.whole ? reelEnd : remap(card.end)) - start));
     const { x, y } = shotXY(s);
-    layers.push({ id: uid("layer"), assetId: id, start, in: 0, out: +len.toFixed(2), layout: "pip", x, y, scale: shotWidth(s) / 1080, shape: "rounded", border: true, opacity: 1, volume: 0 });
+    layers.push({ id: uid("layer"), assetId: id, start, in: 0, out: +len.toFixed(2), layout: s.split === "bottom" ? "split-bottom" : s.split === "top" ? "split-top" : "pip", x, y, scale: shotWidth(s) / 1080, shape: "rounded", border: true, opacity: 1, volume: 0 });
   });
   return {
     timeline: { fps: 30, aspect: "9:16", clips, captions: [], overlays, audio: [], layers },
@@ -356,6 +382,8 @@ export function buildReelTimeline(kit: ReelEditKit, style: CaptionStyleId = "pop
 
 /** ערכות עיצוב מוכנות: כל אחת כיוון שלם (גרסה, גופנים, צבעים, כניסה, מעבר וגרפיקה) */
 export const DESIGN_PRESETS: { id: string; label: string; variant: string; design: ReelDesign }[] = [
+  { id: "native", label: "טבעי לאינסטגרם", variant: "J", design: { headFont: "assistant", transition: "cut", motion: "off" } },
+  { id: "editorial-hook", label: "כותרת מגזין קבועה", variant: "I", design: { headFont: "frank", bodyFont: "bellefair", main: "#FFFFFF", transition: "cut", motion: "off" } },
   { id: "clean", label: "נקי ומודרני", variant: "B", design: { headFont: "heebo", bodyFont: "heebo", main: "#FFFFFF", body: "#F7C9D6", accent: "#F7C9D6", play: "blur", transition: "fade", motion: "underline", emphasis: true } },
   { id: "magazine", label: "מגזין יוקרתי", variant: "D", design: { headFont: "frank", bodyFont: "assistant", emFont: "gveret", main: "#FAF6F1", body: "#F7C9D6", accent: "#F7C9D6", play: "wipe", transition: "zoom", motion: "circle" } },
   { id: "energy", label: "אנרגטי", variant: "C", design: { headFont: "secular", bodyFont: "rubik", main: "#FFFFFF", body: "#F6E7A6", accent: "#F6E7A6", play: "bounce", transition: "whip", motion: "burst", emphasis: true } },
