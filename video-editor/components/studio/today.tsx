@@ -6,6 +6,7 @@ import { db, formatDate } from "@/lib/studio/client";
 import { MEDIA_BUCKET } from "@/lib/supabase/env";
 import { Btn, Label, Loading, Note, Panel, Tag, toast } from "./ui";
 import { cn } from "@/lib/utils";
+import { variantLabel } from "@/lib/studio/reel-timeline";
 
 interface Item { id: string; title: string; account: string; format: string; stage: string; planned_date: string | null; hook: string; caption: string; content_type?: string | null; draft_id: string | null }
 
@@ -63,7 +64,7 @@ export function TodayPost({ today }: { today: string }) {
         <div className="min-w-0 flex-1 space-y-2">
           {d ? (
             <>
-              <p className="text-sm">{variants > 1 ? `גרסה ${chosenId}${d.data.chosen_variant ? "" : " (ברירת מחדל)"}. ` : ""}{d.data.video || d.data.carousel ? "שולחים לאינסטגרם מהטלפון, מוסיפים מוזיקה טרנדית ומפרסמים או שומרים כטיוטה." : "יש תסריט ורשימת שוטים. מצלמים, ואז עורכים בעורך הווידאו."}</p>
+              <p className="text-sm">{d.data.edit ? `גרסה ${variantLabel(d.data.chosen_variant)}. ` : variants > 1 ? `גרסה ${chosenId}${d.data.chosen_variant ? "" : " (ברירת מחדל)"}. ` : ""}{d.data.video || d.data.carousel ? "שולחים לאינסטגרם מהטלפון, מוסיפים מוזיקה טרנדית ומפרסמים או שומרים כטיוטה." : "יש תסריט ורשימת שוטים. מצלמים, ואז עורכים בעורך הווידאו."}</p>
               {variants > 1 && <Link href="/studio/pick" className="block text-[12px] underline underline-offset-4">להחליף גרסה</Link>}
               <Link href={`/studio/reel?id=${d.id}`} className="inline-flex rounded-[5px] bg-[#1F1B16] px-3.5 py-2 text-[13px] font-bold text-[#FBF8F2]">{d.data.video || d.data.carousel ? "לשלוח לאינסטגרם" : "לפתוח את התסריט ולצלם"}</Link>
             </>

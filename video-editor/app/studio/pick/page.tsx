@@ -8,6 +8,7 @@ import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { MEDIA_BUCKET } from "@/lib/supabase/env";
 import { Btn, Loading, Note, PageHead, Panel, Tag, inputCls, toast } from "@/components/studio/ui";
 import { cn } from "@/lib/utils";
+import { variantLabel } from "@/lib/studio/reel-timeline";
 
 interface Row { id: string; title: string; format: string; stage: string; planned_date: string | null; content_type?: string | null; draft_id: string; draft: Draft }
 
@@ -86,6 +87,18 @@ function PostCard({ row, onSaved }: { row: Row; onSaved: (d: Draft) => void }) {
   const comment = (v: Variant, text: string) => save({ ...d.data, variants: variants.map((x) => (x.id === v.id ? { ...x, comment: text } : x)) }, "ההערה נשמרה");
   const type = row.content_type || d.data.content_type;
   const chosen = variants.find((v) => v.id === chosenId);
+
+  if (d.data.edit) {
+    // ריל מהמנוע המשותף: הגרסאות מתחלפות בתוך הריל עצמו (ובעורך), עם תצוגה זהה
+    return (
+      <Link href={`/studio/reel?id=${d.id}`} className="flex w-full flex-wrap items-center gap-2 rounded-2xl border border-[#E2DACD] bg-[#FBF8F2] px-4 py-3 hover:bg-[#F4EFE6]">
+        <span className="text-[12px] font-bold text-[#6F675C]">{row.planned_date ? formatDate(row.planned_date) : "בלי תאריך"}</span>
+        <span className="font-semibold">{row.title}</span>
+        <span className="ms-auto"><Tag tone="green">גרסה {variantLabel(d.data.chosen_variant)}</Tag></span>
+        <span className="text-[12px] underline underline-offset-4">להחליף בתוך הריל</span>
+      </Link>
+    );
+  }
 
   if (!open) {
     // פוסט שנבחר: שורה אחת

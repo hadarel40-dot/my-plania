@@ -13,6 +13,8 @@ export const REEL_STYLES: { id: CaptionStyleId; variant: string; label: string }
   { id: "chips", variant: "A", label: "כותרת בתיבה ורודה" },
   { id: "lines", variant: "B", label: "שורה אחרי שורה" },
 ];
+/** השם של גרסה, זהה בכל מקום (דשבורד, עורך, "מה עולה היום") */
+export const variantLabel = (v?: string | null) => { const s = REEL_STYLES.find((x) => x.variant === (v ?? "C")) ?? REEL_STYLES[0]; return `${s.variant} · ${s.label}`; };
 export const styleForVariant = (v?: string | null): CaptionStyleId => REEL_STYLES.find((s) => s.variant === v)?.id ?? "pop";
 
 const PINK = "#F7C9D6";

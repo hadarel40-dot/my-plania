@@ -33,7 +33,7 @@ export function StudioVersions() {
         {REEL_STYLES.map((s) => (
           <button key={s.id} type="button" onClick={() => choose(s.variant)}
             className={cn("rounded-full border px-3 py-1 text-xs font-semibold", current === s.id ? "border-violet-500 bg-violet-500/15" : "border-zinc-700 hover:border-violet-500")}>
-            {s.label}
+            {s.variant} · {s.label}
           </button>
         ))}
       </div>

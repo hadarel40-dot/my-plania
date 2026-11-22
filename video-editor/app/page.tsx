@@ -6,7 +6,7 @@ import { getUser } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home({ searchParams }: { searchParams: Promise<{ password?: string }> }) {
+export default async function Home({ searchParams }: { searchParams: Promise<{ password?: string; empty?: string }> }) {
   // בלי Supabase: עורך יחיד שנשמר בדפדפן
   if (!supabaseEnabled) return <LocalEditor />;
 
@@ -25,9 +25,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ p
   const pending = isAdmin
     ? (await supabase.from("join_requests").select("id", { count: "exact", head: true }).eq("status", "pending")).count ?? 0
     : 0;
-  const showPassword = !hasPassword || (await searchParams).password === "1";
+  const params = await searchParams;
+  const showPassword = !hasPassword || params.password === "1";
   return (
     <ProjectList email={user.email ?? ""} projects={projects ?? []} error={error?.message ?? null}
-      showPassword={showPassword} hasPassword={hasPassword} admin={isAdmin ? { pending } : null} />
+      showPassword={showPassword} hasPassword={hasPassword} admin={isAdmin ? { pending } : null} showEmpty={params.empty === "1"} />
   );
 }

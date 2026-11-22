@@ -197,7 +197,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
         }
         const project = projectFromDraft(draft);
         const { title, ...doc } = project;
-        const { data, error } = await supabase.from("projects").insert({ title, doc, meta: computeMeta(project) }).select("id").single();
+        // תמונה ממוזערת ברשימת הפרויקטים: השער של הריל
+        const meta = computeMeta(project);
+        const coverPath = draft.data.video?.cover;
+        if (coverPath && !meta.thumbnail) {
+          const { data: signed } = await supabase.storage.from("media").createSignedUrl(coverPath, 365 * 24 * 3600);
+          if (signed?.signedUrl) meta.thumbnail = signed.signedUrl;
+        }
+        const { data, error } = await supabase.from("projects").insert({ title, doc, meta }).select("id").single();
         if (error) throw new StudioError(error.message, 500);
         await supabase.from("studio_drafts").update({ project_id: data.id }).eq("id", draft.id);
         return NextResponse.json({ projectId: data.id });

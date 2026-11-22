@@ -8,7 +8,7 @@ import { timelineDuration } from "@/lib/editor/timeline-utils";
 import type { MediaAsset, SavedProject, Timeline } from "@/lib/editor/types";
 import { CONTENT_TYPES, labelOf, type Draft } from "@/lib/studio/config";
 import { db, editorHref, studioCall } from "@/lib/studio/client";
-import { REEL_STYLES, buildReelTimeline, styleForVariant } from "@/lib/studio/reel-timeline";
+import { REEL_STYLES, buildReelTimeline, reelCaptions, styleForVariant } from "@/lib/studio/reel-timeline";
 import { canShareFiles, shareToInstagram } from "@/lib/studio/share";
 import { MEDIA_BUCKET } from "@/lib/supabase/env";
 import { Btn, Loading, Panel, Tag, toast } from "./ui";
@@ -36,6 +36,8 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
   const [fromEditor, setFromEditor] = useState(false);
   const [busy, setBusy] = useState("");
   const [progress, setProgress] = useState(0);
+  // אחרי ששלחו או הורידו: מסך "מוכן לאינסטגרם" עם הצעדים
+  const [ready, setReady] = useState<"shared" | "saved" | null>(null);
   const abort = useRef<AbortController | null>(null);
   const variant = draft.data.chosen_variant;
   const caption = draft.data.caption ?? "";
@@ -58,13 +60,23 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
       if (live) { setProject({ timeline: built.timeline, assets }); setFromEditor(false); }
     })().catch(() => live && setProject(null));
     return () => { live = false; };
-  }, [draft.project_id, variant, kit]);
+  }, [draft.project_id, draft.project_id ? null : variant, kit]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const inputProps = useMemo<CompositionProps | null>(() => (project ? { timeline: project.timeline, assets: project.assets, override: null } : null), [project]);
   const frames = project ? Math.max(1, Math.ceil(timelineDuration(project.timeline) * project.timeline.fps)) : 1;
 
+  // החלפת גרסה: בטיוטה, ואם כבר נפתח פרויקט בעורך, גם בו (רק הכתוביות של הסטודיו מתחלפות)
   const chooseStyle = async (variantId: string) => {
     if (variantId === variant) return;
+    if (draft.project_id && project) {
+      const { data: row } = await db().from("projects").select("doc").eq("id", draft.project_id).maybeSingle();
+      if (row?.doc) {
+        const doc = row.doc as SavedProject;
+        const overlays = [...doc.timeline.overlays.filter((o) => !o.studio), ...reelCaptions(kit.cards, styleForVariant(variantId))];
+        await db().from("projects").update({ doc: { ...doc, timeline: { ...doc.timeline, overlays } } }).eq("id", draft.project_id);
+        setProject({ ...project, timeline: { ...project.timeline, overlays } });
+      }
+    }
     const { data, error } = await db().from("studio_drafts").update({ data: { ...draft.data, chosen_variant: variantId } }).eq("id", draft.id).select("*").single();
     if (error) return toast(error.message, true);
     onChange(data as Draft);
@@ -84,8 +96,8 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
       const blob = await exportMp4();
       const file = new File([blob], "reel.mp4", { type: "video/mp4" });
       const res = await shareToInstagram([file], caption);
-      if (res === "unsupported") save(blob);
-      else if (res === "shared") toast("הכיתוב הועתק. באינסטגרם: מוסיפים מוזיקה ומדביקים את הכיתוב");
+      if (res === "unsupported") { save(blob); setReady("saved"); }
+      else if (res === "shared") setReady("shared");
     } catch (e) { if (!abort.current?.signal.aborted) toast((e as Error).message, true); }
     finally { setBusy(""); }
   };
@@ -98,7 +110,7 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
   };
   const download = async () => {
     setBusy("download"); setProgress(0);
-    try { save(await exportMp4()); } catch (e) { if (!abort.current?.signal.aborted) toast((e as Error).message, true); }
+    try { save(await exportMp4()); if (caption) await navigator.clipboard?.writeText(caption).catch(() => {}); setReady("saved"); } catch (e) { if (!abort.current?.signal.aborted) toast((e as Error).message, true); }
     finally { setBusy(""); }
   };
   const openEditor = async () => {
@@ -109,13 +121,13 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
 
   return (
     <Panel title="הריל" accent="שלך" aside={<span className="flex flex-wrap gap-1">{draft.data.content_type && <Tag tone="butter">{labelOf(CONTENT_TYPES, draft.data.content_type)}</Tag>}{fromEditor && <Tag tone="green">מסונכרן עם העורך</Tag>}</span>}>
-      {!fromEditor && (
+      {(
         <div className="mb-3 flex flex-wrap items-center gap-1.5">
           <span className="text-[12px] font-bold text-[#6F675C]">גרסה:</span>
           {REEL_STYLES.map((s) => (
             <button key={s.id} type="button" onClick={() => chooseStyle(s.variant)}
               className={cn("rounded-full border px-3 py-1 text-[12px] font-semibold", (variant ? styleForVariant(variant) === s.id : s.id === "pop") ? "border-[#1F1B16] bg-[#1F1B16] text-[#FBF8F2]" : "border-[#E2DACD] bg-white/70 hover:border-[#1F1B16]")}>
-              {s.label}
+              {s.variant} · {s.label}
             </button>
           ))}
         </div>
@@ -137,6 +149,22 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
           </div>
           <ShareHint />
           <p className="text-[12px] text-[#6F675C]">{fromEditor ? "מוצג הפרויקט מהעורך: כל שינוי שם מופיע כאן מיד, וגם בקובץ שנשלח." : "זה בדיוק מה שייפתח בעורך ומה שייצא בקובץ. בעורך אפשר להחליף קטע או לשנות טקסט."}</p>
+          {ready && (
+            <div className="rounded-xl border border-[#3E6B4F] bg-[#E2ECDF] p-3 text-sm">
+              <p className="mb-1.5 font-bold">מוכן לאינסטגרם</p>
+              <ol className="list-decimal space-y-1 pr-5 text-[13px]">
+                <li>{ready === "shared" ? "באינסטגרם: בוחרים ריל, הסרטון כבר שם." : "הסרטון ירד. מעבירים לטלפון (או שולחים מהסטודיו בטלפון), ובאינסטגרם: + ואז ריל, ובוחרים אותו."}</li>
+                <li>מוסיפים שיר טרנדי (סמל התו המוזיקלי), ומכוונים את העוצמה של השיר.</li>
+                <li>מדביקים את הכיתוב: הוא כבר הועתק.</li>
+                <li>מפרסמים, או שומרים כטיוטה באינסטגרם.</li>
+              </ol>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Btn variant="line" onClick={() => navigator.clipboard.writeText(caption).then(() => toast("הכיתוב הועתק"))}>להעתיק כיתוב שוב</Btn>
+                <a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center rounded-[5px] bg-[#1F1B16] px-3.5 py-2 text-[13px] font-bold text-[#FBF8F2]">לפתוח את אינסטגרם</a>
+                <Btn variant="ghost" onClick={() => setReady(null)}>לסגור</Btn>
+              </div>
+            </div>
+          )}
           {caption && <p className="whitespace-pre-line text-sm leading-relaxed">{caption}</p>}
         </div>
       </div>

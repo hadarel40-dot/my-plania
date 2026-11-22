@@ -26,10 +26,14 @@ function updatedLabel(iso: string) {
 const formatDuration = (sec: number) =>
   `${Math.floor(sec / 60)}:${Math.floor(sec % 60).toString().padStart(2, "0")}`;
 
-export function ProjectList({ email, projects, error, showPassword, hasPassword, admin }: {
+export function ProjectList({ email, projects: all, error, showPassword, hasPassword, admin, showEmpty = false }: {
   email: string; projects: Row[]; error: string | null; showPassword: boolean; hasPassword: boolean;
-  admin: { pending: number } | null;
+  admin: { pending: number } | null; showEmpty?: boolean;
 }) {
+  // פרויקטים ריקים (בלי קליפים) מוסתרים כברירת מחדל. לא נמחקים
+  const isEmpty = (p: Row) => !((p.meta as { clipCount?: number } | null)?.clipCount ?? 0);
+  const emptyCount = all.filter(isEmpty).length;
+  const projects = showEmpty ? all : all.filter((p) => !isEmpty(p));
   return (
     <div className="h-screen overflow-y-auto text-zinc-100">
       <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-zinc-800/70 bg-zinc-950/60 px-4 backdrop-blur-xl sm:px-6">
@@ -71,7 +75,12 @@ export function ProjectList({ email, projects, error, showPassword, hasPassword,
           {projects.map((p) => <ProjectCard key={p.id} project={p} />)}
         </div>
 
-        {projects.length === 0 && !error && (
+        {emptyCount > 0 && (
+          <p className="mt-4 text-center text-xs text-zinc-500">
+            <Link href={showEmpty ? "/" : "/?empty=1"} className="underline underline-offset-4">{showEmpty ? "להסתיר פרויקטים ריקים" : `${emptyCount} פרויקטים ריקים מוסתרים. להציג`}</Link>
+          </p>
+        )}
+        {all.length === 0 && !error && (
           <p className="mt-8 text-center text-sm text-zinc-500">עדיין אין פרויקטים. צרו את הראשון.</p>
         )}
       </main>
