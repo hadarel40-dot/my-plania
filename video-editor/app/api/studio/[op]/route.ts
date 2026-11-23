@@ -180,7 +180,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
             content_type: input.content_type, caption: written.caption, chosen_variant: talking ? "C" : calmVariant(input.content_type, cards),
             ...(input.goal ? { goal: input.goal } : {}),
             edit: { segments, cards, ...(talking ? { sound: true } : {}) },
-            reel_design: talking ? { transition: "cut" } : { transition: "cut", motion: "off" },
+            // בלי דיבור: מעבר רך בין הרגעים, כדי שהחיבור ייראה זורם ולא קטוע
+            reel_design: talking ? { transition: "cut" } : { transition: "fade", motion: "off" },
           },
         }).select("id").single();
         if (error || !dr) throw new StudioError(error?.message ?? "לא נשמר", 500);

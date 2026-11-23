@@ -241,8 +241,25 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
                 <button key={l.id} type="button" onClick={() => applyLook(l.theme)} aria-pressed={on} title={l.hint}
                   className={`w-[104px] shrink-0 overflow-hidden rounded-xl border text-right transition ${on ? "border-2 border-[#5E1D1D]" : "border-[#E3D9CC] hover:border-[#5E1D1D]"}`}>
                   <span className="flex h-[64px] flex-col justify-center px-2" style={{ background: t.bg, textAlign: t.align === "center" ? "center" : "right" }}>
-                    <span className="block truncate text-[16px] leading-tight" style={{ fontFamily: `"${t.headFont}"`, color: t.headColor, fontWeight: 700 }}>כותרת</span>
-                    <span className="block truncate text-[12px]" style={{ fontFamily: `"${t.bodyFont}"`, color: t.bodyColor, fontSize: t.bodyFont === "Amatic SC" ? 16 : 12 }}>שורה קטנה</span>
+                    {l.theme.card ? (
+                      // מסגרת: פתק, פולרואיד, נייר, בועה, מחברת או מסקינטייפ, בקטן
+                      <span className="relative mx-auto block w-[76%] px-1.5 py-1 shadow-[0_3px_6px_rgba(0,0,0,0.25)]" style={{
+                        background: l.theme.card === "note" ? "#FFE98F" : l.theme.card === "tape" ? l.theme.accent : "#FFFFFF",
+                        borderRadius: l.theme.card === "bubble" ? 10 : 2,
+                        transform: `rotate(${l.theme.card === "note" || l.theme.card === "polaroid" ? -3 : 0}deg)`,
+                        borderRight: l.theme.card === "notebook" ? `2px solid ${l.theme.accent}` : undefined,
+                        paddingTop: l.theme.card === "polaroid" ? 14 : undefined,
+                      }}>
+                        {l.theme.card === "note" && <span className="absolute left-1/2 top-[-3px] size-[7px] -translate-x-1/2 rounded-full" style={{ background: l.theme.accent }} />}
+                        {l.theme.card === "polaroid" && <span className="absolute inset-x-1.5 top-1 h-[10px] bg-[#B5A79E]" />}
+                        <span className="block truncate text-[12px] leading-tight" style={{ fontFamily: `"${t.headFont}"`, color: t.headColor, fontWeight: 700, textAlign: "center" }}>כותרת</span>
+                      </span>
+                    ) : (
+                      <>
+                        <span className="block truncate text-[16px] leading-tight" style={{ fontFamily: `"${t.headFont}"`, color: t.headColor, fontWeight: 700 }}>כותרת</span>
+                        <span className="block truncate text-[12px]" style={{ fontFamily: `"${t.bodyFont}"`, color: t.bodyColor, fontSize: t.bodyFont === "Amatic SC" ? 16 : 12 }}>שורה קטנה</span>
+                      </>
+                    )}
                   </span>
                   <span className="block bg-white px-2 py-1">
                     <span className="block truncate text-[12px] font-bold text-[#2A2622]">{l.name}</span>

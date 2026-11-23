@@ -15,14 +15,16 @@ export async function buildDriveReel(input: {
 }) {
   const step = input.onStep ?? (() => {});
   step("בוחרת סרטונים מהדרייב...");
-  const { files } = await studioCall<{ files: { id: string; name: string; mimeType: string; w: number; h: number; seconds: number }[] }>("drive-pick", { idea: input.idea, hook: input.hook, count: 4, exclude: input.exclude ?? [] });
-  // מכל סרטון נלקח רק הקטע שצריך (3 שניות מהאמצע), מומר לקובץ קל ונשמר בספרייה.
+  const { files } = await studioCall<{ files: { id: string; name: string; mimeType: string; w: number; h: number; seconds: number }[] }>("drive-pick", { idea: input.idea, hook: input.hook, count: 5, exclude: input.exclude ?? [] });
+  // קצב: אורכים שונים לכל רגע, פתיחה קצרה שתופסת, וסוף קצת יותר ארוך שנושם
+  const RHYTHM = [2.2, 2.6, 2.0, 2.4, 2.9];
+  // מכל סרטון נלקח הרגע הכי טוב (חד, מואר, עם תנועה בלי רעידות), מומר לקובץ קל ונשמר בספרייה.
   // סרטוני אייפון הם 4K ו-HDR: בלי ההמרה הם כבדים לנגינה ונראים דהויים
   const clips = [];
   let firstError = "";
   for (const [i, f] of files.entries()) {
     try {
-      clips.push(await driveClipToLibrary(f.id, { seconds: 3, onProgress: (p) => step(`מכינה סרטון ${i + 1} מתוך ${files.length} (${Math.round(p * 100)}%)`) }));
+      clips.push(await driveClipToLibrary(f.id, { seconds: RHYTHM[i % RHYTHM.length], onProgress: (p) => step(`בוחרת את הרגע הכי טוב ומכינה סרטון ${i + 1} מתוך ${files.length} (${Math.round(p * 100)}%)`) }));
     } catch (e) {
       firstError ||= (e as Error).message;
       logEvent("drive_reel_clip_failed", { stage: "convert", file: f.name, mimeType: f.mimeType, error: errorText(e) });

@@ -194,6 +194,10 @@ async function renderPhotoSlide(c: Carousel, index: number, images: Record<numbe
   canvas.height = H;
   const ctx = canvas.getContext("2d")!;
   const photo = images[index] ? await loadImage(images[index]) : null;
+  if (t.card) {
+    drawFramed(ctx, c, index, photo, t, { HEAD, BODY, hw, bw });
+    return canvas;
+  }
   if (photo) {
     drawCover(ctx, photo, 0, 0, W, H);
     const g = ctx.createLinearGradient(0, 0, 0, H);
@@ -244,6 +248,142 @@ async function renderPhotoSlide(c: Carousel, index: number, images: Record<numbe
   if (slide.kind !== "cover") ctx.fillText(`${index + 1}/${c.slides.length}`, P, 100);
   if (c.handle) ctx.fillText(c.handle, P, H - 60);
   return canvas;
+}
+
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/**
+ * שקופית עם מסגרת חמודה לטקסט, על התמונה (או על רקע, אם אין תמונה):
+ * פתק נעוץ, פולרואיד, נייר קרוע עם מסקינטייפ, בועת דיבור, דף מחברת, או שורות על פסי דבק.
+ */
+function drawFramed(ctx: CanvasRenderingContext2D, c: Carousel, index: number, photo: HTMLImageElement | null, t: typeof PHOTO_DEFAULT & { card?: string }, f: { HEAD: string; BODY: string; hw: number; bw: number }) {
+  const slide = c.slides[index];
+  const kind = t.card!;
+  const tilt = (index % 2 ? 1 : -1) * (kind === "note" ? 2.2 : kind === "polaroid" ? 2.6 : kind === "notebook" ? 1 : kind === "paper" ? 1.2 : 0);
+  // רקע: התמונה על כל המסגרת (בפולרואיד: רק בתוך המסגרת)
+  ctx.fillStyle = t.bg;
+  ctx.fillRect(0, 0, W, H);
+  if (photo && kind !== "polaroid") {
+    drawCover(ctx, photo, 0, 0, W, H);
+    if (t.overlay) { ctx.fillStyle = `rgba(20,16,12,${t.overlay})`; ctx.fillRect(0, 0, W, H); }
+  }
+  const big = slide.kind === "cover" || slide.kind === "cta";
+  const recap = slide.kind === "recap";
+  const CW = kind === "polaroid" ? 780 : kind === "tape" ? 860 : 820;
+  const PAD = kind === "bubble" ? 64 : kind === "tape" ? 0 : 72;
+  const tw = CW - PAD * 2 - (kind === "notebook" ? 60 : 0);
+  const hs = Math.round((big ? 92 : 72) * (kind === "tape" ? 1.12 : 1) * t.headScale), bs = Math.round((recap ? 46 : 42) * sizeFactor(t.bodyFont) * t.bodyScale);
+  ctx.direction = "rtl";
+  ctx.font = `${f.hw} ${hs}px ${f.HEAD}`;
+  const head = wrap(ctx, slide.headline, tw);
+  ctx.font = `${f.bw} ${bs}px ${f.BODY}`;
+  const rows = recap ? slide.body.split("\n").map((r) => r.replace(/^[-•·\d.\s]+/, "").trim()).filter(Boolean) : [];
+  const body = recap ? rows : slide.body ? wrap(ctx, slide.body, tw) : [];
+  const hl = hs * 1.14, bl = bs * (recap ? 1.5 : 1.3);
+  const textH = head.length * hl + (body.length ? 26 + body.length * bl : 0);
+  const photoH = kind === "polaroid" ? (photo ? 640 : 0) : 0;
+  const CH = kind === "polaroid" ? 44 + photoH + 40 + textH + 70 : Math.max(textH + PAD * 2, kind === "note" ? CW * 0.62 : 0);
+  const pos = big || kind === "polaroid" ? "center" : t.position;
+  const cx = W / 2;
+  const top = pos === "top" ? 150 : pos === "bottom" ? H - 150 - CH : (H - CH) / 2;
+  const cy = top + CH / 2;
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate((tilt * Math.PI) / 180);
+  const x0 = -CW / 2, y0 = -CH / 2;
+  ctx.shadowColor = "rgba(0,0,0,0.32)"; ctx.shadowBlur = 34; ctx.shadowOffsetY = 16;
+  if (kind === "note") {
+    ctx.fillStyle = "#FFE98F"; ctx.fillRect(x0, y0, CW, CH);
+    ctx.shadowColor = "transparent";
+    const g = ctx.createLinearGradient(0, y0 + CH * 0.7, 0, y0 + CH);
+    g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(120,90,0,0.10)");
+    ctx.fillStyle = g; ctx.fillRect(x0, y0, CW, CH);
+    // הנעץ
+    ctx.shadowColor = "rgba(0,0,0,0.35)"; ctx.shadowBlur = 8; ctx.shadowOffsetY = 5;
+    ctx.fillStyle = t.accent; ctx.beginPath(); ctx.arc(0, y0 + 26, 22, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowColor = "transparent"; ctx.fillStyle = "rgba(255,255,255,0.55)"; ctx.beginPath(); ctx.arc(-7, y0 + 19, 7, 0, Math.PI * 2); ctx.fill();
+  } else if (kind === "polaroid") {
+    ctx.fillStyle = "#FFFFFF"; ctx.fillRect(x0, y0, CW, CH);
+    ctx.shadowColor = "transparent";
+    if (photo) {
+      ctx.save(); ctx.beginPath(); ctx.rect(x0 + 40, y0 + 44, CW - 80, photoH); ctx.clip();
+      drawCover(ctx, photo, x0 + 40, y0 + 44, CW - 80, photoH); ctx.restore();
+    }
+  } else if (kind === "paper") {
+    ctx.fillStyle = "#FBF8F2";
+    ctx.beginPath(); ctx.moveTo(x0, y0 + 10);
+    for (let x = x0; x <= x0 + CW; x += 28) ctx.lineTo(x, y0 + (Math.round(x) % 56 === 0 ? 0 : 14));
+    ctx.lineTo(x0 + CW, y0 + CH - 10);
+    for (let x = x0 + CW; x >= x0; x -= 28) ctx.lineTo(x, y0 + CH - (Math.round(x) % 56 === 0 ? 0 : 14));
+    ctx.closePath(); ctx.fill();
+    ctx.shadowColor = "transparent";
+    // שני פסי מסקינטייפ בפינות
+    for (const [tx, rot] of [[x0 + 60, -0.5], [x0 + CW - 60, 0.5]] as const) {
+      ctx.save(); ctx.translate(tx, y0 + 6); ctx.rotate(rot);
+      ctx.fillStyle = "rgba(230,211,168,0.88)"; ctx.fillRect(-80, -22, 160, 44); ctx.restore();
+    }
+  } else if (kind === "bubble") {
+    ctx.fillStyle = "#FFFFFF"; roundRect(ctx, x0, y0, CW, CH, 56); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x0 + CW - 170, y0 + CH - 4); ctx.lineTo(x0 + CW - 90, y0 + CH + 70); ctx.lineTo(x0 + CW - 90, y0 + CH - 4); ctx.closePath(); ctx.fill();
+  } else if (kind === "notebook") {
+    ctx.fillStyle = "#FFFFFF"; ctx.fillRect(x0, y0, CW, CH);
+    ctx.shadowColor = "transparent";
+    ctx.strokeStyle = t.accent; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x0 + CW - 70, y0); ctx.lineTo(x0 + CW - 70, y0 + CH); ctx.stroke();
+  }
+  ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+
+  // הטקסט
+  const center = t.align === "center" || kind === "polaroid";
+  ctx.textAlign = center ? "center" : "right";
+  const tx = center ? 0 : x0 + CW - PAD - (kind === "notebook" ? 60 : 0);
+  let y = kind === "polaroid" ? y0 + 44 + photoH + 40 : y0 + (CH - textH) / 2;
+  // דף מחברת: קו כחול מתחת לכל שורת טקסט
+  const rule = (by: number) => {
+    if (kind !== "notebook") return;
+    ctx.save(); ctx.strokeStyle = "rgba(90,130,200,0.38)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x0 + 20, by + 12); ctx.lineTo(x0 + CW - 20, by + 12); ctx.stroke(); ctx.restore();
+  };
+  for (const l of head) {
+    y += hl;
+    if (kind === "tape") {
+      ctx.font = `${f.hw} ${hs}px ${f.HEAD}`;
+      const lw = Math.min(W - 120, ctx.measureText(l).width + 70);
+      ctx.save(); ctx.translate(center ? 0 : tx + 35 - lw / 2, y - hs * 0.35); ctx.rotate(((head.indexOf(l) % 2 ? 1 : -1) * 1.2 * Math.PI) / 180);
+      ctx.fillStyle = t.accent; ctx.globalAlpha = 0.95; ctx.fillRect(-lw / 2, -hs * 0.62, lw, hs * 1.12); ctx.globalAlpha = 1; ctx.restore();
+    }
+    ctx.fillStyle = t.headColor; ctx.font = `${f.hw} ${hs}px ${f.HEAD}`;
+    ctx.fillText(l, tx, y - hs * 0.2);
+    rule(y - hs * 0.2);
+  }
+  if (body.length) {
+    y += 26;
+    for (const l of body) {
+      y += bl;
+      ctx.font = `${f.bw} ${bs}px ${f.BODY}`;
+      if (kind === "tape") {
+        const lw = Math.min(W - 160, ctx.measureText(l).width + 50 + (recap ? 30 : 0));
+        ctx.fillStyle = "rgba(255,255,255,0.92)"; ctx.fillRect(center ? -lw / 2 : tx + 25 - lw, y - bs * 1.0, lw, bs * 1.25);
+      }
+      if (recap && !center) { ctx.save(); ctx.fillStyle = kind === "tape" ? t.headColor : t.accent; ctx.beginPath(); ctx.arc(tx - 6, y - bs * 0.38, 7, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+      ctx.fillStyle = t.bodyColor;
+      ctx.fillText(l, recap && !center ? tx - 30 : tx, y - bs * 0.22);
+      rule(y - bs * 0.22);
+    }
+  }
+  ctx.restore();
+
+  // מספור וכינוי
+  ctx.font = `800 30px ${SANS}`;
+  ctx.fillStyle = photo && kind !== "polaroid" ? "rgba(255,255,255,0.9)" : "rgba(42,38,34,0.7)";
+  ctx.textAlign = "left"; ctx.direction = "ltr";
+  if (slide.kind !== "cover") ctx.fillText(`${index + 1}/${c.slides.length}`, 100, 100);
+  if (c.handle) ctx.fillText(c.handle, 100, H - 60);
 }
 
 export async function renderAll(c: Carousel, images: Record<number, string> = {}) {

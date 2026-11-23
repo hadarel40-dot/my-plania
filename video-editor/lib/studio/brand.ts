@@ -47,7 +47,11 @@ export interface Theme {
   align?: "right" | "center";
   /** מיקום הטקסט בשקופית רגילה */
   position?: "bottom" | "center" | "top";
+  /** מסגרת חמודה לטקסט: פתק נעוץ, פולרואיד, נייר קרוע, בועת דיבור, מחברת, או מסקינטייפ */
+  card?: CardFrame;
 }
+
+export type CardFrame = "note" | "polaroid" | "paper" | "bubble" | "notebook" | "tape";
 
 /** ערכת המותג של חשבון: פלטת צבעים ופונטים קבועים */
 export interface BrandKit extends Theme {
@@ -90,5 +94,11 @@ export const LOOKS: { id: string; name: string; hint: string; theme: Theme }[] =
   { id: "oldmoney", name: "קלאסי", hint: "שמנת וזהב, שקט ויוקרתי", theme: { headFont: "Bellefair", bodyFont: "David Libre", headColor: "#F3E6C8", bodyColor: "#FBF8F2", bg: "#3B2F25", accent: "#C9A96E", overlay: 0.55, headScale: 1.1, bodyScale: 1, align: "center", position: "center" } },
   { id: "notes", name: "פתק בטלפון", hint: "כמו פתק שכתבת לעצמך", theme: { headFont: "Heebo", bodyFont: "Heebo", headColor: "#1F1B16", bodyColor: "#3A332B", bg: "#FFF8D9", accent: "#E8B23A", overlay: 0.05, headScale: 0.9, bodyScale: 0.9, align: "right", position: "top" } },
   { id: "noir", name: "ורוד כהה", hint: "כהה עם ורוד חזק", theme: { headFont: "Rubik", bodyFont: "Assistant", headColor: "#F7A8C0", bodyColor: "#FFFFFF", bg: "#1A1214", accent: "#F7A8C0", overlay: 0.65, headScale: 1.05, bodyScale: 0.95, align: "right", position: "bottom" } },
+  { id: "pinned", name: "פתק נעוץ", hint: "פתק צהוב עם נעץ על התמונה", theme: { card: "note", headFont: "Playpen Sans Hebrew", bodyFont: "Playpen Sans Hebrew", headColor: "#2A2622", bodyColor: "#4E4540", bg: "#E9DFD3", accent: "#D9534F", overlay: 0.12, headScale: 1, bodyScale: 1, align: "right", position: "center" } },
+  { id: "polaroid", name: "פולרואיד", hint: "תמונה במסגרת, כתב יד מתחת", theme: { card: "polaroid", headFont: "Playpen Sans Hebrew", bodyFont: "Assistant", headColor: "#2A2622", bodyColor: "#6A6158", bg: "#EFE6DC", accent: "#B5848E", overlay: 0, headScale: 1, bodyScale: 1, align: "center", position: "center" } },
+  { id: "paper", name: "נייר קרוע", hint: "פיסת נייר עם מסקינטייפ", theme: { card: "paper", headFont: "Frank Ruhl Libre", bodyFont: "Assistant", headColor: "#1F1B16", bodyColor: "#4E4540", bg: "#D9CFC4", accent: "#E6D3A8", overlay: 0.15, headScale: 1, bodyScale: 1, align: "right", position: "bottom" } },
+  { id: "bubble", name: "בועת דיבור", hint: "כאילו את אומרת את זה", theme: { card: "bubble", headFont: "Rubik", bodyFont: "Assistant", headColor: "#2A2622", bodyColor: "#4E4540", bg: "#F7C9D6", accent: "#FFFFFF", overlay: 0.1, headScale: 1, bodyScale: 1, align: "right", position: "top" } },
+  { id: "notebook", name: "דף מחברת", hint: "שורות כחולות וקו אדום", theme: { card: "notebook", headFont: "Playpen Sans Hebrew", bodyFont: "Playpen Sans Hebrew", headColor: "#1F2A44", bodyColor: "#2F3B57", bg: "#E6E0D6", accent: "#E06A6A", overlay: 0.12, headScale: 0.95, bodyScale: 0.95, align: "right", position: "center" } },
+  { id: "tape", name: "מסקינטייפ", hint: "כל שורה על פס דבק", theme: { card: "tape", headFont: "Secular One", bodyFont: "Assistant", headColor: "#2A2622", bodyColor: "#2A2622", bg: "#3B2F25", accent: "#EADBB8", overlay: 0.2, headScale: 1, bodyScale: 1, align: "right", position: "center" } },
   { id: "bold", name: "נועז", hint: "כותרת גדולה וצהובה", theme: { headFont: "Secular One", bodyFont: "Assistant", headColor: "#F6E7A6", bodyColor: "#FFFFFF", bg: "#5E1D1D", accent: "#F6E7A6", overlay: 0.5, headScale: 1.25, bodyScale: 0.95, align: "right", position: "center" } },
 ];

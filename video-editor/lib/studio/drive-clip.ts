@@ -1,5 +1,5 @@
 "use client";
-import { ALL_FORMATS, BufferTarget, Conversion, CustomSource, Input, Mp4OutputFormat, Output, QUALITY_HIGH } from "mediabunny";
+import { ALL_FORMATS, BufferTarget, CanvasSink, Conversion, CustomSource, EncodedPacketSink, Input, Mp4OutputFormat, Output, QUALITY_HIGH, type InputVideoTrack } from "mediabunny";
 import { db } from "./client";
 import { MEDIA_BUCKET } from "@/lib/supabase/env";
 
@@ -17,6 +17,54 @@ async function fetchRange(id: string, start: number, end: number) {
       await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
     }
   }
+}
+
+/** ציון לפריים קטן: חדות (שונות של לפלסיאן), חשיפה (לא כהה ולא שרוף), ואפור לשונות בין פריימים */
+function frameStats(c: HTMLCanvasElement | OffscreenCanvas) {
+  const ctx = c.getContext("2d") as CanvasRenderingContext2D;
+  const { width: w, height: h } = c;
+  const d = ctx.getImageData(0, 0, w, h).data;
+  const g = new Float32Array(w * h);
+  let sum = 0;
+  for (let i = 0; i < w * h; i++) { const v = (d[i * 4] * 0.299 + d[i * 4 + 1] * 0.587 + d[i * 4 + 2] * 0.114) / 255; g[i] = v; sum += v; }
+  const mean = sum / (w * h);
+  let lsum = 0, lsq = 0, n = 0;
+  for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+    const i = y * w + x;
+    const l = g[i - 1] + g[i + 1] + g[i - w] + g[i + w] - 4 * g[i];
+    lsum += l; lsq += l * l; n++;
+  }
+  const sharp = lsq / n - (lsum / n) ** 2;
+  return { g, mean, sharp };
+}
+
+/**
+ * הרגע הכי טוב בסרטון: בודקים פריימי מפתח לאורך כל הסרטון (מהדרייב יורדים רק הם),
+ * ונותנים ציון: חד, מואר טוב, עם קצת תנועה אבל בלי רעידות, ולא בשנייה הראשונה או האחרונה (שם הטלפון זז).
+ * מחזיר זמן התחלה שנופל על פריים מפתח, כך שגם ההמרה זולה יותר.
+ */
+async function bestMoment(track: InputVideoTrack, duration: number, seconds: number) {
+  const latest = duration - seconds - 0.3;
+  if (latest <= 0.6) return Math.max(0, (duration - seconds) / 2);
+  const packets = new EncodedPacketSink(track);
+  const want = Array.from({ length: 9 }, (_, i) => 0.6 + ((latest - 0.6) * i) / 8);
+  const keys = [...new Set((await Promise.all(want.map((t) => packets.getKeyPacket(t).catch(() => null)))).flatMap((p) => (p ? [+p.timestamp.toFixed(3)] : [])))].sort((a, b) => a - b);
+  if (keys.length < 2) return Math.max(0, (duration - seconds) / 2);
+  const sink = new CanvasSink(track, { width: 90, height: 160, fit: "cover", poolSize: 0 });
+  const stats: { t: number; mean: number; sharp: number; g: Float32Array }[] = [];
+  for await (const wc of sink.canvasesAtTimestamps(keys)) if (wc) stats.push({ t: wc.timestamp, ...frameStats(wc.canvas) });
+  if (!stats.length) return Math.max(0, (duration - seconds) / 2);
+  const maxSharp = Math.max(...stats.map((x) => x.sharp)) || 1;
+  const scored = stats.map((x, i) => {
+    const prev = stats[i - 1] ?? stats[i + 1];
+    let diff = 0;
+    if (prev && prev !== x) { for (let k = 0; k < x.g.length; k += 3) diff += Math.abs(x.g[k] - prev.g[k]); diff /= x.g.length / 3; }
+    const exposure = Math.max(0, 1 - Math.abs(x.mean - 0.5) * 2.2);
+    const motion = diff < 0.02 ? 0.5 : diff < 0.18 ? 1 : 0.3;
+    return { t: x.t, score: (x.sharp / maxSharp) * 0.5 + exposure * 0.3 + motion * 0.2 };
+  }).filter((x) => x.t <= latest + 0.01);
+  const best = scored.sort((a, b) => b.score - a.score)[0];
+  return best ? Math.max(0, best.t) : Math.max(0, (duration - seconds) / 2);
 }
 
 /**
@@ -46,7 +94,9 @@ export async function driveClip(id: string, opts: { from?: number; seconds?: num
     if (!track) throw new Error("אין וידאו בקובץ");
     const duration = await input.computeDuration();
     const seconds = Math.min(opts.seconds ?? 3, duration);
-    const from = Math.max(0, Math.min(opts.from ?? (duration - seconds) / 2, duration - seconds));
+    // בלי זמן מוגדר: מחפשים את הרגע הכי טוב בסרטון (ואם הבדיקה נכשלת, את האמצע)
+    const picked = opts.from ?? await bestMoment(track, duration, seconds).catch(() => (duration - seconds) / 2);
+    const from = Math.max(0, Math.min(picked, duration - seconds));
     // הצד הארוך 1920, הקצר 1080 (או פחות, אם המקור קטן יותר)
     const dw = track.displayWidth, dh = track.displayHeight;
     const scale = Math.min(1, 1920 / Math.max(dw, dh), 1080 / Math.min(dw, dh));
