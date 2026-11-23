@@ -27,7 +27,7 @@ const MORE: { title: string; links: { href: string; label: string; count?: keyof
   ] },
   { title: "לתכנן", links: [
     { href: "/studio/board", label: "לוח התוכן", count: "board" },
-    { href: "/studio/replan", label: "לתכנן את השבוע מחדש" },
+    { href: "/studio/replan", label: "ליצור את השבוע" },
     { href: "/studio/pick", label: "כל הגרסאות", count: "pick" },
     { href: "/studio/film", label: "רשימת צילום", count: "film" },
   ] },

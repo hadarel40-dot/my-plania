@@ -211,7 +211,7 @@ export function WeekBoard({ today }: { today: string }) {
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href="/studio/replan" className="inline-flex min-h-[40px] items-center rounded-xl border border-[#5E1D1D]/40 bg-white px-4 text-[13px] font-bold text-[#5E1D1D] hover:border-[#5E1D1D]">לתכנן מחדש</Link>
+          <Link href="/studio/replan" className="inline-flex min-h-[40px] items-center rounded-xl border border-[#5E1D1D]/40 bg-white px-4 text-[13px] font-bold text-[#5E1D1D] hover:border-[#5E1D1D]">ליצור את השבוע</Link>
           <Link href="/studio/own-video" className="inline-flex min-h-[40px] items-center rounded-xl bg-[#5E1D1D] px-4 text-[13px] font-bold text-[#FAF6F1] shadow-[0_6px_16px_-10px_rgba(94,29,29,0.9)]">+ ריל מהסרטונים שלי</Link>
         </div>
       </div>

@@ -8,7 +8,7 @@ import { buildDriveReel } from "@/lib/studio/drive-reel";
 import { Btn, Field, Loading, Note, PageHead, Select, Tag, toast } from "@/components/studio/ui";
 import { cn } from "@/lib/utils";
 
-interface Option { content_type: ContentType; format: "reel" | "carousel"; title: string; idea: string; hook: string; why: string; template: string }
+interface Option { content_type: ContentType; format: "reel" | "carousel"; title: string; idea: string; hook: string; why: string; template: string; trend?: string }
 interface Item { id: string; title: string; format: string; stage: string; planned_date: string; content_type?: string | null; hook: string; draft_id: string | null }
 
 const DAY = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
@@ -30,16 +30,50 @@ export default function ReplanPage() {
   const [busy, setBusy] = useState("");
   const [progress, setProgress] = useState("");
   const [built, setBuilt] = useState(false);
+  // ימים שכבר יש בהם פוסט שפורסם: לא משבצים בהם עוד אחד
+  const [publishedDays, setPublishedDays] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    db().from("studio_items").select("id, title, format, stage, planned_date, content_type, hook, draft_id").eq("account", account).in("planned_date", dates).neq("stage", "published")
+    db().from("studio_items").select("id, title, format, stage, planned_date, content_type, hook, draft_id").eq("account", account).in("planned_date", dates)
       .then(({ data }) => {
         const by: Record<string, Item[]> = {};
-        for (const i of (data ?? []) as Item[]) (by[i.planned_date] ??= []).push(i);
+        const pub = new Set<string>();
+        for (const i of (data ?? []) as Item[]) {
+          if (i.stage === "published") pub.add(i.planned_date); else (by[i.planned_date] ??= []).push(i);
+        }
         setCurrent(by);
-        setPick(Object.fromEntries(dates.map((d) => [d, by[d]?.length ? KEEP : 0])));
+        setPublishedDays(pub);
+        setPick(Object.fromEntries(dates.map((d) => [d, by[d]?.length || pub.has(d) ? KEEP : 0])));
       });
   }, [account, dates]);
+
+  /**
+   * הכול בלחיצה אחת: טרנדים עדכניים, שבוע מאוזן (ההמלצה של כל יום), וכל פוסט נבנה עד הסוף:
+   * קרוסלות בעיצוב ובתמונות מהדרייב, רילס ערוכים מהסרטונים בדרייב.
+   * יום שכבר יש בו פוסט מוכן או שפורסם נשאר כמו שהוא. רעיון בלי טיוטה מוחלף בפוסט מוכן (ונשאר ברעיונות).
+   */
+  const auto = async () => {
+    setBusy("auto");
+    setBuilt(false);
+    try {
+      const { data: last } = await db().from("studio_trends").select("date").eq("status", "done").order("date", { ascending: false }).limit(1).maybeSingle();
+      if (!last || last.date < addDays(todayIL(), -3)) {
+        setProgress("מחפשת טרנדים חדשים...");
+        await studioCall("trends").catch(() => null);
+      }
+      setProgress("מתכננת שבוע מאוזן עם הטרנדים...");
+      const { days } = await studioCall<{ days: { date: string; options: Option[] }[] }>("week-options", { account, dates });
+      const opts = Object.fromEntries(days.map((d) => [d.date, d.options.slice(0, 3)]));
+      setOptions(opts);
+      const picks = Object.fromEntries(dates.map((d) => {
+        const ready = publishedDays.has(d) || (current[d] ?? []).some((i) => i.draft_id);
+        return [d, ready || !opts[d]?.length ? KEEP : 0];
+      }));
+      setPick(picks);
+      await build(opts, picks);
+    } catch (e) { toast((e as Error).message, true); setProgress(""); }
+    finally { setBusy(""); }
+  };
 
   const generate = async (only?: string) => {
     setBusy(only ?? "all");
@@ -50,8 +84,9 @@ export default function ReplanPage() {
     finally { setBusy(""); }
   };
 
-  const build = async () => {
-    setBusy("build");
+  const build = async (options_ = options, pick_ = pick) => {
+    const options = options_, pick = pick_;
+    setBusy((b) => b || "build");
     try {
       const chosen = dates.filter((d) => pick[d] !== KEEP && options[d]?.[pick[d]]);
       const used: string[] = [];
@@ -64,12 +99,12 @@ export default function ReplanPage() {
         const niche = NICHES.find((x) => x.account === account && (o.content_type === "value" ? x.value === "meals" : true))?.value ?? null;
         const { data: item, error } = await db().from("studio_items").insert({
           title: o.title, account, niche, format: o.format, stage: "idea", planned_date: d, hook: o.hook, content_type: o.content_type, template: o.template || null,
-          notes: `${o.idea}\n\nלמה: ${o.why}`,
+          notes: `${o.idea}\n\nלמה: ${o.why}${o.trend ? `\n\nטרנד: ${o.trend}` : ""}`,
         }).select("id").single();
         if (error) throw new Error(error.message);
         if (o.format === "carousel") {
           // קרוסלה נכתבת מיד, בעיצוב החשבון ועם תמונות מהדרייב
-          const { data: dr, error: e2 } = await db().from("studio_drafts").insert({ idea: o.idea, account, niche, mode: "carousel", facts: "", data: { template: o.template, content_type: o.content_type } }).select("*").single();
+          const { data: dr, error: e2 } = await db().from("studio_drafts").insert({ idea: o.trend ? `${o.idea} (בהשראת הטרנד: ${o.trend})` : o.idea, account, niche, mode: "carousel", facts: "", data: { template: o.template, content_type: o.content_type } }).select("*").single();
           if (e2) throw new Error(e2.message);
           let draft = (await studioCall<{ draft: Draft }>("carousel", { draftId: dr.id })).draft;
           draft = await studioCall<{ draft: Draft }>("drive-match", { draftId: draft.id }).then((r) => r.draft).catch(() => draft);
@@ -78,7 +113,7 @@ export default function ReplanPage() {
           // ריל נבנה מיד מהסרטונים בדרייב. לא הצליח: נשאר רעיון עם הוק, ואפשר לבנות אותו אחר כך מהלוח
           try {
             const r = await buildDriveReel({
-              account, idea: o.idea, hook: o.hook, title: o.title, content_type: o.content_type, date: d, itemId: item.id, exclude: used,
+              account, idea: o.trend ? `${o.idea} (בהשראת הטרנד: ${o.trend})` : o.idea, hook: o.hook, title: o.title, content_type: o.content_type, date: d, itemId: item.id, exclude: used,
               onStep: (st) => setProgress(`${n + 1} מתוך ${chosen.length}: ${o.title} · ${st}`),
             });
             used.push(...r.used);
@@ -97,13 +132,29 @@ export default function ReplanPage() {
 
   return (
     <>
-      <PageHead label="תכנון" title="לתכנן את השבוע" accent="מחדש" sub="לכל יום שלוש אפשרויות שונות, ולידן מה שכבר בלוח. בוחרים יום אחרי יום, ובונים. שום דבר לא נמחק ושום דבר לא מתפרסם." />
+      <PageHead label="תכנון" title="ליצור את" accent="השבוע" sub="בלחיצה אחת: טרנדים עדכניים, שבוע מאוזן, וכל פוסט מוכן עד הסוף, כולל עריכת הרילס והקרוסלות. שום דבר לא נמחק ושום דבר לא מתפרסם." />
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <Field label="חשבון"><Select value={account} onChange={(v) => { setAccount(v); setOptions({}); setBuilt(false); }} options={ACCOUNTS} /></Field>
-        <Btn busy={busy === "all"} onClick={() => generate()}>{busy === "all" ? "חושבת על השבוע..." : hasOptions ? "אפשרויות חדשות לכל השבוע" : "להציע אפשרויות לשבוע"}</Btn>
       </div>
-      {!hasOptions && busy !== "all" && <Note>לוחצים "להציע אפשרויות לשבוע", ולכל יום יופיעו שלוש אפשרויות.</Note>}
+      <section className="mb-5 rounded-3xl border border-[#5E1D1D]/30 bg-[#FFFDFB] p-5 shadow-[0_24px_50px_-40px_rgba(94,29,29,0.6)]">
+        <h2 className="s-serif text-[22px] leading-tight text-[#5E1D1D]">כל השבוע, מוכן להעלאה</h2>
+        <ul className="mt-2 space-y-1 text-[13px] leading-relaxed text-[#4E4540]">
+          <li>מחפשת טרנדים חדשים ובונה עליהם לפחות שני פוסטים</li>
+          <li>שבוע מאוזן: כל ארבעת סוגי התוכן, רילס וקרוסלות</li>
+          <li>רילס ערוכים מהסרטונים בדרייב, קרוסלות מעוצבות עם התמונות שלך</li>
+          <li>יום שכבר יש בו פוסט מוכן או שפורסם נשאר כמו שהוא</li>
+        </ul>
+        <Btn busy={busy === "auto"} disabled={!!busy && busy !== "auto"} onClick={auto} className="mt-4 min-h-[50px] w-full text-[15px]">{busy === "auto" ? "יוצרת את השבוע..." : "ליצור את כל השבוע"}</Btn>
+        {busy === "auto" && progress && <p className="mt-2 text-center text-[13px] font-semibold text-[#5E1D1D]" role="status">{progress}</p>}
+        {busy === "auto" && <p className="mt-1 text-center text-[11px] text-[#9A8C85]">זה לוקח כמה דקות. כדאי להישאר בדף ובוויי-פיי.</p>}
+        {built && !busy && <Link href="/studio" className="mt-3 block text-center text-[14px] font-bold text-[#5E1D1D] underline underline-offset-4">לראות את השבוע</Link>}
+      </section>
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <p className="text-[13px] font-bold text-[#6A6158]">או לבחור בעצמך, יום אחרי יום:</p>
+        <Btn variant="line" busy={busy === "all"} disabled={!!busy && busy !== "all"} onClick={() => generate()}>{busy === "all" ? "חושבת על השבוע..." : hasOptions ? "אפשרויות חדשות" : "להציע אפשרויות לכל יום"}</Btn>
+      </div>
       {busy === "all" && <Loading>מכינה שלוש אפשרויות לכל יום...</Loading>}
+      {publishedDays.size > 0 && hasOptions && <p className="mb-2 text-[12px] text-[#6A6158]">ימים עם פוסט שפורסם נשארים כמו שהם.</p>}
 
       {hasOptions && (
         <div className="space-y-4">
@@ -132,13 +183,14 @@ export default function ReplanPage() {
                     <p className="s-serif text-lg leading-snug">{o.hook}</p>
                     <p className="mt-1 text-[13px]">{o.idea}</p>
                     <p className="mt-1 text-[11px] text-[#6A6158]">{o.why}</p>
+                    {o.trend && <p className="mt-1.5 inline-block rounded-full bg-[#F6E7A6]/70 px-2 py-0.5 text-[11px] font-bold text-[#5E1D1D]">טרנד: {o.trend}</p>}
                   </Card>
                 ))}
               </div>
             </section>
           ))}
           <div className="sticky bottom-3 flex flex-wrap items-center gap-3 rounded-2xl border border-[#5E1D1D] bg-[#FAF6F1] p-3 shadow-[0_8px_24px_-10px_rgba(31,27,22,0.4)]">
-            <Btn busy={busy === "build"} disabled={!changes} onClick={build}>{busy === "build" ? "בונה..." : `לבנות את השבוע (${changes} שינויים)`}</Btn>
+            <Btn busy={busy === "build"} disabled={!changes || !!busy} onClick={() => build()}>{busy === "build" ? "בונה..." : `לבנות את השבוע (${changes} שינויים)`}</Btn>
             {progress && <span className="text-[13px] text-[#4E4540]">{progress}</span>}
             {built && <Link href="/studio/board" className="text-[13px] font-bold underline">ללוח</Link>}
             <span className="text-[11px] text-[#6A6158]">קרוסלות ורילס נבנים מיד, מהתמונות והסרטונים בדרייב.</span>
