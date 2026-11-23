@@ -68,6 +68,7 @@ export function StudioNav({ counts }: { counts: NavCounts }) {
         className={cn("grid size-11 shrink-0 place-items-center rounded-full border transition", more ? "border-[#5E1D1D] bg-[#5E1D1D] text-[#FAF6F1]" : "border-[#E3D9CC] bg-white/70 text-[#5E1D1D]")}>
         {more ? <X className="size-5" /> : <MoreHorizontal className="size-5" />}
       </button>
+      {more && <button type="button" aria-label="לסגור" onClick={() => setMore(false)} className="fixed inset-0 z-40 cursor-default bg-[#2A2622]/25 backdrop-blur-[2px]" />}
       {more && (
         <div className="absolute inset-x-0 top-[calc(100%+8px)] z-50 grid grid-cols-2 gap-4 rounded-3xl border border-[#E3D9CC] bg-[#FFFDFB] p-5 shadow-[0_24px_50px_-24px_rgba(94,29,29,0.5)] md:right-auto md:left-0 md:w-[560px] md:grid-cols-4">
           {MORE.map((g) => (

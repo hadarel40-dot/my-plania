@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Check, Loader2, Trash2, Wand2 } from "lucide-react";
+import { CheckCircle2, Circle, Loader2, Trash2, Wand2 } from "lucide-react";
 import { db } from "@/lib/studio/client";
 import { buildDriveReel } from "@/lib/studio/drive-reel";
 import type { ContentType } from "@/lib/studio/config";
@@ -55,25 +55,33 @@ export function ItemActions({ item, onChange, compact = false }: { item: ActionI
     finally { setBusy(""); }
   };
 
-  const btn = "inline-flex min-h-[32px] items-center justify-center gap-1 rounded-lg border px-2 text-[11px] font-bold transition disabled:opacity-50";
   const step = busy.startsWith("reel:") ? busy.slice(5) : "";
+  const building = busy.startsWith("reel");
+  const btn = "inline-flex min-h-[34px] items-center justify-center gap-1 whitespace-nowrap rounded-full border text-[12px] font-bold transition";
   return (
-    <div className={cn("flex flex-wrap gap-1 bg-[#FAF6F1]", compact ? "px-1.5 pb-1.5" : "pt-2")}>
+    <div className={cn("space-y-1.5", compact ? "px-1.5 pb-1.5" : "pt-1")}>
       {item.format === "reel" && !item.draft_id && item.planned_date && (
-        <button type="button" disabled={!!busy} onClick={buildReel} title={step || "לבנות ריל מהסרטונים בדרייב"}
-          className={cn(btn, "w-full border-[#5E1D1D] bg-[#5E1D1D] text-[#FAF6F1]")}>
-          {busy.startsWith("reel") ? <Loader2 className="size-3.5 animate-spin" /> : <Wand2 className="size-3.5" />}
-          <span className="truncate">{step || "לבנות ריל"}</span>
-        </button>
+        building ? (
+          <div className="rounded-xl bg-[#F7E4E7] px-2 py-1.5" role="status">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#5E1D1D]"><Loader2 className="size-3.5 shrink-0 animate-spin" /><span className="line-clamp-2 leading-snug">{step || "בונה ריל..."}</span></div>
+            <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/70"><div className="h-full w-1/3 animate-[slide_1.2s_ease-in-out_infinite] rounded-full bg-[#5E1D1D]" /></div>
+          </div>
+        ) : (
+          <button type="button" disabled={!!busy} onClick={buildReel} className={cn(btn, "w-full border-[#5E1D1D] bg-[#5E1D1D] px-3 text-[#FAF6F1]")}>
+            <Wand2 className="size-3.5" />לבנות ריל
+          </button>
+        )
       )}
-      <button type="button" disabled={!!busy} onClick={togglePublished} aria-pressed={published} title={published ? "לבטל את הסימון" : "לסמן שפורסם באינסטגרם"}
-        className={cn(btn, "flex-1", published ? "border-[#3E6B4F] bg-[#3E6B4F] text-white" : "border-[#E3D9CC] bg-white text-[#3E6B4F] hover:border-[#3E6B4F]")}>
-        {busy === "pub" ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}{published ? "פורסם" : compact ? "פורסם?" : "סמני שפורסם"}
-      </button>
-      <button type="button" disabled={!!busy} onClick={remove} aria-label="למחוק מהלוח" title="למחוק מהלוח"
-        className={cn(btn, "border-[#E3D9CC] bg-white px-2 text-[#9A8C85] hover:border-[#B5484B] hover:text-[#B5484B]")}>
-        {busy === "del" ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
-      </button>
+      <div className="flex items-center gap-1.5">
+        <button type="button" disabled={!!busy} onClick={togglePublished} aria-pressed={published} title={published ? "לבטל את הסימון" : "לסמן שפורסם באינסטגרם"}
+          className={cn(btn, "min-w-0 flex-1 px-2 disabled:opacity-60", published ? "border-[#3E6B4F] bg-[#3E6B4F] text-white" : "border-[#D9CFC4] bg-transparent text-[#6A6158] hover:border-[#3E6B4F] hover:text-[#3E6B4F]")}>
+          {busy === "pub" ? <Loader2 className="size-4 animate-spin" /> : published ? <CheckCircle2 className="size-4 shrink-0" /> : <Circle className="size-4 shrink-0" />}<span className="truncate">פורסם</span>
+        </button>
+        <button type="button" disabled={!!busy} onClick={remove} aria-label="למחוק מהלוח" title="למחוק מהלוח"
+          className={cn(btn, "size-[34px] shrink-0 border-transparent text-[#B5A79E] hover:bg-[#F7E4E7] hover:text-[#B5484B] disabled:opacity-60")}>
+          {busy === "del" ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-4" />}
+        </button>
+      </div>
     </div>
   );
 }

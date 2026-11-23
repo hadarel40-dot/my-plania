@@ -145,3 +145,6 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
     content: ""; position: absolute; inset: -9px 0; min-height: 40px;
   }
 }
+
+/* פס התקדמות שזז (בניית ריל מהדרייב) */
+@keyframes slide { 0% { transform: translateX(120%); } 100% { transform: translateX(-320%); } }

@@ -246,7 +246,7 @@ export function WeekBoard({ today }: { today: string }) {
                       {type && <p className="mt-1 text-[11px] font-semibold text-[#B5848E]">{labelOf(CONTENT_TYPES, type)}</p>}
                     </div>
                   </Link>
-                  <div className="px-2 pb-2"><ItemActions item={x} onChange={() => loadRange(days[0], days[6]).then(setData)} /></div>
+                  <div className="px-2.5 pb-2.5"><ItemActions item={x} onChange={() => loadRange(days[0], days[6]).then(setData)} /></div>
                   </div>
                 );
               })}
