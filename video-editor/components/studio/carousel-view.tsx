@@ -3,7 +3,7 @@ import { ShareHint } from "./share-hint";
 import { HookLab, RewriteChips } from "./hook-lab";
 import { LOOKS, PHOTO_DEFAULT } from "@/lib/studio/brand";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Download, ImagePlus, Palette, Pencil, Plus, Send, Sparkles, Trash2, Undo2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Download, FolderOpen, ImagePlus, Palette, Pencil, Plus, Send, Sparkles, Trash2, Undo2, X } from "lucide-react";
 import type { Carousel, Draft, Slide } from "@/lib/studio/config";
 import { NEW_SLIDE } from "@/lib/studio/carousel-blank";
 import { downloadZip, renderAll, renderSlide } from "@/lib/studio/carousel-render";
@@ -336,6 +336,7 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
 /** העורך: כל שקופית עם תמונה ממוזערת חיה, סוג, טקסט, תמונה, וסידור */
 function SlideEditor({ edit, setEdit, images, account }: { edit: Carousel; setEdit: (c: Carousel) => void; images: string[] | null; account: string }) {
   const [uploading, setUploading] = useState<number | null>(null);
+  const [picking, setPicking] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const target = useRef(0);
   const slides = edit.slides;
@@ -397,8 +398,9 @@ function SlideEditor({ edit, setEdit, images, account }: { edit: Carousel; setEd
                 <div className="mt-1.5"><RewriteChips account={account} headline={s.headline} body={s.body} onDone={(headline, body) => setSlide(i, { headline, body })} /></div>
                 <div className="mt-1.5 flex flex-wrap items-center gap-2">
                   <Btn variant="ghost" className="px-1.5 text-[12px]" busy={uploading === i} onClick={() => { target.current = i; fileRef.current?.click(); }}>
-                    <ImagePlus className="size-4" />{s.image ? "להחליף תמונה" : "להוסיף תמונה"}
+                    <ImagePlus className="size-4" />{s.image ? "להעלות תמונה אחרת" : "להעלות תמונה"}
                   </Btn>
+                  <Btn variant="ghost" className="px-1.5 text-[12px]" onClick={() => setPicking(i)}><FolderOpen className="size-4" />מהדרייב</Btn>
                   {s.image && <Btn variant="ghost" className="px-1.5 text-[12px]" onClick={() => setSlide(i, { image: undefined })}><X className="size-4" />להוריד תמונה</Btn>}
                   <Btn variant="ghost" className="ms-auto px-1.5 text-[12px]" onClick={() => addAfter(i)}><Plus className="size-4" />שקופית אחרי</Btn>
                 </div>
@@ -407,6 +409,7 @@ function SlideEditor({ edit, setEdit, images, account }: { edit: Carousel; setEd
           </li>
         ))}
       </ol>
+      {picking !== null && <DrivePicker onClose={() => setPicking(null)} onPick={(id) => { setSlide(picking, { image: { kind: "drive", id } }); setPicking(null); }} />}
       <Label className="mb-1 mt-4">כיתוב</Label>
       <textarea rows={6} className={inputCls} value={edit.caption} placeholder="השורה הראשונה היא מה שרואים לפני ה'עוד'" onChange={(e) => setEdit({ ...edit, caption: e.target.value })} />
       <Label className="mb-1 mt-3">תיאור לקוראי מסך</Label>
@@ -426,4 +429,55 @@ function IconBtn({ children, label, onClick, disabled }: { children: React.React
 function lookOf(theme?: Theme) {
   const cur = JSON.stringify({ ...PHOTO_DEFAULT, ...(theme ?? {}) });
   return LOOKS.find((l) => JSON.stringify({ ...PHOTO_DEFAULT, ...l.theme }) === cur)?.id ?? null;
+}
+
+interface DriveItem { id: string; name: string; mimeType: string; description?: string }
+let driveCache: DriveItem[] | null = null;
+
+/** בחירת תמונה (או פריים מסרטון) מהדרייב לשקופית: רשת של כל מה שיש, עם חיפוש לפי שם או תיקייה */
+function DrivePicker({ onPick, onClose }: { onPick: (id: string) => void; onClose: () => void }) {
+  const [files, setFiles] = useState<DriveItem[] | null>(driveCache);
+  const [q, setQ] = useState("");
+  const [kind, setKind] = useState<"all" | "image" | "video">("all");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    if (driveCache) return;
+    studioCall<{ configured: boolean; files: DriveItem[] }>("drive-files", {})
+      .then((r) => { if (!r.configured) throw new Error("הדרייב עוד לא מחובר"); driveCache = r.files; setFiles(r.files); })
+      .catch((e) => setError((e as Error).message));
+  }, []);
+  const shown = (files ?? []).filter((f) => (kind === "all" || f.mimeType.startsWith(kind)) && (!q.trim() || `${f.name} ${f.description ?? ""}`.includes(q.trim())));
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#2A2622]/40 p-0 backdrop-blur-[2px] sm:items-center sm:p-6" onClick={onClose}>
+      <div className="flex max-h-[88vh] w-full max-w-3xl flex-col rounded-t-3xl bg-[#FFFDFB] p-4 shadow-2xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="תמונה מהדרייב">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="s-serif text-[20px] text-[#5E1D1D]">תמונה מהדרייב</p>
+          <button type="button" aria-label="סגירה" onClick={onClose} className="grid size-9 place-items-center rounded-full hover:bg-[#F2ECE4]"><X className="size-5" /></button>
+        </div>
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <input className={`${inputCls} min-w-[160px] flex-1`} placeholder="חיפוש לפי שם או תיקייה" value={q} onChange={(e) => setQ(e.target.value)} />
+          <div className="flex gap-1 rounded-xl border border-[#E3D9CC] bg-white p-1">
+            {([["all", "הכול"], ["image", "תמונות"], ["video", "מסרטונים"]] as const).map(([v, l]) => (
+              <button key={v} type="button" onClick={() => setKind(v)} className={`min-h-[32px] rounded-lg px-2.5 text-[12px] font-bold ${kind === v ? "bg-[#5E1D1D] text-[#FAF6F1]" : "text-[#5E1D1D]"}`}>{l}</button>
+            ))}
+          </div>
+        </div>
+        <div className="min-h-[200px] overflow-y-auto">
+          {error ? <Note tone="bad">{error}</Note> : !files ? <Loading>טוענת את הדרייב...</Loading> : !shown.length ? <Note>לא נמצא כלום.</Note> : (
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+              {shown.slice(0, 120).map((f) => (
+                <button key={f.id} type="button" onClick={() => onPick(f.id)} title={f.name}
+                  className="group relative aspect-[4/5] overflow-hidden rounded-xl border border-[#E3D9CC] bg-[#F2ECE4] hover:border-[#5E1D1D]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/api/studio/drive-thumb?id=${f.id}&size=400`} alt={f.name} loading="lazy" className="size-full object-cover transition group-hover:scale-[1.04]" />
+                  {f.mimeType.startsWith("video/") && <span className="absolute bottom-1 right-1 rounded-full bg-black/60 px-1.5 text-[10px] font-bold text-white">מסרטון</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <p className="mt-2 text-[11px] text-[#9A8C85]">מסרטון: נלקח הפריים שהדרייב שומר לסרטון.</p>
+      </div>
+    </div>
+  );
 }
