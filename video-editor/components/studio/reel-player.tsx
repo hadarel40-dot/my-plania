@@ -289,7 +289,7 @@ function ReelPlayerInner({ draft, onChange }: { draft: Draft; onChange: (d: Draf
                 <Sparkles className="size-3.5" />הפתיעי אותי
               </button>
             </div>
-            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
+            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] md:flex-wrap md:overflow-visible">
               {DESIGN_PRESETS.map((pr) => (
                 <button key={pr.id} type="button" onClick={() => applyPreset(pr.variant, pr.design)}
                   className="w-[104px] shrink-0 overflow-hidden rounded-2xl border-2 border-[#E3D9CC] text-right transition hover:border-[#B5848E]">
@@ -736,7 +736,7 @@ function Row({ label, children, scroll }: { label: string; children: React.React
   return (
     <div>
       <p className="mb-1.5 text-[12px] font-bold text-[#6A6158]">{label}</p>
-      <div className={cn("flex gap-1.5", scroll ? "-mx-3 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&>*]:shrink-0" : "flex-wrap")}>{children}</div>
+      <div className={cn("flex gap-1.5", scroll ? "-mx-3 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&>*]:shrink-0 md:mx-0 md:flex-wrap md:overflow-visible md:px-0" : "flex-wrap")}>{children}</div>
     </div>
   );
 }

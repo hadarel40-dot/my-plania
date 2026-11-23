@@ -3,7 +3,7 @@ import { ShareHint } from "./share-hint";
 import { HookLab, RewriteChips } from "./hook-lab";
 import { LOOKS, PHOTO_DEFAULT } from "@/lib/studio/brand";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, ImagePlus, Plus, Trash2, Undo2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Download, ImagePlus, Palette, Pencil, Plus, Send, Sparkles, Trash2, Undo2, X } from "lucide-react";
 import type { Carousel, Draft, Slide } from "@/lib/studio/config";
 import { NEW_SLIDE } from "@/lib/studio/carousel-blank";
 import { downloadZip, renderAll, renderSlide } from "@/lib/studio/carousel-render";
@@ -204,42 +204,45 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
   return (
     <>
       <Panel label={`${shown!.slides.length} שקופיות · 1080x1350`} title="הקרוסלה" accent="שלך"
-        aside={
-          <div className="flex flex-wrap gap-2">
-            {edit ? (
-              <>
-                <Btn variant="line" disabled={!undoCount} onClick={undoLast}><Undo2 className="size-4" />ביטול שינוי</Btn>
-                <Btn variant="ghost" onClick={() => setEdit(null)}>יציאה בלי לשמור</Btn>
-                <Btn busy={busy === "save"} onClick={save}>שמירה</Btn>
-              </>
-            ) : (
-              <>
-                {history.length > 0 && <Btn variant="line" busy={busy === "revert"} onClick={revert}><Undo2 className="size-4" />לחזור לגרסה הקודמת</Btn>}
-                <Btn variant="ghost" busy={busy === "regen"} onClick={regen}>לכתוב מחדש עם AI</Btn>
-                <Btn variant="line" onClick={() => setEdit(structuredClone(c))}>לערוך</Btn>
-                <Btn busy={busy === "send"} onClick={sendToInstagram}>לשלוח לאינסטגרם</Btn>
-                <Btn variant="line" busy={busy === "zip"} onClick={async () => { setBusy("zip"); try { await downloadZip(shown ?? c, draft.idea, photos); } finally { setBusy(""); } }}>להוריד</Btn>
-              </>
-            )}
-          </div>
-        }>
+        aside={edit ? <Tag>מצב עריכה</Tag> : undefined}>
         {!images ? <Loading>מכינה את השקופיות...</Loading> : (
-          <div className="flex gap-3 overflow-x-auto pb-2">
+          // בטלפון מחליקים הצידה, במחשב כל השקופיות ברשת (גלגלת העכבר לא גוללת הצידה)
+          <div className="flex gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-[repeat(auto-fill,minmax(170px,1fr))] md:overflow-visible">
             {images.map((src, i) => (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={src} alt={i === 0 ? shown!.alt : `שקופית ${i + 1}`} className="h-[300px] w-[240px] shrink-0 rounded-xl border border-[#E3D9CC] object-cover shadow-[0_1px_2px_rgba(31,27,22,0.08)]" />
+              <img key={i} src={src} alt={i === 0 ? shown!.alt : `שקופית ${i + 1}`} className="h-[300px] w-[240px] shrink-0 rounded-xl border border-[#E3D9CC] object-cover shadow-[0_1px_2px_rgba(31,27,22,0.08)] md:aspect-[4/5] md:h-auto md:w-full" />
             ))}
           </div>
         )}
+        {/* כל הפעולות בשורה אחת מסודרת: שליחה והורדה קודם, עריכה אחריהן */}
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-y border-[#E3D9CC] py-3">
+          {edit ? (
+            <>
+              <Btn busy={busy === "save"} onClick={save}>שמירה</Btn>
+              <Btn variant="line" disabled={!undoCount} onClick={undoLast}><Undo2 className="size-4" />ביטול שינוי</Btn>
+              <Btn variant="line" onClick={() => setEdit(null)}>יציאה בלי לשמור</Btn>
+            </>
+          ) : (
+            <>
+              <Btn busy={busy === "send"} onClick={sendToInstagram}><Send className="size-4" />לשלוח לאינסטגרם</Btn>
+              <Btn variant="line" busy={busy === "zip"} onClick={async () => { setBusy("zip"); try { await downloadZip(shown ?? c, draft.idea, photos); } finally { setBusy(""); } }}><Download className="size-4" />להוריד</Btn>
+              <span className="mx-1 hidden h-6 w-px bg-[#E3D9CC] sm:block" />
+              <Btn variant="line" onClick={() => setEdit(structuredClone(c))}><Pencil className="size-4" />לערוך טקסט</Btn>
+              <Btn variant="line" busy={busy === "regen"} onClick={regen}><Sparkles className="size-4" />לכתוב מחדש</Btn>
+              {history.length > 0 && <Btn variant="line" busy={busy === "revert"} onClick={revert}><Undo2 className="size-4" />לגרסה הקודמת</Btn>}
+            </>
+          )}
+        </div>
         <div className="mt-3">
           <Label>מראה</Label>
-          <div className="mt-1.5 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+          {/* בטלפון מחליקים הצידה, במחשב הכול מוצג ברשת */}
+          <div className="mt-1.5 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] md:grid md:grid-cols-[repeat(auto-fill,minmax(104px,1fr))] md:overflow-visible">
             {LOOKS.map((l) => {
               const t = { ...PHOTO_DEFAULT, ...l.theme };
               const on = style === "photo" && lookOf(shown?.theme) === l.id;
               return (
                 <button key={l.id} type="button" onClick={() => applyLook(l.theme)} aria-pressed={on} title={l.hint}
-                  className={`w-[104px] shrink-0 overflow-hidden rounded-xl border text-right transition ${on ? "border-2 border-[#5E1D1D]" : "border-[#E3D9CC] hover:border-[#5E1D1D]"}`}>
+                  className={`w-[104px] shrink-0 overflow-hidden rounded-xl border text-right transition md:w-auto ${on ? "border-2 border-[#5E1D1D]" : "border-[#E3D9CC] hover:border-[#5E1D1D]"}`}>
                   <span className="flex h-[64px] flex-col justify-center px-2" style={{ background: t.bg, textAlign: t.align === "center" ? "center" : "right" }}>
                     {l.theme.card ? (
                       // מסגרת: פתק, פולרואיד, נייר, בועה, מחברת או מסקינטייפ, בקטן
@@ -269,16 +272,16 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
               );
             })}
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <span className="text-[12px] font-bold text-[#6A6158]">בלי תמונות:</span>
-            {([["cream", "שמנת"], ["ink", "כהה"], ["butter", "צהוב"]] as const).map(([v, l]) => (
-              <button key={v} type="button" onClick={() => setStyle(v)}
-                className={`rounded-lg border px-2.5 py-1 text-[12px] font-semibold ${style === v ? "border-[#5E1D1D] bg-[#5E1D1D] text-[#FAF6F1]" : "border-[#E3D9CC] bg-white/70"}`}>{l}</button>
-            ))}
-            <button type="button" onClick={pullPhotos} disabled={busy === "photos"} className="ms-auto inline-flex min-h-[32px] items-center gap-1 rounded-full border border-[#5E1D1D]/40 bg-white px-3 text-[12px] font-bold text-[#5E1D1D] disabled:opacity-60">
-              {busy === "photos" ? "מחפשת בדרייב..." : draft.data.materials?.matches.length ? "לבחור מחדש מהדרייב" : "תמונות מהדרייב"}
-            </button>
-            <button type="button" onClick={() => setDesignOpen(!designOpen)} className="text-[12px] font-bold underline underline-offset-4">{designOpen ? "לסגור עיצוב" : "פונטים וצבעים"}</button>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Btn variant="line" busy={busy === "photos"} onClick={pullPhotos}><ImagePlus className="size-4" />{busy === "photos" ? "מחפשת בדרייב..." : draft.data.materials?.matches.length ? "תמונות אחרות מהדרייב" : "תמונות מהדרייב"}</Btn>
+            <Btn variant={designOpen ? "solid" : "line"} onClick={() => setDesignOpen(!designOpen)}><Palette className="size-4" />{designOpen ? "לסגור" : "פונטים וצבעים"}</Btn>
+            <div className="flex items-center gap-1 rounded-xl border border-[#E3D9CC] bg-white/70 p-1" role="radiogroup" aria-label="סגנון בלי תמונות">
+              <span className="px-1.5 text-[12px] font-bold text-[#6A6158]">בלי תמונות</span>
+              {([["cream", "שמנת"], ["ink", "כהה"], ["butter", "צהוב"]] as const).map(([v, l]) => (
+                <button key={v} type="button" role="radio" aria-checked={style === v} onClick={() => setStyle(v)}
+                  className={`min-h-[32px] rounded-lg px-2.5 text-[12px] font-bold transition ${style === v ? "bg-[#5E1D1D] text-[#FAF6F1]" : "text-[#5E1D1D] hover:bg-[#F2ECE4]"}`}>{l}</button>
+              ))}
+            </div>
           </div>
         </div>
         {designOpen && (
