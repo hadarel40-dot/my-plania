@@ -311,6 +311,16 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
 
       {edit && <SlideEditor edit={edit} setEdit={setEdit} images={images} account={draft.account} />}
 
+      {/* בעריכה: השמירה תמיד גלויה בתחתית המסך, גם כשגוללים לשקופיות למטה */}
+      {edit && (
+        <div className="sticky bottom-3 z-30 flex flex-wrap items-center gap-2 rounded-2xl border border-[#5E1D1D] bg-[#FFFDFB] p-3 shadow-[0_10px_30px_-12px_rgba(31,27,22,0.5)]">
+          <Btn busy={busy === "save"} onClick={save} className="min-w-[120px]">שמירה</Btn>
+          <Btn variant="line" disabled={!undoCount} onClick={undoLast}><Undo2 className="size-4" />ביטול שינוי</Btn>
+          <Btn variant="ghost" onClick={() => setEdit(null)}>יציאה בלי לשמור</Btn>
+          <span className="text-[12px] text-[#6A6158]">השינויים נראים בשקופיות למעלה, ונשמרים בלחיצה על שמירה.</span>
+        </div>
+      )}
+
       {suggestions.length > 0 && <VoiceSuggestions account={draft.account} suggestions={suggestions} onDone={() => setSuggestions([])} />}
 
       {!edit && (
