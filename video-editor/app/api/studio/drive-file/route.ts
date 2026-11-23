@@ -39,6 +39,7 @@ export async function GET(request: Request) {
     headers: { authorization: `Bearer ${await driveAccessToken()}`, range: `bytes=${start}-${start + CHUNK - 1}` },
     cache: "no-store",
   });
+  if (!res.ok && res.status !== 206) console.warn("drive-file", id, start, res.status);
   if (!res.ok && res.status !== 206) return NextResponse.json({ error: `drive ${res.status}` }, { status: res.status === 416 ? 416 : 502 });
   const body = await res.arrayBuffer();
   return new NextResponse(body, {

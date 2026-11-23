@@ -204,7 +204,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
         const thumbs = await Promise.all(files.map((f, i) => (i < 40 && f.mimeType.startsWith("video/") ? driveThumb(f) : Promise.resolve(null))));
         const chosen = await pickDriveClips({ ...input, files, thumbs });
         if (!chosen.length) throw new StudioError("לא מצאתי סרטונים בדרייב", 404);
-        return NextResponse.json({ files: chosen.map((f) => ({ id: f.id, name: f.name, mimeType: f.mimeType, size: Number(f.size ?? 0) })) });
+        return NextResponse.json({ files: chosen.map((f) => ({
+          id: f.id, name: f.name, mimeType: f.mimeType, size: Number(f.size ?? 0),
+          w: Number(f.videoMediaMetadata?.width ?? 0), h: Number(f.videoMediaMetadata?.height ?? 0), seconds: Number(f.videoMediaMetadata?.durationMillis ?? 0) / 1000,
+        })) });
       }
       case "drive-files": {
         const { folder } = z.object({ folder: z.string().max(300).optional() }).parse(body);
