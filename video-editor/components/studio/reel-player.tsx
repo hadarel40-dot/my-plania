@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { HookLab, RewriteChips } from "./hook-lab";
 import { Player, type PlayerRef } from "@remotion/player";
 import { MediaTagsContext, TimelineComposition, type CompositionProps, type MediaTags } from "@/remotion/timeline-composition";
 import { Html5Audio, Html5Video } from "remotion";
@@ -324,6 +325,16 @@ export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Dr
             )}
           </div>
 
+          <HookLab draftId={draft.id} current={draft.data.edit!.cards[0]?.headline ?? draft.data.edit!.cards[0]?.text ?? ""} onPick={async (h) => {
+            // הכרטיס הראשון מתחלף, והגרסה הקודמת נשמרת להחזרה ("לבטל" אצל המעצב)
+            const kit = draft.data.edit!;
+            const edit = { ...kit, cards: kit.cards.map((c, i) => (i === 0 ? { ...c, text: h.headline, headline: h.headline, body: h.body || c.body || "" } : c)) };
+            const { data, error } = await db().from("studio_drafts").update({ data: { ...draft.data, edit, edit_history: [kit, ...(draft.data.edit_history ?? [])].slice(0, 6) } }).eq("id", draft.id).select("*").single();
+            if (error) throw new Error(error.message);
+            await db().from("studio_items").update({ hook: h.headline }).eq("draft_id", draft.id);
+            onChange(data as Draft);
+          }} />
+
           <TextsEditor draft={draft} onChange={onChange} design={design} setD={setD} globalStyle={style} />
 
           <VoiceOver draft={draft} onChange={onChange} reelSeconds={timelineDuration(timeline)} voUrl={voUrl}
@@ -635,6 +646,7 @@ function TextsEditor({ draft, onChange, design, setD, globalStyle }: { draft: Dr
                 <p className="text-[12px] font-black text-[#5E1D1D]">כרטיס {n}</p>
                 <input className={inputCls} value={c.head} placeholder="כותרת ראשית" onChange={(e) => setCards((x) => x.map((y, j) => (j === i ? { ...y, head: e.target.value } : y)))} />
                 <input className={cn(inputCls, "text-[14px]")} value={c.body} placeholder="כותרת משנית (לא חובה)" onChange={(e) => setCards((x) => x.map((y, j) => (j === i ? { ...y, body: e.target.value } : y)))} />
+                <RewriteChips account={draft.account} headline={c.head} body={c.body} onDone={(head, body) => setCards((x) => x.map((y, j) => (j === i ? { head, body } : y)))} />
                 <Row label="סגנון לכרטיס הזה" scroll>
                   <Chip on={!pc.style} onClick={() => setCard(n, { style: undefined })}>כמו בגרסה</Chip>
                   {REEL_STYLES.map((st) => <Chip key={st.id} on={pc.style === st.id} onClick={() => setCard(n, { style: st.id })}>{st.variant} · {st.label.split(":")[0]}</Chip>)}

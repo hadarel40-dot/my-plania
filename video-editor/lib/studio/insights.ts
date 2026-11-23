@@ -460,7 +460,14 @@ const WeekOptionsSchema = z.object({
 });
 
 /** לכל יום שלוש אפשרויות שונות זו מזו (סוג תוכן, פורמט, זווית), כדי שהיא תבחר */
-export async function weekOptions(input: { account: string; dates: string[]; voice: string; trends: TrendItem[]; existing: string[]; feedback: Feedback[]; templates: { id: string; name: string; kind: string }[] }) {
+const GOAL_MIX: Record<string, string> = {
+  grow: "המטרה השבוע: לגדול, להגיע לאנשים חדשים. יותר ויראלי וערך שמשתפים ושולחים לחברה, פתיחות רחבות שמדברות גם למי שלא מכירה אותה.",
+  authority: "המטרה השבוע: לבנות סמכות. יותר ערך עמוק, מדריכים ורשימות ששומרים, ודעה ברורה שמראה שהיא יודעת על מה היא מדברת.",
+  sell: "המטרה השבוע: למכור. יותר אמון והוכחה (מה זה עשה בפועל, מאחורי הקלעים, התנגדויות ותשובות), ולפחות שני פוסטים שנגמרים בהזמנה לכתוב מילה בתגובה ולקבל משהו בהודעה.",
+  launch: "המטרה השבוע: להשקה. בונים ציפייה: הבעיה, הסיפור מאחורי מה שיוצא, הצצה, ולפחות שני פוסטים שמזמינים להגיב כדי לשמוע ראשונות.",
+};
+
+export async function weekOptions(input: { account: string; dates: string[]; goal?: string; voice: string; trends: TrendItem[]; existing: string[]; feedback: Feedback[]; templates: { id: string; name: string; kind: string }[] }) {
   const performance = await performanceSummary(12, input.account).catch(() => "אין נתוני ביצועים.");
   const { days } = cleanDeep(await askBrain({
     prefer: "claude", schema: WeekOptionsSchema,
@@ -470,6 +477,7 @@ ${preferencesBlock(input.feedback)}
 
 החשבון: @${input.account}.
 הימים: ${input.dates.join(", ")}
+${input.goal ? GOAL_MIX[input.goal] ?? "" : ""}
 טרנדים מאומתים: ${JSON.stringify(input.trends.slice(0, 10).map((t) => ({ title: t.title, idea: t.reel_idea })))}
 ביצועים של החשבון: ${performance}
 כבר קיים (לא לחזור): ${JSON.stringify(input.existing.slice(0, 50))}
@@ -478,7 +486,7 @@ ${preferencesBlock(input.feedback)}
 לכל יום תני בדיוק 3 אפשרויות שונות באמת זו מזו: סוג תוכן אחר (story סיפור אישי, viral ויראלי, value ערך, trust אמון והוכחה), זווית אחרת, ולפחות ריל אחד וקרוסלה אחת ביום.
 בכל השבוע יחד, שכל ארבעת סוגי התוכן יופיעו.
 לכל אפשרות: title (עד 8 מילים), idea (מה רואים ומה הצופה מקבלת, משפט או שניים), hook (המשפט הראשון על המסך, עד 8 מילים), why (למה זה יעבוד, רק לפי מה שלמעלה), template (id מהרשימה שמתאים לפורמט), trend (השם המדויק של הטרנד מהרשימה אם האפשרות בנויה עליו, אחרת ריק).
-האפשרות הראשונה בכל יום היא ההמלצה שלך ליום הזה. ההמלצות של כל השבוע יחד צריכות להיות שבוע שלם ומאוזן: כל ארבעת סוגי התוכן, רילס וקרוסלות לסירוגין, ולפחות שתיים שבנויות על טרנדים מהרשימה (אם יש טרנדים מתאימים).` }],
+האפשרות הראשונה בכל יום היא ההמלצה שלך ליום הזה. ההמלצות של כל השבוע יחד צריכות להיות שבוע שלם ומאוזן לפי המטרה: כל ארבעת סוגי התוכן (במשקל שמתאים למטרה), רילס וקרוסלות לסירוגין, ולפחות שתיים שבנויות על טרנדים מהרשימה (אם יש טרנדים מתאימים).` }],
   }));
   return days;
 }

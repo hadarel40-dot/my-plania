@@ -148,6 +148,8 @@ export interface DraftData {
   /** כיתוב לריל מוכן (לקרוסלה הכיתוב בתוך carousel) */
   caption?: string;
   content_type?: ContentType;
+  /** המטרה של השבוע שבו הפוסט נוצר (לגדול, סמכות, למכור, להשקה): משנה את הסוף ואת הקריאה לפעולה */
+  goal?: WeekGoal;
   /** תבנית מוכנה (lib/studio/templates.ts) */
   template?: string;
   carousel?: Carousel;
@@ -170,3 +172,12 @@ export interface TrendItem { niche: Niche; account: Account; kind: string; title
 
 /** האזור הבטוח של אינסטגרם על מסגרת 1080x1920 */
 export const SAFE = { width: 1080, height: 1920, top: 230, bottom: 1440, right: 230, cardX: 80, cardW: 770 };
+
+/** המטרה של שבוע: לפיה התכנון מתאזן והקריאה לפעולה משתנה */
+export const WEEK_GOALS = [
+  { value: "grow", label: "לגדול", hint: "יותר אנשים חדשים: ויראלי וערך שמשתפים" },
+  { value: "authority", label: "לבנות סמכות", hint: "שיבינו שאת יודעת: ערך עמוק ושמירות" },
+  { value: "sell", label: "למכור", hint: "אמון והוכחה, וסוף שמזמין לכתוב לך" },
+  { value: "launch", label: "להשקה", hint: "בונים ציפייה למשהו חדש שיוצא" },
+] as const;
+export type WeekGoal = (typeof WEEK_GOALS)[number]["value"];

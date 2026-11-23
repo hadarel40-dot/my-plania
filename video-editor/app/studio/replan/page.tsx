@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Check, RefreshCw } from "lucide-react";
-import { ACCOUNTS, CONTENT_TYPES, NICHES, labelOf, type Account, type ContentType, type Draft } from "@/lib/studio/config";
+import { ACCOUNTS, CONTENT_TYPES, NICHES, WEEK_GOALS, labelOf, type Account, type ContentType, type Draft, type WeekGoal } from "@/lib/studio/config";
 import { db, formatDate, studioCall, todayIL } from "@/lib/studio/client";
 import { buildDriveReel } from "@/lib/studio/drive-reel";
 import { Btn, Field, Loading, Note, PageHead, Select, Tag, toast } from "@/components/studio/ui";
@@ -30,6 +30,7 @@ export default function ReplanPage() {
   const [busy, setBusy] = useState("");
   const [progress, setProgress] = useState("");
   const [built, setBuilt] = useState(false);
+  const [goal, setGoal] = useState<WeekGoal>("grow");
   // ימים שכבר יש בהם פוסט שפורסם: לא משבצים בהם עוד אחד
   const [publishedDays, setPublishedDays] = useState<Set<string>>(new Set());
 
@@ -62,7 +63,7 @@ export default function ReplanPage() {
         await studioCall("trends").catch(() => null);
       }
       setProgress("מתכננת שבוע מאוזן עם הטרנדים...");
-      const { days } = await studioCall<{ days: { date: string; options: Option[] }[] }>("week-options", { account, dates });
+      const { days } = await studioCall<{ days: { date: string; options: Option[] }[] }>("week-options", { account, dates, goal });
       const opts = Object.fromEntries(days.map((d) => [d.date, d.options.slice(0, 3)]));
       setOptions(opts);
       const picks = Object.fromEntries(dates.map((d) => {
@@ -78,7 +79,7 @@ export default function ReplanPage() {
   const generate = async (only?: string) => {
     setBusy(only ?? "all");
     try {
-      const { days } = await studioCall<{ days: { date: string; options: Option[] }[] }>("week-options", { account, dates: only ? [only] : dates });
+      const { days } = await studioCall<{ days: { date: string; options: Option[] }[] }>("week-options", { account, dates: only ? [only] : dates, goal });
       setOptions((o) => ({ ...o, ...Object.fromEntries(days.map((d) => [d.date, d.options.slice(0, 3)])) }));
     } catch (e) { toast((e as Error).message, true); }
     finally { setBusy(""); }
@@ -104,7 +105,7 @@ export default function ReplanPage() {
         if (error) throw new Error(error.message);
         if (o.format === "carousel") {
           // קרוסלה נכתבת מיד, בעיצוב החשבון ועם תמונות מהדרייב
-          const { data: dr, error: e2 } = await db().from("studio_drafts").insert({ idea: o.trend ? `${o.idea} (בהשראת הטרנד: ${o.trend})` : o.idea, account, niche, mode: "carousel", facts: "", data: { template: o.template, content_type: o.content_type } }).select("*").single();
+          const { data: dr, error: e2 } = await db().from("studio_drafts").insert({ idea: o.trend ? `${o.idea} (בהשראת הטרנד: ${o.trend})` : o.idea, account, niche, mode: "carousel", facts: "", data: { template: o.template, content_type: o.content_type, goal } }).select("*").single();
           if (e2) throw new Error(e2.message);
           let draft = (await studioCall<{ draft: Draft }>("carousel", { draftId: dr.id })).draft;
           draft = await studioCall<{ draft: Draft }>("drive-match", { draftId: draft.id }).then((r) => r.draft).catch(() => draft);
@@ -113,7 +114,7 @@ export default function ReplanPage() {
           // ריל נבנה מיד מהסרטונים בדרייב. לא הצליח: נשאר רעיון עם הוק, ואפשר לבנות אותו אחר כך מהלוח
           try {
             const r = await buildDriveReel({
-              account, idea: o.trend ? `${o.idea} (בהשראת הטרנד: ${o.trend})` : o.idea, hook: o.hook, title: o.title, content_type: o.content_type, date: d, itemId: item.id, exclude: used,
+              account, idea: o.trend ? `${o.idea} (בהשראת הטרנד: ${o.trend})` : o.idea, hook: o.hook, title: o.title, content_type: o.content_type, date: d, itemId: item.id, exclude: used, goal,
               onStep: (st) => setProgress(`${n + 1} מתוך ${chosen.length}: ${o.title} · ${st}`),
             });
             used.push(...r.used);
@@ -138,9 +139,19 @@ export default function ReplanPage() {
       </div>
       <section className="mb-5 rounded-3xl border border-[#5E1D1D]/30 bg-[#FFFDFB] p-5 shadow-[0_24px_50px_-40px_rgba(94,29,29,0.6)]">
         <h2 className="s-serif text-[22px] leading-tight text-[#5E1D1D]">כל השבוע, מוכן להעלאה</h2>
-        <ul className="mt-2 space-y-1 text-[13px] leading-relaxed text-[#4E4540]">
+        <p className="mt-3 text-[13px] font-bold text-[#2A2622]">מה המטרה השבוע?</p>
+        <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-4" role="radiogroup" aria-label="המטרה של השבוע">
+          {WEEK_GOALS.map((g) => (
+            <button key={g.value} type="button" role="radio" aria-checked={goal === g.value} onClick={() => setGoal(g.value)}
+              className={cn("rounded-2xl border p-2.5 text-right transition", goal === g.value ? "border-[#5E1D1D] bg-[#5E1D1D] text-[#FAF6F1]" : "border-[#E3D9CC] bg-white hover:border-[#5E1D1D]")}>
+              <span className="block text-[14px] font-bold">{g.label}</span>
+              <span className={cn("mt-0.5 block text-[11px] leading-snug", goal === g.value ? "text-[#FAF6F1]/80" : "text-[#6A6158]")}>{g.hint}</span>
+            </button>
+          ))}
+        </div>
+        <ul className="mt-4 space-y-1 text-[13px] leading-relaxed text-[#4E4540]">
           <li>מחפשת טרנדים חדשים ובונה עליהם לפחות שני פוסטים</li>
-          <li>שבוע מאוזן: כל ארבעת סוגי התוכן, רילס וקרוסלות</li>
+          <li>שבוע מאוזן לפי המטרה, עם סוף שמתאים לה (לשמור, לשתף, או לכתוב מילה בתגובה)</li>
           <li>רילס ערוכים מהסרטונים בדרייב, קרוסלות מעוצבות עם התמונות שלך</li>
           <li>יום שכבר יש בו פוסט מוכן או שפורסם נשאר כמו שהוא</li>
         </ul>

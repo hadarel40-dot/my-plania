@@ -1,5 +1,7 @@
 "use client";
 import { ShareHint } from "./share-hint";
+import { HookLab, RewriteChips } from "./hook-lab";
+import { LOOKS, PHOTO_DEFAULT } from "@/lib/studio/brand";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, ImagePlus, Plus, Trash2, Undo2, X } from "lucide-react";
 import type { Carousel, Draft, Slide } from "@/lib/studio/config";
@@ -158,6 +160,13 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
     } catch (e) { toast((e as Error).message, true); }
     finally { setBusy(""); }
   };
+  // מראה מוכן: עובר לסגנון "תמונה" עם הפונטים והצבעים של המראה
+  const applyLook = async (theme: Theme) => {
+    if (edit) return setEdit({ ...edit, style: "photo", theme });
+    if (!c) return;
+    setThemeLocal(theme);
+    try { await persist({ ...c, style: "photo", theme }); } catch (e) { toast((e as Error).message, true); }
+  };
   const setStyle = async (style: NonNullable<Carousel["style"]>) => {
     if (edit) return setEdit({ ...edit, style });
     if (!c) return;
@@ -205,13 +214,35 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
             ))}
           </div>
         )}
-        <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          <Label>עיצוב:</Label>
-          {([["photo", "תמונה"], ["cream", "שמנת"], ["ink", "כהה"], ["butter", "צהוב"]] as const).map(([v, l]) => (
-            <button key={v} type="button" onClick={() => setStyle(v)}
-              className={`rounded-lg border px-2.5 py-1 text-[12px] font-semibold ${style === v ? "border-[#5E1D1D] bg-[#5E1D1D] text-[#FAF6F1]" : "border-[#E3D9CC] bg-white/70"}`}>{l}</button>
-          ))}
-          <button type="button" onClick={() => setDesignOpen(!designOpen)} className="ms-2 text-[12px] font-bold underline underline-offset-4">{designOpen ? "לסגור עיצוב" : "פונטים וצבעים"}</button>
+        <div className="mt-3">
+          <Label>מראה</Label>
+          <div className="mt-1.5 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+            {LOOKS.map((l) => {
+              const t = { ...PHOTO_DEFAULT, ...l.theme };
+              const on = style === "photo" && lookOf(shown?.theme) === l.id;
+              return (
+                <button key={l.id} type="button" onClick={() => applyLook(l.theme)} aria-pressed={on} title={l.hint}
+                  className={`w-[104px] shrink-0 overflow-hidden rounded-xl border text-right transition ${on ? "border-2 border-[#5E1D1D]" : "border-[#E3D9CC] hover:border-[#5E1D1D]"}`}>
+                  <span className="flex h-[64px] flex-col justify-center px-2" style={{ background: t.bg, textAlign: t.align === "center" ? "center" : "right" }}>
+                    <span className="block truncate text-[16px] leading-tight" style={{ fontFamily: `"${t.headFont}"`, color: t.headColor, fontWeight: 700 }}>כותרת</span>
+                    <span className="block truncate text-[12px]" style={{ fontFamily: `"${t.bodyFont}"`, color: t.bodyColor, fontSize: t.bodyFont === "Amatic SC" ? 16 : 12 }}>שורה קטנה</span>
+                  </span>
+                  <span className="block bg-white px-2 py-1">
+                    <span className="block truncate text-[12px] font-bold text-[#2A2622]">{l.name}</span>
+                    <span className="block truncate text-[10px] text-[#9A8C85]">{l.hint}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <span className="text-[12px] font-bold text-[#6A6158]">בלי תמונות:</span>
+            {([["cream", "שמנת"], ["ink", "כהה"], ["butter", "צהוב"]] as const).map(([v, l]) => (
+              <button key={v} type="button" onClick={() => setStyle(v)}
+                className={`rounded-lg border px-2.5 py-1 text-[12px] font-semibold ${style === v ? "border-[#5E1D1D] bg-[#5E1D1D] text-[#FAF6F1]" : "border-[#E3D9CC] bg-white/70"}`}>{l}</button>
+            ))}
+            <button type="button" onClick={() => setDesignOpen(!designOpen)} className="ms-auto text-[12px] font-bold underline underline-offset-4">{designOpen ? "לסגור עיצוב" : "פונטים וצבעים"}</button>
+          </div>
         </div>
         {designOpen && (
           <div className="mt-3">
@@ -227,7 +258,18 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
         <ShareHint />
       </Panel>
 
-      {edit && <SlideEditor edit={edit} setEdit={setEdit} images={images} />}
+      {!edit && (
+        <HookLab draftId={draft.id} current={c.slides[0]?.headline ?? ""} onPick={async (h) => {
+          // נשמר עם היסטוריה, כדי ש"לחזור לגרסה הקודמת" יחזיר את הפתיחה הקודמת
+          const next = { ...c, slides: c.slides.map((s, i) => (i === 0 ? { ...s, headline: h.headline, body: h.body || s.body } : s)) };
+          const { data, error } = await db().from("studio_drafts").update({ data: { ...draft.data, carousel: next, carousel_history: [c, ...history].slice(0, 5) } }).eq("id", draft.id).select("*").single();
+          if (error) throw new Error(error.message);
+          await db().from("studio_items").update({ hook: h.headline }).eq("draft_id", draft.id);
+          onChange(data as Draft);
+        }} />
+      )}
+
+      {edit && <SlideEditor edit={edit} setEdit={setEdit} images={images} account={draft.account} />}
 
       {suggestions.length > 0 && <VoiceSuggestions account={draft.account} suggestions={suggestions} onDone={() => setSuggestions([])} />}
 
@@ -242,7 +284,7 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
 }
 
 /** העורך: כל שקופית עם תמונה ממוזערת חיה, סוג, טקסט, תמונה, וסידור */
-function SlideEditor({ edit, setEdit, images }: { edit: Carousel; setEdit: (c: Carousel) => void; images: string[] | null }) {
+function SlideEditor({ edit, setEdit, images, account }: { edit: Carousel; setEdit: (c: Carousel) => void; images: string[] | null; account: string }) {
   const [uploading, setUploading] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const target = useRef(0);
@@ -302,6 +344,7 @@ function SlideEditor({ edit, setEdit, images }: { edit: Carousel; setEdit: (c: C
                 </div>
                 <input className={inputCls} value={s.headline} placeholder="כותרת" onChange={(e) => setSlide(i, { headline: e.target.value })} />
                 <textarea rows={s.kind === "recap" ? 5 : 2} className={`${inputCls} mt-1.5`} value={s.body} placeholder={s.kind === "recap" ? "שורה לכל נקודה" : "טקסט (לא חובה)"} onChange={(e) => setSlide(i, { body: e.target.value })} />
+                <div className="mt-1.5"><RewriteChips account={account} headline={s.headline} body={s.body} onDone={(headline, body) => setSlide(i, { headline, body })} /></div>
                 <div className="mt-1.5 flex flex-wrap items-center gap-2">
                   <Btn variant="ghost" className="px-1.5 text-[12px]" busy={uploading === i} onClick={() => { target.current = i; fileRef.current?.click(); }}>
                     <ImagePlus className="size-4" />{s.image ? "להחליף תמונה" : "להוסיף תמונה"}
@@ -327,4 +370,10 @@ function IconBtn({ children, label, onClick, disabled }: { children: React.React
     <button type="button" title={label} aria-label={label} disabled={disabled} onClick={onClick}
       className="rounded-md border border-[#E3D9CC] bg-white/70 p-1 text-[#2A2622] disabled:opacity-30">{children}</button>
   );
+}
+
+/** איזה מראה מוכן פעיל עכשיו (אם העיצוב זהה לאחד מהם) */
+function lookOf(theme?: Theme) {
+  const cur = JSON.stringify({ ...PHOTO_DEFAULT, ...(theme ?? {}) });
+  return LOOKS.find((l) => JSON.stringify({ ...PHOTO_DEFAULT, ...l.theme }) === cur)?.id ?? null;
 }

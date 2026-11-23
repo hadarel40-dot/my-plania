@@ -254,6 +254,15 @@ export function keepImages(prev: Carousel | undefined, next: Carousel): Carousel
   };
 }
 
+/** הסוף של פוסט לפי המטרה של השבוע */
+export function goalCta(goal?: string) {
+  if (goal === "sell") return "cta: הזמנה לכתוב מילה אחת קצרה בתגובה (מילת קוד, למשל \"תכנון\") כדי לקבל ממנה משהו שימושי בהודעה פרטית. מילה אחת, כתובה במפורש.";
+  if (goal === "launch") return "cta: מזמינה להגיב במילה אחת קצרה כדי להיות הראשונות לשמוע כשזה יוצא. מילה אחת, כתובה במפורש.";
+  if (goal === "authority") return "cta: לשמור את הפוסט לפעם הבאה שזה יקרה.";
+  if (goal === "grow") return "cta: לשלוח למישהי שצריכה את זה, או לעקוב בשביל עוד כאלה.";
+  return "cta: פעולה אחת בלבד (לשמור, להגיב במילה, או לעקוב).";
+}
+
 export async function writeCarousel(draft: Draft, voice: string, kit?: BrandKit | null): Promise<DraftData> {
   const handle = ACCOUNTS.find((a) => a.value === draft.account)?.label ?? "";
   const prompt = (retry: string) => `${context(draft, voice)}
@@ -263,7 +272,7 @@ export async function writeCarousel(draft: Draft, voice: string, kit?: BrandKit 
 2. stake: למה זה חשוב לצופה, במשפט אחד. גם היא צריכה לעבוד כשער שני, אז לא הקדמה.
 3 והלאה. point: רעיון אחד בכל שקופית. headline של 3 עד 7 מילים, body עד 25 מילים.
 לפני האחרונה. recap: הכל כרשימה קצרה, השקופית שמצלמים ושולחים. body עם שורה לכל נקודה.
-אחרונה. cta: פעולה אחת בלבד (לשמור, להגיב במילה, או לעקוב).
+אחרונה. ${goalCta(draft.data.goal)}
 caption: הכיתוב לפוסט. שורה ראשונה שמושכת להמשיך לקרוא, גוף קצר בקול שלה, קריאה אחת לפעולה, ושלושה האשטגים רלוונטיים בסוף.
 alt: תיאור קצר של השער, לקוראי מסך.
 רעיון אחד לקרוסלה. מספרים רק מהעובדות, ואחרים נכתבים {{המספר שלך}}. בלי אימוג'י ובלי מקפים ארוכים.${retry}`;
@@ -449,7 +458,7 @@ const UploadReelSchema = z.object({
  * ריל מהסרטונים שהיא העלתה. סרטון דיבור: הכתוביות הן מה שנאמר (לא משנים מילה), ורק הכותרת והכיתוב נכתבים.
  * סרטונים בלי דיבור: נכתבים כרטיסי טקסט קצרים לפי הרעיון, אחד לכל קטע או שניים.
  */
-export async function writeUploadReel(input: { voice: string; idea: string; transcript: string | null; cardCount: number; hook?: string }) {
+export async function writeUploadReel(input: { voice: string; idea: string; transcript: string | null; cardCount: number; hook?: string; goal?: string }) {
   return cleanDeep(await askBrain({
     prefer: "claude", schema: UploadReelSchema,
     system: "את מנהלת הסושיאל שלה. עברית מדוברת וחמה, בלי אימוג'י, בלי מקפים ארוכים, בלי מספרים מומצאים. את שם האפליקציה כותבים Plania.",
@@ -458,7 +467,7 @@ export async function writeUploadReel(input: { voice: string; idea: string; tran
 הרעיון של הריל (מה שהיא כתבה): ${input.idea || "לא כתבה, תסיקי מהדיבור"}
 ${input.transcript ? `מה שהיא אומרת בסרטון: "${input.transcript}"\n\ncards: רשימה ריקה (הכתוביות הן הדיבור עצמו).` : `אין דיבור בסרטונים. cards: בדיוק ${input.cardCount} כרטיסים לפי הסדר: headline עד 6 מילים שעוצר גלילה (הראשון הוא ההוק${input.hook ? `, והוא בדיוק: "${input.hook}"` : ""}), body עד 7 מילים או ריק.`}
 title: שם קצר לריל (עד 7 מילים).
-caption: כיתוב לפוסט: שורה ראשונה שמושכת, 2-4 שורות קצרות, שאלה אחת בסוף, ושלושה האשטגים רלוונטיים בשורה אחרונה.` }],
+caption: כיתוב לפוסט: שורה ראשונה שמושכת, 2-4 שורות קצרות, ${input.goal ? `בסוף קריאה אחת לפעולה (${goalCta(input.goal).replace(/^cta: /, "")})` : "שאלה אחת בסוף"}, ושלושה האשטגים רלוונטיים בשורה אחרונה.` }],
   }));
 }
 
@@ -496,4 +505,42 @@ reason במשפט קצר: מה רואים ולמה זה מתאים.` }];
   // רשת ביטחון: משלימים מהסרטונים האחרונים שלא נבחרו
   for (const { f } of videos) { if (chosen.length >= input.count) break; if (!chosen.includes(f)) chosen.push(f); }
   return chosen.slice(0, input.count);
+}
+
+// ---------- מעבדת הוקים ושכתוב מהיר
+
+const HookLabSchema = z.object({ hooks: z.array(z.object({ headline: z.string(), body: z.string() })) });
+
+/** חמש פתיחות חלופיות לשקופית הראשונה (קרוסלה) או לכרטיס הראשון (ריל), שונות זו מזו בזווית */
+export async function hookLab(input: { voice: string; idea: string; current: string; rest: string; format: "carousel" | "reel" }) {
+  const raw = cleanDeep(await askBrain({
+    prefer: "claude", schema: HookLabSchema,
+    system: "את מנהלת סושיאל שכותבת פתיחות שעוצרות גלילה. עברית מדוברת, בקול שלה, בלי אימוג'י, בלי מקפים ארוכים, בלי מספרים מומצאים. את שם האפליקציה כותבים Plania.",
+    parts: [{ text: `${input.voice}
+
+${input.format === "carousel" ? "השער של קרוסלה" : "הכרטיס הראשון של ריל"}.
+הרעיון: ${input.idea}
+הפתיחה הנוכחית: ${input.current}
+מה בא אחריה: ${input.rest.slice(0, 1200)}
+
+כתבי 5 פתיחות חלופיות, כל אחת בזווית אחרת: סקרנות, טעות נפוצה, תוצאה, הזדהות אישית, ומשפט נועז. כולן חייבות להתאים למה שבא אחריהן.
+headline עד 6 מילים. body ${input.format === "carousel" ? "שורה אחת קצרה של הבטחה" : "ריק"}. לא לחזור על הפתיחה הנוכחית.` }],
+  }));
+  return raw.hooks.slice(0, 5);
+}
+
+export const REWRITES = { short: "קצר יותר, חצי מהאורך בערך", sharp: "חד ונועז יותר, מילים חזקות", personal: "יותר אישי, מהחוויה שלה", simple: "פשוט וברור יותר, מילים יומיומיות" } as const;
+const RewriteSchema = z.object({ headline: z.string(), body: z.string() });
+
+/** שכתוב מהיר של שקופית או כרטיס, בלי לשנות את המשמעות */
+export async function rewriteText(input: { voice: string; headline: string; body: string; how: keyof typeof REWRITES }) {
+  return cleanDeep(await askBrain({
+    prefer: "claude", schema: RewriteSchema,
+    system: "את עורכת טקסט לסושיאל. עברית מדוברת, בקול שלה, בלי אימוג'י, בלי מקפים ארוכים, בלי מספרים מומצאים. את שם האפליקציה כותבים Plania.",
+    parts: [{ text: `${input.voice}
+
+כתבי מחדש את הטקסט הזה: ${REWRITES[input.how]}. אותה משמעות, אותו רעיון.
+headline: ${input.headline}
+body: ${input.body || "(ריק, להשאיר ריק)"}` }],
+  }));
 }

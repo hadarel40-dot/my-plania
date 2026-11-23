@@ -7,7 +7,7 @@ import { computeMeta } from "@/lib/editor/project-meta";
 import type { Draft, TrendItem } from "@/lib/studio/config";
 import { driveAccessToken, driveConfigured, driveProblem, driveEmail, driveThumb, listDriveMedia } from "@/lib/studio/drive";
 import { adminStore, autoDraft, autoSuggest } from "@/lib/studio/auto";
-import { carouselIdeas, editCarouselByChat, understandReelRequest, matchMaterials, writeCarousel, pickDriveClips, writeHooks, writeScript, writeUploadReel } from "@/lib/studio/engine";
+import { carouselIdeas, editCarouselByChat, understandReelRequest, matchMaterials, writeCarousel, hookLab, pickDriveClips, REWRITES, rewriteText, writeHooks, writeScript, writeUploadReel } from "@/lib/studio/engine";
 import { projectFromDraft } from "@/lib/studio/handoff";
 import { applyReelChanges, type Segment } from "@/lib/studio/reel-edit";
 import { advise, buildVoice, inspire, planToday, planWeek, preferencesBlock, type Feedback, researchTrends, suggestFromEdit, weekOptions, weeklyStats, writeReview } from "@/lib/studio/insights";
@@ -61,6 +61,25 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
     };
 
     switch (op) {
+      case "hook-lab": {
+        // חמש פתיחות חלופיות לשער של קרוסלה או לכרטיס הראשון של ריל
+        const { draftId } = z.object({ draftId: uuid }).parse(body);
+        const draft = await loadDraft(draftId);
+        const car = draft.data.carousel;
+        const cards = draft.data.edit?.cards ?? [];
+        if (!car && !cards.length) throw new StudioError("אין עדיין פתיחה להחליף", 400);
+        const hooks = await hookLab({
+          voice: await voiceWithPrefs(draft.account), idea: draft.idea, format: car ? "carousel" : "reel",
+          current: car ? `${car.slides[0]?.headline ?? ""} ${car.slides[0]?.body ?? ""}` : cards[0].text,
+          rest: car ? car.slides.slice(1).map((x) => x.headline).join(" | ") : cards.slice(1).map((x) => x.text).join(" | "),
+        });
+        return NextResponse.json({ hooks });
+      }
+      case "rewrite": {
+        // שכתוב מהיר של שקופית או כרטיס: קצר יותר, חד יותר, אישי יותר, פשוט יותר
+        const input = z.object({ account, headline: z.string().max(400), body: z.string().max(1200).default(""), how: z.enum(Object.keys(REWRITES) as [keyof typeof REWRITES, ...(keyof typeof REWRITES)[]]) }).parse(body);
+        return NextResponse.json(await rewriteText({ voice: await voiceWithPrefs(input.account), headline: input.headline, body: input.body, how: input.how }));
+      }
       case "hooks": {
         const { draftId } = z.object({ draftId: uuid }).parse(body);
         const draft = await loadDraft(draftId);
@@ -132,6 +151,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
           transcript: z.array(z.object({ start: z.number(), end: z.number(), text: z.string().max(400) })).max(300).default([]),
           // מתכנון מחדש: ההוק והכותרת שנבחרו, ופריט קיים בלוח שהריל מתחבר אליו
           hook: z.string().max(200).optional(), title: z.string().max(120).optional(), itemId: uuid.optional(), notes: z.string().max(400).optional(),
+          goal: z.enum(["grow", "authority", "sell", "launch"]).optional(),
         }).parse(body);
         const talking = input.transcript.length > 0;
         // בלי דיבור: מכל סרטון לוקחים את האמצע, עד 3 שניות, כדי שהריל יזוז. עם דיבור: הסרטונים כמו שהם
@@ -144,7 +164,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
         const cardCount = Math.max(1, Math.min(6, Math.round(total / 2.6)));
         const written = await writeUploadReel({
           voice: await voiceWithPrefs(input.account), idea: input.idea,
-          transcript: talking ? input.transcript.map((t) => t.text).join(" ") : null, cardCount, hook: input.hook,
+          transcript: talking ? input.transcript.map((t) => t.text).join(" ") : null, cardCount, hook: input.hook, goal: input.goal,
         });
         const title = (input.title || written.title || input.idea || "ריל מהסרטונים שלי").slice(0, 80);
         const cards = talking
@@ -158,6 +178,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
           idea: input.title || written.title || input.idea || "ריל מהסרטונים שלי", account: input.account, niche, mode: "full", facts: "",
           data: {
             content_type: input.content_type, caption: written.caption, chosen_variant: talking ? "C" : calmVariant(input.content_type, cards),
+            ...(input.goal ? { goal: input.goal } : {}),
             edit: { segments, cards, ...(talking ? { sound: true } : {}) },
             reel_design: talking ? { transition: "cut" } : { transition: "cut", motion: "off" },
           },
@@ -308,14 +329,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
         return NextResponse.json({ projectId: data.id });
       }
       case "week-options": {
-        const { account: acc, dates } = z.object({ account, dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).min(1).max(7) }).parse(body);
+        const { account: acc, dates, goal } = z.object({ account, dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).min(1).max(7), goal: z.enum(["grow", "authority", "sell", "launch"]).optional() }).parse(body);
         const [{ data: trend }, { data: existing }, { data: fb }] = await Promise.all([
           supabase.from("studio_trends").select("items").eq("status", "done").order("date", { ascending: false }).limit(1).maybeSingle(),
           supabase.from("studio_items").select("title").eq("account", acc).order("created_at", { ascending: false }).limit(60),
           supabase.from("studio_feedback").select("kind, text, verdict, reason").order("created_at", { ascending: false }).limit(60),
         ]);
         const days = await weekOptions({
-          account: acc, dates, voice: voiceBlock(await getVoice(supabase, acc), acc),
+          account: acc, dates, goal, voice: voiceBlock(await getVoice(supabase, acc), acc),
           trends: ((trend?.items ?? []) as TrendItem[]).filter((t) => t.account === acc),
           existing: (existing ?? []).map((e) => e.title as string), feedback: (fb ?? []) as Feedback[],
           templates: TEMPLATES.map((t) => ({ id: t.id, name: t.name, kind: t.kind })),

@@ -78,3 +78,17 @@ export const PHOTO_DEFAULT: Required<Pick<Theme, "headFont" | "bodyFont" | "head
 export const sizeFactor = (family?: string) => (family === "Amatic SC" ? 1.65 : family === "Gveret Levin" ? 1.2 : 1);
 
 export const fontStack = (family: string | undefined, fallback: string) => (family ? `"${family}", ${fallback}` : fallback);
+
+/**
+ * סגנונות מוכנים לקרוסלה עם תמונות: כל אחד הוא מראה שלם (פונטים, צבעים, החשכה, מיקום).
+ * רקע הוא לשקופית בלי תמונה, ולכן הטקסט תמיד בניגוד אליו.
+ */
+export const LOOKS: { id: string; name: string; hint: string; theme: Theme }[] = [
+  { id: "plania", name: "Plania's", hint: "ורוד בהיר וכתב יד", theme: { ...PHOTO_DEFAULT } },
+  { id: "clean", name: "נקי ובהיר", hint: "לבן, פשוט, הרבה אוויר", theme: { headFont: "Assistant", bodyFont: "Assistant", headColor: "#FFFFFF", bodyColor: "#F4EEE6", bg: "#8C7B6B", accent: "#FFFFFF", overlay: 0.3, headScale: 0.95, bodyScale: 0.9, align: "center", position: "center" } },
+  { id: "editorial", name: "מגזין", hint: "סריף אלגנטי, כמו כתבה", theme: { headFont: "Frank Ruhl Libre", bodyFont: "Assistant", headColor: "#FBF8F2", bodyColor: "#E9E2D6", bg: "#1F1B16", accent: "#F6E7A6", overlay: 0.5, headScale: 1.05, bodyScale: 0.95, align: "right", position: "bottom" } },
+  { id: "oldmoney", name: "קלאסי", hint: "שמנת וזהב, שקט ויוקרתי", theme: { headFont: "Bellefair", bodyFont: "David Libre", headColor: "#F3E6C8", bodyColor: "#FBF8F2", bg: "#3B2F25", accent: "#C9A96E", overlay: 0.55, headScale: 1.1, bodyScale: 1, align: "center", position: "center" } },
+  { id: "notes", name: "פתק בטלפון", hint: "כמו פתק שכתבת לעצמך", theme: { headFont: "Heebo", bodyFont: "Heebo", headColor: "#1F1B16", bodyColor: "#3A332B", bg: "#FFF8D9", accent: "#E8B23A", overlay: 0.05, headScale: 0.9, bodyScale: 0.9, align: "right", position: "top" } },
+  { id: "noir", name: "ורוד כהה", hint: "כהה עם ורוד חזק", theme: { headFont: "Rubik", bodyFont: "Assistant", headColor: "#F7A8C0", bodyColor: "#FFFFFF", bg: "#1A1214", accent: "#F7A8C0", overlay: 0.65, headScale: 1.05, bodyScale: 0.95, align: "right", position: "bottom" } },
+  { id: "bold", name: "נועז", hint: "כותרת גדולה וצהובה", theme: { headFont: "Secular One", bodyFont: "Assistant", headColor: "#F6E7A6", bodyColor: "#FFFFFF", bg: "#5E1D1D", accent: "#F6E7A6", overlay: 0.5, headScale: 1.25, bodyScale: 0.95, align: "right", position: "center" } },
+];

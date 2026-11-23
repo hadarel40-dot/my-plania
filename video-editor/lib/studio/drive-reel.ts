@@ -1,7 +1,7 @@
 "use client";
 import { db, studioCall } from "./client";
 import { MEDIA_BUCKET } from "@/lib/supabase/env";
-import type { ContentType } from "./config";
+import type { ContentType, WeekGoal } from "./config";
 import { errorText, logEvent } from "@/lib/telemetry";
 
 /** מוריד קובץ מהדרייב דרך השרת, בחתיכות של 4MB */
@@ -38,7 +38,7 @@ const meta = (blob: Blob) => new Promise<{ w: number; h: number; seconds: number
  */
 export async function buildDriveReel(input: {
   account: string; idea: string; hook: string; title: string; content_type: ContentType; date: string;
-  itemId?: string; exclude?: string[]; onStep?: (s: string) => void;
+  itemId?: string; exclude?: string[]; onStep?: (s: string) => void; goal?: WeekGoal;
 }) {
   const step = input.onStep ?? (() => {});
   step("בוחרת סרטונים מהדרייב...");
@@ -74,7 +74,7 @@ export async function buildDriveReel(input: {
   step("כותבת את הכרטיסים והכיתוב...");
   const { draftId } = await studioCall<{ draftId: string }>("upload-reel", {
     account: input.account, idea: input.idea, hook: input.hook, title: input.title, content_type: input.content_type,
-    date: input.date, clips, transcript: [], itemId: input.itemId,
+    date: input.date, clips, transcript: [], itemId: input.itemId, goal: input.goal,
   });
   return { draftId, used: files.map((f) => f.id) };
 }
