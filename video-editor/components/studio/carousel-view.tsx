@@ -85,7 +85,8 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
     for (const x of m?.matches ?? []) {
       const n = Number(x.target.match(/שקופית\s*(\d+)/)?.[1]);
       const f = m?.files.find((ff) => ff.id === x.file_id);
-      if (n && f?.mimeType.startsWith("image/")) out[n - 1] = `/api/studio/drive-thumb?id=${f.id}&size=1200`;
+      // תמונה מהדרייב, או פריים מסרטון כשאין תמונה מתאימה (הדרייב שלה הוא בעיקר סרטונים)
+      if (n && f && (f.mimeType.startsWith("image/") || f.mimeType.startsWith("video/"))) out[n - 1] = `/api/studio/drive-thumb?id=${f.id}&size=1600`;
     }
     (shown?.slides ?? []).forEach((s, i) => {
       if (s.image?.kind === "storage" && storageUrls[s.image.path]) out[i] = storageUrls[s.image.path];
@@ -159,6 +160,22 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
       }
     } catch (e) { toast((e as Error).message, true); }
     finally { setBusy(""); }
+  };
+  // תמונות מתאימות מהדרייב לכל שקופית (תמונה, או פריים מסרטון), ומעבר למראה עם תמונות
+  const pullPhotos = async () => {
+    setBusy("photos");
+    try {
+      const fresh = (await studioCall<{ draft: Draft }>("drive-match", { draftId: draft.id })).draft;
+      onChange(fresh);
+      if (c && (c.style ?? "cream") !== "photo") await persistOn(fresh, { ...c, style: "photo" });
+      toast("התמונות מהדרייב בפנים");
+    } catch (e) { toast((e as Error).message, true); }
+    finally { setBusy(""); }
+  };
+  const persistOn = async (base: Draft, carousel: Carousel) => {
+    const { data, error } = await db().from("studio_drafts").update({ data: { ...base.data, carousel } }).eq("id", base.id).select("*").single();
+    if (error) throw new Error(error.message);
+    onChange(data as Draft);
   };
   // מראה מוכן: עובר לסגנון "תמונה" עם הפונטים והצבעים של המראה
   const applyLook = async (theme: Theme) => {
@@ -241,7 +258,10 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
               <button key={v} type="button" onClick={() => setStyle(v)}
                 className={`rounded-lg border px-2.5 py-1 text-[12px] font-semibold ${style === v ? "border-[#5E1D1D] bg-[#5E1D1D] text-[#FAF6F1]" : "border-[#E3D9CC] bg-white/70"}`}>{l}</button>
             ))}
-            <button type="button" onClick={() => setDesignOpen(!designOpen)} className="ms-auto text-[12px] font-bold underline underline-offset-4">{designOpen ? "לסגור עיצוב" : "פונטים וצבעים"}</button>
+            <button type="button" onClick={pullPhotos} disabled={busy === "photos"} className="ms-auto inline-flex min-h-[32px] items-center gap-1 rounded-full border border-[#5E1D1D]/40 bg-white px-3 text-[12px] font-bold text-[#5E1D1D] disabled:opacity-60">
+              {busy === "photos" ? "מחפשת בדרייב..." : draft.data.materials?.matches.length ? "לבחור מחדש מהדרייב" : "תמונות מהדרייב"}
+            </button>
+            <button type="button" onClick={() => setDesignOpen(!designOpen)} className="text-[12px] font-bold underline underline-offset-4">{designOpen ? "לסגור עיצוב" : "פונטים וצבעים"}</button>
           </div>
         </div>
         {designOpen && (

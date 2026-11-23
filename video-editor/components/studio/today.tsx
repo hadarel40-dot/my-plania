@@ -33,7 +33,7 @@ export function thumbPath(d?: Draft): string | null {
   if (drive?.kind === "drive") return `drive:${drive.id}`;
   const m = d.data.materials;
   const first = [...(m?.matches ?? [])].sort((a, b) => (Number(a.target.match(/\d+/)?.[0]) || 99) - (Number(b.target.match(/\d+/)?.[0]) || 99))
-    .map((x) => m?.files.find((f) => f.id === x.file_id)).find((f) => f?.mimeType.startsWith("image/"));
+    .map((x) => m?.files.find((f) => f.id === x.file_id)).find((f) => f?.mimeType.startsWith("image/") || f?.mimeType.startsWith("video/"));
   return first ? `drive:${first.id}` : null;
 }
 
