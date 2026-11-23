@@ -105,6 +105,52 @@ async function signAssets(assets_: Record<string, MediaAsset>) {
  * כל שינוי נשמר בטיוטה ונראה בנגן מיד. "לשלוח לאינסטגרם" ו"להוריד" מייצאים בדיוק את מה שרואים.
  */
 export function ReelPlayer({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => void }) {
+  // ריל שנבנה ישר מהדרייב (לפני ההמרה): קודם ממירים את הקטעים לקבצים קלים, ורק אז מנגנים
+  if (draft.data.edit?.segments.some((x) => x.path.startsWith("drive:"))) return <DriveConvert draft={draft} onChange={onChange} />;
+  return <ReelPlayerInner draft={draft} onChange={onChange} />;
+}
+
+/** ממיר את הקטעים מהדרייב (4K, HDR) לקבצים קלים בספרייה, פעם אחת, ושומר את הריל */
+function DriveConvert({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => void }) {
+  const [step, setStep] = useState("מכינה את הסרטונים מהדרייב...");
+  const [failed, setFailed] = useState("");
+  const started = useRef(false);
+  const run = async () => {
+    setFailed("");
+    try {
+      const { driveClipToLibrary } = await import("@/lib/studio/drive-clip");
+      const kit = draft.data.edit!;
+      const segs = [...kit.segments];
+      const todo = segs.map((x, i) => (x.path.startsWith("drive:") ? i : -1)).filter((i) => i >= 0);
+      for (const [n, i] of todo.entries()) {
+        const x = segs[i];
+        const c = await driveClipToLibrary(x.path.slice(6), { from: x.from ?? 0, seconds: x.seconds, onProgress: (p) => setStep(`מכינה סרטון ${n + 1} מתוך ${todo.length} (${Math.round(p * 100)}%)`) });
+        segs[i] = { path: c.path, width: c.w, height: c.h, seconds: x.seconds };
+      }
+      const { data, error } = await db().from("studio_drafts").update({ data: { ...draft.data, edit: { ...kit, segments: segs } } }).eq("id", draft.id).select("*").single();
+      if (error) throw new Error(error.message);
+      onChange(data as Draft);
+    } catch (e) { setFailed((e as Error).message); }
+  };
+  useEffect(() => { if (!started.current) { started.current = true; void run(); } }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <div className="rounded-2xl border border-[#E3D9CC] bg-[#FFFDFB] p-5 text-center">
+      {failed ? (
+        <>
+          <p className="text-[14px] font-bold text-[#B5484B]">לא הצלחתי להכין את הסרטונים: {failed}</p>
+          <Btn className="mt-3" onClick={run}>לנסות שוב</Btn>
+        </>
+      ) : (
+        <>
+          <p className="text-[15px] font-bold text-[#5E1D1D]" role="status">{step}</p>
+          <p className="mt-1 text-[12px] text-[#6A6158]">פעם אחת לכל ריל: לוקחת מכל סרטון רק את הקטע שצריך, בגודל שמתנגן חלק ובצבעים הנכונים.</p>
+        </>
+      )}
+    </div>
+  );
+}
+
+function ReelPlayerInner({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => void }) {
   const kit = draft.data.edit!;
   const [assets, setAssets] = useState<Record<string, MediaAsset> | null>(null);
   const [design, setDesign] = useState<ReelDesign>(draft.data.reel_design ?? {});
