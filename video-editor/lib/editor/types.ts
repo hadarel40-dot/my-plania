@@ -169,6 +169,8 @@ export interface Overlay {
   strokeColor?: string;
   /** עובי הקו המתאר ביחס לגודל הגופן (ברירת מחדל 0.05) */
   strokeWidth?: number;
+  /** גרפיקה מצוירת (עיגול): הגובה ביחס לרוחב, כדי שתקיף בדיוק את הטקסט */
+  aspect?: number;
   /** צל לטקסט, ב-CSS (למשל מהסטודיו, כדי שייראה בדיוק כמו בדשבורד) */
   shadow?: string;
   weight: 400 | 700 | 900;

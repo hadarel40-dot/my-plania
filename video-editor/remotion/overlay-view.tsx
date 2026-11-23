@@ -156,7 +156,7 @@ function ShapeView({ o, frame, fps, width, height, unit, opacity }: { o: Overlay
       svg = <path d="M4 60 C 120 30, 260 26, 396 44 M 60 76 C 170 58, 290 58, 360 68" {...common} />;
       break;
     case "circle":
-      h = w * 0.5;
+      h = w * (o.aspect ?? 0.5);
       svg = <path d="M 330 20 C 400 40, 410 140, 300 176 C 180 210, 30 190, 12 120 C -4 60, 90 12, 210 10 C 280 8, 360 30, 372 60" {...common} />;
       break;
     case "arrow":

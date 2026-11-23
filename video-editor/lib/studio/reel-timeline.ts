@@ -184,11 +184,18 @@ function captions(cards: ReelEditKit["cards"], style: CaptionStyleId, design: Re
     if (!design.motion || design.motion === "off") return null;
     return design.motion === "auto" ? autoMotion(text, ci) : design.motion;
   };
-  const shape = (kind: MotionId, x: number, cy: number, textW: number, size: number, start: number, end: number, ci: number): Overlay => {
-    const w = kind === "arrow" ? 240 : Math.min(1000, textW * (kind === "underline" ? 1.05 : kind === "circle" ? 1.35 : 1.3));
-    const y = kind === "underline" ? cy + (size * 0.66) / 1920 : kind === "arrow" ? cy - (size * 1.05) / 1920 : cy;
+  // עיגול שמקיף שורה: אליפסה שהטקסט נכנס בתוכה עם מרווח (רוחב פי 1.4, גובה פי 1.9 מגובה האותיות)
+  const ring = (textW: number, size: number) => { const w = Math.min(1060, textW * 1.4 + size * 0.6); return { w, h: Math.max(size * 1.9, w * 0.22) }; };
+  // th: הגובה של השורה כולה (גם כשהיא נשברת לכמה שורות), כדי שהקו יישב מתחת לשורה האחרונה והעיגול יקיף את כולה
+  const shape = (kind: MotionId, x: number, cy: number, textW: number, size: number, start: number, end: number, ci: number, th = size * 1.3): Overlay => {
+    const rg = ring(textW, size);
+    const w = kind === "arrow" ? 240
+      : kind === "circle" ? rg.w
+      : kind === "burst" ? Math.min(1040, Math.max(textW * 1.5, th * 3.6))
+      : Math.min(1000, textW * (kind === "underline" ? 1.05 : 1.3));
+    const y = kind === "underline" ? cy + (th / 2) / 1920 : kind === "arrow" ? cy - (th / 2 + size * 0.4) / 1920 : cy;
     const sx = kind === "arrow" ? Math.min(0.9, x + textW / 2160 + 0.04) : x;
-    return { ...base, id: uid("ov"), kind: "shape", text: kind, start: +start.toFixed(2), end, x: sx, y: +y.toFixed(4), size: Math.round(w), color: ACC, weight: 400, stroke: false, rotate: kind === "underline" ? (ci % 2 ? 1.5 : -1.5) : 0, animIn: "none", loop: "none", animOut: "fade" };
+    return { ...base, id: uid("ov"), kind: "shape", text: kind, start: +start.toFixed(2), end, x: sx, y: +y.toFixed(4), size: Math.round(w), color: ACC, weight: 400, stroke: false, rotate: kind === "underline" ? (ci % 2 ? 1.5 : -1.5) : 0, animIn: "none", loop: "none", animOut: "fade", ...(kind === "circle" ? { aspect: +(rg.h / rg.w).toFixed(3) } : {}) };
   };
   const dark = (c: string) => ["#5E1D1D", "#2A2622", "#B5848E"].includes(c);
   const base = { kind: "text" as const, studio: true, x: 0.5, background: null, rotate: 0, loop: "none" as const };
@@ -308,17 +315,24 @@ function captions(cards: ReelEditKit["cards"], style: CaptionStyleId, design: Re
       ...head.map((l, li) => ({ ...l, size: l.em ? hs * (style === "editorial" ? 1.6 : 1.3) : style === "stairs" ? hs * (li % 2 ? 0.72 : 1.08) : hs, kind: "head" as const })),
       ...sub.map((l) => ({ ...l, size: bs, kind: "body" as const })),
     ];
-    const mo = motionFor(ci, headline);
+    const mo0 = motionFor(ci, headline);
     const targetRow = Math.max(0, rows.findIndex((r) => r.em));
     // גובה אמיתי של כל שורה: שורה ארוכה שנשברת לשתיים תופסת כפול, מילה מודגשת מוטה צריכה אוויר,
     // וקו מתחת למילה צריך מקום משלו, כדי ששום דבר לא יעלה על משהו אחר
     const lh = style === "chips" || style === "marker" ? 1.5 : style === "stairs" ? 1.12 : 1.3;
-    const linesOf = (r: { t: string; size: number }) => Math.max(1, Math.ceil((r.t.length * r.size * 0.56) / (1080 * 0.86)));
+    // רוחב משוער של שורה: נמדד על המסך כ-0.43 מגודל הגופן לתו, ולוקחים 0.48 לביטחון. הטקסט נשבר ב-90% מהרוחב
+    const widthOf = (r: { t: string; size: number }) => r.t.length * r.size * 0.48;
+    const linesOf = (r: { t: string; size: number }) => Math.max(1, Math.ceil(widthOf(r) / (1080 * 0.9)));
+    // עיגול או פרץ רק סביב שורה קצרה בשורה אחת. שורה ארוכה או שבורה: קו בכתב יד מתחת, אחרת הקווים חותכים את הטקסט
+    const tr = rows[targetRow];
+    const mo: MotionId | null = mo0 && (mo0 === "circle" || mo0 === "burst") && tr && (linesOf(tr) > 1 || widthOf(tr) > 680) ? "underline" : mo0;
     const textH = (r: { t: string; size: number; kind: string }) => r.size * (r.kind === "body" ? 1.3 : lh) * linesOf(r);
-    const below = (r: { size: number; em: boolean; kind: string }, ri: number) =>
-      (r.em ? r.size * 0.22 : 0) + (mo && ri === targetRow && r.kind === "head" ? (mo === "underline" ? r.size * 0.45 : mo === "circle" || mo === "burst" ? r.size * 0.3 : 0) : 0);
-    const above = (r: { size: number; em: boolean; kind: string }, ri: number) =>
-      (r.em ? r.size * 0.12 : 0) + (mo && ri === targetRow && r.kind === "head" && (mo === "arrow" || mo === "circle" || mo === "burst") ? r.size * 0.3 : 0);
+    // כמה העיגול בולט מעל ומתחת לשורה (הגובה שלו חצי מהרוחב), כדי שהשורות השכנות יזוזו ולא ייחתכו
+    const ringPad = (r: { t: string; size: number; kind: string }) => (ring(widthOf(r), r.size).h - r.size) / 2 + r.size * 0.12;
+    const below = (r: { t: string; size: number; em: boolean; kind: string }, ri: number) =>
+      (r.em ? r.size * 0.22 : 0) + (mo && ri === targetRow && r.kind === "head" ? (mo === "underline" ? r.size * 0.8 : mo === "circle" || mo === "burst" ? ringPad(r) : 0) : 0);
+    const above = (r: { t: string; size: number; em: boolean; kind: string }, ri: number) =>
+      (r.em ? r.size * 0.12 : 0) + (mo && ri === targetRow && r.kind === "head" ? (mo === "circle" || mo === "burst" ? ringPad(r) : mo === "arrow" ? r.size * 0.55 : 0) : 0);
     const blockH = () => rows.reduce((n, r, ri) => n + above(r, ri) + textH(r) + below(r, ri), 0) + (sub.length ? 36 * k : 0);
     // אם הכרטיס לא נכנס בגובה, מקטינים את כולו
     const room = 1920 * 0.62;
@@ -337,7 +351,7 @@ function captions(cards: ReelEditKit["cards"], style: CaptionStyleId, design: Re
       const start = +(c.start + 0.1 + ri * 0.22).toFixed(2);
       if (mo && ri === targetRow && r.kind === "head") {
         const rx = style === "stairs" ? (ri % 2 ? 0.56 : 0.44) : 0.5;
-        out.push(shape(mo, rx, cy, Math.min(980, r.t.length * r.size * 0.52), r.size, start + 0.3, c.end, ci));
+        out.push(shape(mo, rx, cy, Math.min(972, widthOf(r)), r.size, start + 0.3, c.end, ci, linesOf(r) > 1 ? th : r.size * 1.5));
       }
       if (r.kind === "head" && (style === "marker" || style === "neon" || style === "outline" || style === "stairs")) {
         const em = r.em;
