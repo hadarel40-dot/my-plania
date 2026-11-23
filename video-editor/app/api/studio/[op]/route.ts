@@ -220,8 +220,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
         // ריל מהדרייב: בוחרים סרטונים מהארכיון שמתאימים לרעיון. ההורדה וההעלאה קורות בדפדפן
         const input = z.object({ idea: z.string().max(800), hook: z.string().max(200).default(""), count: z.number().int().min(1).max(6).default(4), exclude: z.array(z.string().max(100)).max(60).default([]) }).parse(body);
         if (!driveConfigured()) throw new StudioError("דרייב עוד לא מחובר", 400);
-        // סרטונים גדולים מדי לא נבחרים: הם יורדים לדפדפן (גם בטלפון)
-        const files = (await listDriveMedia(null, 150)).filter((f) => f.mimeType.startsWith("video/") && Number(f.size ?? 0) < 120_000_000).slice(0, 100);
+        const files = (await listDriveMedia(null, 150)).filter((f) => f.mimeType.startsWith("video/")).slice(0, 100);
         const thumbs = await Promise.all(files.map((f, i) => (i < 40 && f.mimeType.startsWith("video/") ? driveThumb(f) : Promise.resolve(null))));
         const chosen = await pickDriveClips({ ...input, files, thumbs });
         if (!chosen.length) throw new StudioError("לא מצאתי סרטונים בדרייב", 404);

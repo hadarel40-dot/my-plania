@@ -22,6 +22,9 @@ export function thumbPath(d?: Draft): string | null {
   const v = d.data.variants?.find((x) => x.id === d.data.chosen_variant) ?? d.data.variants?.[0];
   const video = v?.video ?? d.data.video;
   if (video?.cover) return video.cover;
+  // ריל שמתנגן מהדרייב: התמונה של הסרטון הראשון
+  const seg = d.data.edit?.segments?.[0]?.path;
+  if (seg?.startsWith("drive:")) return seg;
   const slides = (v?.carousel ?? d.data.carousel)?.slides ?? [];
   const img = slides.find((s) => s.image?.kind === "storage")?.image;
   if (img?.kind === "storage") return img.path;

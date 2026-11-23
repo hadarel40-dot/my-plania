@@ -50,7 +50,8 @@ async function loadClips(assets: Record<string, MediaAsset>, onProgress: (p: num
     if (hit) cached[id] = { ...a, url: hit }; else rest[id] = a;
   }
   const signed = { ...cached, ...(await signAssets(rest)) };
-  const list = Object.entries(signed).filter(([id, a]) => a.url && !cached[id]);
+  // סרטונים מהדרייב לא נטענים מראש במלואם (הם גדולים): הנגן מבקש רק את הקטע שמתנגן
+  const list = Object.entries(signed).filter(([id, a]) => a.url && !cached[id] && !a.storagePath?.startsWith("drive:"));
   const done: Record<string, number> = {};
   const totals: Record<string, number> = {};
   const report = () => {
@@ -85,8 +86,12 @@ async function loadClips(assets: Record<string, MediaAsset>, onProgress: (p: num
 }
 
 /** כתובות צפייה לכל הקבצים של הפרויקט (מהאחסון) */
-async function signAssets(assets: Record<string, MediaAsset>) {
-  const paths = Object.values(assets).flatMap((a) => (a.storagePath ? [a.storagePath] : []));
+/** סרטון מהדרייב (drive:<id>) מתנגן ישר מהשרת, בטווחים, בלי להעתיק אותו */
+const driveUrl = (p: string) => `/api/studio/drive-stream?id=${encodeURIComponent(p.slice(6))}`;
+
+async function signAssets(assets_: Record<string, MediaAsset>) {
+  const assets = Object.fromEntries(Object.entries(assets_).map(([id, a]) => [id, a.storagePath?.startsWith("drive:") ? { ...a, url: driveUrl(a.storagePath) } : a]));
+  const paths = Object.values(assets).flatMap((a) => (a.storagePath && !a.storagePath.startsWith("drive:") ? [a.storagePath] : []));
   if (!paths.length) return assets;
   const { data } = await db().storage.from(MEDIA_BUCKET).createSignedUrls(paths, 6 * 60 * 60);
   const byPath = new Map((data ?? []).map((d) => [d.path, d.signedUrl]));
