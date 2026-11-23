@@ -34,6 +34,14 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, max: number) {
   return out;
 }
 
+/** שורות של סיכום: כל נקודה נשברת לרוחב, והתבליט רק בשורה הראשונה שלה */
+function wrapRows(ctx: CanvasRenderingContext2D, rows: string[], max: number) {
+  const lines: string[] = [];
+  const starts = new Set<number>();
+  for (const r of rows) { starts.add(lines.length); lines.push(...wrap(ctx, r, max)); }
+  return { lines, starts };
+}
+
 /** כותב שורות מימין, ומקטין את הגופן עד שהטקסט נכנס לגובה */
 function block(ctx: CanvasRenderingContext2D, text: string, font: (size: number) => string, size: number, top: number, maxH: number, color: string, lineH = 1.18) {
   let s = size;
@@ -223,7 +231,9 @@ async function renderPhotoSlide(c: Carousel, index: number, images: Record<numbe
   const head = wrap(ctx, slide.headline, W - P * 2);
   const rows = recap ? slide.body.split("\n").map((r) => r.replace(/^[-•·\d.\s]+/, "").trim()).filter(Boolean) : [];
   ctx.font = `${bw} ${bodySize}px ${BODY}`;
-  const body = recap ? rows : slide.body ? wrap(ctx, slide.body, W - P * 2 - (recap ? 40 : 0)) : [];
+  const centered = t.align === "center";
+  const rr = wrapRows(ctx, rows, W - P * 2 - (centered ? 0 : 40));
+  const body = recap ? rr.lines : slide.body ? wrap(ctx, slide.body, W - P * 2) : [];
   const bodyLH = Math.round(bodySize * (recap ? 1.5 : 1.05));
   const total = head.length * headSize * 1.05 + (body.length ? 22 + body.length * bodyLH : 0);
   let y = pos === "center" ? (H - total) / 2 : pos === "top" ? 170 : H - P - 60 - total;
@@ -234,11 +244,12 @@ async function renderPhotoSlide(c: Carousel, index: number, images: Record<numbe
     y += 22;
     ctx.fillStyle = t.bodyColor;
     ctx.font = `${bw} ${bodySize}px ${BODY}`;
-    for (const l of body) {
-      y += bodyLH;
-      if (recap) { ctx.save(); ctx.fillStyle = t.accent; ctx.beginPath(); ctx.arc(W - P - 10, y - bodySize * 0.35, 8, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
-      ctx.fillText(l, recap ? W - P - 40 : X, y - 14);
-    }
+    body.forEach((l, li) => {
+      // שורת המשך של אותה נקודה מקבלת פחות רווח, כדי שיהיה ברור מה שייך למה
+      y += recap && !rr.starts.has(li) ? bodySize * 1.12 : bodyLH;
+      if (recap && !centered && rr.starts.has(li)) { ctx.save(); ctx.fillStyle = t.accent; ctx.beginPath(); ctx.arc(W - P - 10, y - bodySize * 0.35, 8, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+      ctx.fillText(l, recap && !centered ? W - P - 40 : X, y - 14);
+    });
   }
   ctx.shadowBlur = 0;
   ctx.font = `800 30px ${SANS}`;
@@ -282,7 +293,9 @@ function drawFramed(ctx: CanvasRenderingContext2D, c: Carousel, index: number, p
   const head = wrap(ctx, slide.headline, tw);
   ctx.font = `${f.bw} ${bs}px ${f.BODY}`;
   const rows = recap ? slide.body.split("\n").map((r) => r.replace(/^[-•·\d.\s]+/, "").trim()).filter(Boolean) : [];
-  const body = recap ? rows : slide.body ? wrap(ctx, slide.body, tw) : [];
+  const centerF = t.align === "center" || kind === "polaroid";
+  const fr = wrapRows(ctx, rows, tw - (centerF ? 0 : 30));
+  const body = recap ? fr.lines : slide.body ? wrap(ctx, slide.body, tw) : [];
   const hl = hs * 1.14, bl = bs * (recap ? 1.5 : 1.3);
   const textH = head.length * hl + (body.length ? 26 + body.length * bl : 0);
   const photoH = kind === "polaroid" ? (photo ? 640 : 0) : 0;
@@ -370,7 +383,7 @@ function drawFramed(ctx: CanvasRenderingContext2D, c: Carousel, index: number, p
         const lw = Math.min(W - 160, ctx.measureText(l).width + 50 + (recap ? 30 : 0));
         ctx.fillStyle = "rgba(255,255,255,0.92)"; ctx.fillRect(center ? -lw / 2 : tx + 25 - lw, y - bs * 1.0, lw, bs * 1.25);
       }
-      if (recap && !center) { ctx.save(); ctx.fillStyle = kind === "tape" ? t.headColor : t.accent; ctx.beginPath(); ctx.arc(tx - 6, y - bs * 0.38, 7, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+      if (recap && !center && fr.starts.has(body.indexOf(l))) { ctx.save(); ctx.fillStyle = kind === "tape" ? t.headColor : t.accent; ctx.beginPath(); ctx.arc(tx - 6, y - bs * 0.38, 7, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
       ctx.fillStyle = t.bodyColor;
       ctx.fillText(l, recap && !center ? tx - 30 : tx, y - bs * 0.22);
       rule(y - bs * 0.22);
