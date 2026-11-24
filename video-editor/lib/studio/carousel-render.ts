@@ -208,6 +208,10 @@ async function renderPhotoSlide(c: Carousel, index: number, images: Record<numbe
     drawFramed(ctx, c, index, photo, t, { HEAD, BODY, hw, bw });
     return canvas;
   }
+  if (t.layout === "split") {
+    drawSplit(ctx, c, index, photo, t, { HEAD, BODY, hw, bw });
+    return canvas;
+  }
   if (photo) {
     drawCover(ctx, photo, 0, 0, W, H);
     const g = ctx.createLinearGradient(0, 0, 0, H);
@@ -261,6 +265,99 @@ async function renderPhotoSlide(c: Carousel, index: number, images: Record<numbe
   if (slide.kind !== "cover") ctx.fillText(`${index + 1}/${c.slides.length}`, P, 100);
   if (c.handle) ctx.fillText(c.handle, P, H - 60);
   return canvas;
+}
+
+/**
+ * "השער שלי": תמונה על כל המסגרת עם הצללה עדינה למעלה ולמטה, כותרת ענקית בפינה העליונה
+ * (האות הראשונה בצבע הדגשה), ולמטה: שורה מודגשת, שורה בכתב יד, ושורה בצבע הדגשה עם חץ.
+ * שורות הטקסט נלקחות מה-body לפי ירידות שורה. בסיכום: כרטיס לבן עם הנקודות.
+ */
+function drawSplit(ctx: CanvasRenderingContext2D, c: Carousel, index: number, photo: HTMLImageElement | null, t: typeof PHOTO_DEFAULT, f: { HEAD: string; BODY: string; hw: number; bw: number }) {
+  const slide = c.slides[index];
+  const P = 96;
+  if (photo) {
+    drawCover(ctx, photo, 0, 0, W, H);
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, `rgba(18,14,12,${Math.min(0.85, t.overlay + 0.3).toFixed(2)})`);
+    g.addColorStop(0.32, `rgba(18,14,12,${(t.overlay * 0.4).toFixed(2)})`);
+    g.addColorStop(0.6, `rgba(18,14,12,${(t.overlay * 0.4).toFixed(2)})`);
+    g.addColorStop(1, `rgba(18,14,12,${Math.min(0.9, t.overlay + 0.4).toFixed(2)})`);
+    ctx.fillStyle = g;
+  } else ctx.fillStyle = t.bg;
+  ctx.fillRect(0, 0, W, H);
+  ctx.direction = "rtl";
+  ctx.textAlign = "right";
+  ctx.shadowColor = "rgba(0,0,0,0.35)"; ctx.shadowBlur = 16;
+
+  // הכותרת הענקית: מקטינים עד שהיא נכנסת בשתי שורות לכל היותר
+  let hs = Math.round((slide.kind === "cover" ? 168 : 140) * t.headScale);
+  let head: string[] = [];
+  for (; hs > 60; hs -= 6) { ctx.font = `${f.hw} ${hs}px ${f.HEAD}`; head = wrap(ctx, slide.headline, W - P * 2); if (head.length <= 2) break; }
+  let y = 120;
+  head.forEach((l, li) => {
+    y += hs * 1.02;
+    ctx.font = `${f.hw} ${hs}px ${f.HEAD}`;
+    ctx.fillStyle = t.headColor;
+    ctx.fillText(l, W - P, y);
+    // האות הראשונה של הכותרת בצבע הדגשה (בעברית היא הימנית ביותר)
+    if (li === 0 && l.length > 1) { ctx.fillStyle = t.accent; ctx.fillText(l[0], W - P, y); }
+  });
+
+  if (slide.kind === "recap") {
+    // כרטיס לבן בתחתית עם הנקודות
+    const rows = slide.body.split("\n").map((r) => r.replace(/^[-•·\d.\s]+/, "").trim()).filter(Boolean);
+    ctx.shadowColor = "transparent";
+    const rs = 52, cw = W - 120;
+    ctx.font = `${f.hw} ${rs}px ${f.HEAD}`;
+    const lines = rows.map((r) => wrap(ctx, r, cw - 140));
+    const ch = 70 + lines.reduce((n, l) => n + l.length * rs * 1.2 + 34, 0) + 20;
+    const top = H - 110 - ch;
+    ctx.save(); ctx.shadowColor = "rgba(0,0,0,0.3)"; ctx.shadowBlur = 30; ctx.shadowOffsetY = 12;
+    ctx.fillStyle = "#FFFFFF"; roundRect(ctx, 60, top, cw, ch, 28); ctx.fill(); ctx.restore();
+    let ry = top + 60;
+    lines.forEach((ls) => {
+      ctx.fillStyle = t.accent; ctx.beginPath(); ctx.arc(W - 60 - 56, ry + rs * 0.42, 12, 0, Math.PI * 2); ctx.fill();
+      ls.forEach((l) => { ry += rs * 1.2; ctx.fillStyle = "#2A2622"; ctx.font = `${f.hw} ${rs}px ${f.HEAD}`; ctx.fillText(l, W - 60 - 90, ry - rs * 0.25); });
+      ry += 34;
+    });
+  } else {
+    // ולמטה: שורה מודגשת, שורה בכתב יד, ושורה עם חץ (לפי ירידות השורה ב-body)
+    const parts = slide.body.split("\n").map((x) => x.trim()).filter(Boolean);
+    const blocks: { text: string; font: string; size: number; color: string; arrow?: boolean }[] = [];
+    const bold = (sz: number) => `${f.hw} ${sz}px ${f.HEAD}`;
+    const hand = (sz: number) => `${f.bw} ${sz}px ${f.BODY}`;
+    const handSize = Math.round(54 * sizeFactor(t.bodyFont) * t.bodyScale);
+    if (parts.length >= 3) {
+      blocks.push({ text: parts[0], font: bold(70), size: 70, color: t.headColor });
+      blocks.push({ text: parts[1], font: hand(handSize), size: handSize, color: t.bodyColor });
+      parts.slice(2).forEach((p) => blocks.push({ text: p, font: bold(62), size: 62, color: t.accent, arrow: true }));
+    } else if (parts.length === 2) {
+      blocks.push({ text: parts[0], font: bold(70), size: 70, color: t.headColor });
+      blocks.push({ text: parts[1], font: hand(handSize), size: handSize, color: t.bodyColor });
+    } else if (parts.length === 1) {
+      blocks.push({ text: parts[0], font: hand(handSize), size: handSize, color: t.bodyColor });
+    }
+    const laid = blocks.map((b) => { ctx.font = b.font; return { ...b, lines: wrap(ctx, b.arrow ? `\u2190 ${b.text}` : b.text, W - P * 2) }; });
+    const total = laid.reduce((n, b) => n + b.lines.length * b.size * 1.18 + 14, 0);
+    let by = H - 170 - total;
+    for (const b of laid) {
+      for (const l of b.lines) { by += b.size * 1.18; ctx.font = b.font; ctx.fillStyle = b.color; ctx.fillText(l, W - P, by - b.size * 0.2); }
+      by += 14;
+    }
+    // חץ קטן בכתב יד בפינה: יש עוד שקופיות
+    if (index < c.slides.length - 1) {
+      ctx.shadowColor = "transparent";
+      ctx.strokeStyle = t.headColor; ctx.lineWidth = 4; ctx.lineCap = "round"; ctx.lineJoin = "round";
+      const ax = W - P - 130, ay = H - 110;
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.bezierCurveTo(ax + 30, ay - 12, ax + 60, ay + 10, ax + 125, ay - 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ax + 105, ay - 18); ctx.lineTo(ax + 127, ay - 2); ctx.lineTo(ax + 105, ay + 12); ctx.stroke();
+    }
+  }
+  ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
+  ctx.font = `800 30px ${SANS}`;
+  ctx.fillStyle = "rgba(255,255,255,0.8)";
+  ctx.textAlign = "left"; ctx.direction = "ltr";
+  if (c.handle) ctx.fillText(c.handle, 100, H - 60);
 }
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {

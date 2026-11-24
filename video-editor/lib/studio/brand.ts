@@ -49,6 +49,8 @@ export interface Theme {
   position?: "bottom" | "center" | "top";
   /** מסגרת חמודה לטקסט: פתק נעוץ, פולרואיד, נייר קרוע, בועת דיבור, מחברת, או מסקינטייפ */
   card?: CardFrame;
+  /** פריסה "השער שלי": כותרת ענקית למעלה (האות הראשונה בצבע הדגשה), ולמטה שורה מודגשת, שורה בכתב יד ושורה עם חץ */
+  layout?: "split";
 }
 
 export type CardFrame = "note" | "polaroid" | "paper" | "bubble" | "notebook" | "tape";
@@ -87,7 +89,10 @@ export const fontStack = (family: string | undefined, fallback: string) => (fami
  * סגנונות מוכנים לקרוסלה עם תמונות: כל אחד הוא מראה שלם (פונטים, צבעים, החשכה, מיקום).
  * רקע הוא לשקופית בלי תמונה, ולכן הטקסט תמיד בניגוד אליו.
  */
+export const SPLIT_LOOK: Theme = { layout: "split", headFont: "Rubik", bodyFont: "Gveret Levin", headColor: "#FBF3D8", bodyColor: "#FBF3D8", bg: "#2A2622", accent: "#E7A3CF", overlay: 0.3, headScale: 1, bodyScale: 1, align: "right", position: "bottom" };
+
 export const LOOKS: { id: string; name: string; hint: string; theme: Theme }[] = [
+  { id: "split", name: "השער שלי", hint: "כותרת ענקית, כתב יד וחץ", theme: SPLIT_LOOK },
   { id: "plania", name: "Plania's", hint: "ורוד בהיר וכתב יד", theme: { ...PHOTO_DEFAULT } },
   { id: "clean", name: "נקי ובהיר", hint: "לבן, פשוט, הרבה אוויר", theme: { headFont: "Assistant", bodyFont: "Assistant", headColor: "#FFFFFF", bodyColor: "#F4EEE6", bg: "#8C7B6B", accent: "#FFFFFF", overlay: 0.3, headScale: 0.95, bodyScale: 0.9, align: "center", position: "center" } },
   { id: "editorial", name: "מגזין", hint: "סריף אלגנטי, כמו כתבה", theme: { headFont: "Frank Ruhl Libre", bodyFont: "Assistant", headColor: "#FBF8F2", bodyColor: "#E9E2D6", bg: "#1F1B16", accent: "#F6E7A6", overlay: 0.5, headScale: 1.05, bodyScale: 0.95, align: "right", position: "bottom" } },

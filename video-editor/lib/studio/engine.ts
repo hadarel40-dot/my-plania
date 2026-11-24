@@ -4,7 +4,7 @@ import { askBrain, type BrainPart } from "@/lib/ai/brain";
 import type { DriveFile } from "./drive";
 import { templateBrief, templateById } from "./templates";
 import { cleanDeep } from "./clean";
-import { applyCaptionDefaults, type BrandKit } from "./brand";
+import { SPLIT_LOOK, applyCaptionDefaults, type BrandKit } from "./brand";
 import { ACCOUNTS, NICHES, type Beat, type Carousel, type Materials, type Check, type Draft, type DraftData, type Hook, type ScreenCard } from "./config";
 import { scoreHook, words } from "./hookscore";
 
@@ -221,13 +221,13 @@ export function carouselChecks(c: Carousel): Check[] {
   const points = c.slides.filter((x) => x.kind === "point");
   const ctas = c.slides.filter((x) => x.kind === "cta");
   const longBody = c.slides.filter((x) => words(x.body).length > 25).map((x, i) => i + 1);
-  const badHead = points.filter((x) => words(x.headline).length < 2 || words(x.headline).length > 7).map((x) => x.headline);
+  const badHead = points.filter((x) => words(x.headline).length < 1 || words(x.headline).length > 6).map((x) => x.headline);
   const placeholders = [...new Set(JSON.stringify(c).match(/\{\{[^}]+\}\}/g) ?? [])];
   const checks: Check[] = [
     { id: "count", label: "6 עד 10 שקופיות", pass: n >= 6 && n <= 10, detail: `${n} שקופיות` },
     { id: "cover", label: "כותרת השער עד שש מילים", pass: cover?.kind === "cover" && words(cover.headline).length <= 6, detail: cover ? `${words(cover.headline).length} מילים` : "אין שער" },
     { id: "body", label: "עד 25 מילים בכל שקופית", pass: longBody.length === 0, detail: longBody.length ? `ארוכות מדי: ${longBody.join(", ")}` : "תקין" },
-    { id: "heads", label: "כותרת של 3 עד 7 מילים לכל רעיון", pass: badHead.length === 0, detail: badHead.join(" | ") || "תקין" },
+    { id: "heads", label: "כותרת קצרה (עד 6 מילים) לכל רעיון", pass: badHead.length === 0, detail: badHead.join(" | ") || "תקין" },
     { id: "recap", label: "שקופית סיכום שאפשר לצלם ולשלוח", pass: c.slides.some((x) => x.kind === "recap"), detail: c.slides.some((x) => x.kind === "recap") ? "יש" : "חסרה" },
     { id: "cta", label: "קריאה אחת לפעולה, בסוף", pass: ctas.length === 1 && c.slides[n - 1]?.kind === "cta", detail: ctas.length === 1 ? "קריאה אחת" : ctas.length === 0 ? "אין קריאה לפעולה" : `${ctas.length} קריאות` },
   ];
@@ -260,17 +260,30 @@ export function goalCta(goal?: string) {
   if (goal === "launch") return "cta: מזמינה להגיב במילה אחת קצרה כדי להיות הראשונות לשמוע כשזה יוצא. מילה אחת, כתובה במפורש.";
   if (goal === "authority") return "cta: לשמור את הפוסט לפעם הבאה שזה יקרה.";
   if (goal === "grow") return "cta: לשלוח למישהי שצריכה את זה, או לעקוב בשביל עוד כאלה.";
-  return "cta: פעולה אחת בלבד (לשמור, להגיב במילה, או לעקוב).";
+  return "cta: פעולה אחת בלבד, לפי סוג הקרוסלה שלמעלה (שמירה: לשמור. קרבה: שאלה לתגובות. פנייה: מילה בתגובה או בהודעה).";
+}
+
+/** המבנה של כל סוג קרוסלה (שמירה, קרבה, פנייה) */
+function carouselKindBlock(type?: string) {
+  if (type === "story") return `סוג: קרוסלת קרבה (אישית). רגע אמיתי אחד מהחיים שלה, מסופר שקופית אחרי שקופית כמו סיפור קצר: מה קרה, מה הרגישה, מה הבינה.
+פרטים אמיתיים וקטנים, בלי הטפה. שקופית recap היא מה שהיא לקחה מזה. הסוף: שאלה אישית שמזמינה לספר בתגובות. המטרה: שירגישו קרובות וישארו.`;
+  if (type === "trust") return `סוג: קרוסלת פנייה (איך זה לעבוד איתה, או להשתמש במה שהיא מציעה). מבנה: הבעיה של מי שפונה אליה, התהליך שלב אחרי שלב, לפני ואחרי, ומה יוצא בסוף.
+רק דברים אמיתיים, בלי תוצאות ממוצאות ובלי לחץ. הסוף: הזמנה לכתוב מילה אחת בתגובה או בהודעה כדי לקבל פרטים. המטרה: שיפנו אליה.`;
+  return `סוג: קרוסלת שמירה (ערך). ספציפית ומעשית: כל שקופית point היא רעיון אחד עם דוגמה קונקרטית מהחיים (body מתחיל ב"למשל" או מראה איך בפועל).
+recap הוא רשימה שמצלמים ושומרים. הסוף: לשמור את הפוסט. המטרה: שישמרו וישתפו, וככה יגיעו אנשים חדשים.`;
 }
 
 export async function writeCarousel(draft: Draft, voice: string, kit?: BrandKit | null): Promise<DraftData> {
   const handle = ACCOUNTS.find((a) => a.value === draft.account)?.label ?? "";
   const prompt = (retry: string) => `${context(draft, voice)}
 
+${carouselKindBlock(draft.data.content_type)}
+
 כתבי קרוסלה לאינסטגרם, 6 עד 10 שקופיות, בסדר הזה:
 1. cover: השער. headline עד שש מילים, חד וספציפי, body שורה אחת של הבטחה.
 2. stake: למה זה חשוב לצופה, במשפט אחד. גם היא צריכה לעבוד כשער שני, אז לא הקדמה.
-3 והלאה. point: רעיון אחד בכל שקופית. headline של 3 עד 7 מילים, body עד 25 מילים.
+3 והלאה. point: רעיון אחד בכל שקופית. headline של 1 עד 5 מילים (מילה אחת חזקה עובדת הכי טוב), body עד 25 מילים.
+body בשקופיות cover, stake ו-point: שלוש שורות קצרות, מופרדות בירידת שורה: משפט קצר ומודגש (עד 5 מילים), שורה אישית וקלילה (עד 8 מילים, יוצאת בכתב יד), ושורה שלישית קצרה של מה זה נותן לה (עד 4 מילים, יוצאת עם חץ).
 לפני האחרונה. recap: הכל כרשימה קצרה, השקופית שמצלמים ושולחים. body עם שורה לכל נקודה.
 אחרונה. ${goalCta(draft.data.goal)}
 caption: הכיתוב לפוסט. שורה ראשונה שמושכת להמשיך לקרוא, גוף קצר בקול שלה, קריאה אחת לפעולה, ושלושה האשטגים רלוונטיים בסוף.
@@ -290,7 +303,9 @@ alt: תיאור קצר של השער, לקוראי מסך.
   }
   // ברירות המחדל של החשבון: עיצוב, קריאה לפעולה ותגיות
   const { palette: _palette, cta: _cta, hashtags: _tags, ...theme } = kit ?? {}; // eslint-disable-line @typescript-eslint/no-unused-vars
-  const kept = keepImages(draft.data.carousel, { ...carousel, caption: applyCaptionDefaults(carousel.caption, kit), ...(Object.keys(theme).length && !draft.data.carousel?.theme ? { theme, style: "photo" as const } : {}) });
+  // בלי עיצוב מותג ובלי עיצוב קודם: "השער שלי" (תמונה מלאה, כותרת ענקית, כתב יד וחץ)
+  const look = Object.keys(theme).length ? theme : SPLIT_LOOK;
+  const kept = keepImages(draft.data.carousel, { ...carousel, caption: applyCaptionDefaults(carousel.caption, kit), ...(!draft.data.carousel?.theme ? { theme: look, style: "photo" as const } : {}) });
   return { ...draft.data, carousel: kept, checks };
 }
 

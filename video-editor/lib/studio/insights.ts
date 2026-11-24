@@ -467,7 +467,22 @@ const GOAL_MIX: Record<string, string> = {
   launch: "המטרה השבוע: להשקה. בונים ציפייה: הבעיה, הסיפור מאחורי מה שיוצא, הצצה, ולפחות שני פוסטים שמזמינים להגיב כדי לשמוע ראשונות.",
 };
 
-export async function weekOptions(input: { account: string; dates: string[]; goal?: string; voice: string; trends: TrendItem[]; existing: string[]; feedback: Feedback[]; templates: { id: string; name: string; kind: string }[] }) {
+/**
+ * הכלל של הקרוסלות: 4 בחודש. 2 שמירה (ערך), 1 קרבה (אישית), 1 פנייה (איך זה לעבוד איתך). ככה מוכרים בלי לדחוף.
+ * בסוגי התוכן של הסטודיו: value = שמירה, story = קרבה, trust = פנייה.
+ */
+export function carouselMixBlock(done: string[]) {
+  const n = (t: string) => done.filter((x) => x === t || (t === "value" && x === "viral")).length;
+  const need = { value: Math.max(0, 2 - n("value")), story: Math.max(0, 1 - n("story")), trust: Math.max(0, 1 - n("trust")) };
+  return `קרוסלות (הכלל: 4 בחודש, ככה מוכרים בלי לדחוף):
+- 2 קרוסלות שמירה (content_type value): קרוסלת ערך ספציפית, עם דוגמה לכל רעיון. מביאה אנשים חדשים.
+- 1 קרוסלת קרבה (content_type story): קרוסלה אישית, רגע אמיתי מאחורי הקלעים, שקופית אחרי שקופית. גורמת להם להישאר.
+- 1 קרוסלת פנייה (content_type trust): איך זה לעבוד איתה או להשתמש במה שהיא מציעה: תהליך, לפני ואחרי, תוצאה. מביאה הודעות.
+החודש כבר יש: ${done.length ? `${n("value")} שמירה, ${n("story")} קרבה, ${n("trust")} פנייה` : "עוד אין קרוסלות"}.
+מה שחסר החודש: ${need.value} שמירה, ${need.story} קרבה, ${need.trust} פנייה. כל קרוסלה השבוע (format carousel) חייבת להיות מאחד הסוגים החסרים, ולא יותר מהחסר. ריל יכול להיות מכל סוג.`;
+}
+
+export async function weekOptions(input: { account: string; dates: string[]; goal?: string; carouselsThisMonth?: string[]; voice: string; trends: TrendItem[]; existing: string[]; feedback: Feedback[]; templates: { id: string; name: string; kind: string }[] }) {
   const performance = await performanceSummary(12, input.account).catch(() => "אין נתוני ביצועים.");
   const { days } = cleanDeep(await askBrain({
     prefer: "claude", schema: WeekOptionsSchema,
@@ -478,6 +493,7 @@ ${preferencesBlock(input.feedback)}
 החשבון: @${input.account}.
 הימים: ${input.dates.join(", ")}
 ${input.goal ? GOAL_MIX[input.goal] ?? "" : ""}
+${carouselMixBlock(input.carouselsThisMonth ?? [])}
 טרנדים מאומתים: ${JSON.stringify(input.trends.slice(0, 10).map((t) => ({ title: t.title, idea: t.reel_idea })))}
 ביצועים של החשבון: ${performance}
 כבר קיים (לא לחזור): ${JSON.stringify(input.existing.slice(0, 50))}

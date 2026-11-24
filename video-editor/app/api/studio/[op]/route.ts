@@ -330,13 +330,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
       }
       case "week-options": {
         const { account: acc, dates, goal } = z.object({ account, dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).min(1).max(7), goal: z.enum(["grow", "authority", "sell", "launch"]).optional() }).parse(body);
-        const [{ data: trend }, { data: existing }, { data: fb }] = await Promise.all([
+        // הקרוסלות של החודש (לפי היום הראשון שמתכננים), כדי לשמור על 2 שמירה, 1 קרבה, 1 פנייה
+        const month = dates[0].slice(0, 7);
+        const [{ data: trend }, { data: existing }, { data: fb }, { data: monthCars }] = await Promise.all([
           supabase.from("studio_trends").select("items").eq("status", "done").order("date", { ascending: false }).limit(1).maybeSingle(),
           supabase.from("studio_items").select("title").eq("account", acc).order("created_at", { ascending: false }).limit(60),
           supabase.from("studio_feedback").select("kind, text, verdict, reason").order("created_at", { ascending: false }).limit(60),
+          supabase.from("studio_items").select("content_type, planned_date").eq("account", acc).eq("format", "carousel").gte("planned_date", `${month}-01`).lte("planned_date", `${month}-31`),
         ]);
+        const inWeek = new Set(dates);
+        const carouselsThisMonth = (monthCars ?? []).filter((x) => !inWeek.has(x.planned_date as string)).map((x) => (x.content_type as string) || "value");
         const days = await weekOptions({
-          account: acc, dates, goal, voice: voiceBlock(await getVoice(supabase, acc), acc),
+          account: acc, dates, goal, carouselsThisMonth, voice: voiceBlock(await getVoice(supabase, acc), acc),
           trends: ((trend?.items ?? []) as TrendItem[]).filter((t) => t.account === acc),
           existing: (existing ?? []).map((e) => e.title as string), feedback: (fb ?? []) as Feedback[],
           templates: TEMPLATES.map((t) => ({ id: t.id, name: t.name, kind: t.kind })),
