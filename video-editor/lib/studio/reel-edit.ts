@@ -22,7 +22,7 @@ function segmentOfCard(kit: ReelEditKit, cardIndex: number) {
 }
 
 export function applyReelChanges(kit: ReelEditKit, changes: ReelChange[], pool: Segment[], message: string) {
-  let k: ReelEditKit = { segments: [...kit.segments], cards: kit.cards.map((c) => ({ ...c })) };
+  let k: ReelEditKit = { ...kit, segments: [...kit.segments], cards: kit.cards.map((c) => ({ ...c })) };
   const done: string[] = [];
   const left: ReelChange[] = [];
   const used = new Set(k.segments.map((s) => s.path));
@@ -54,17 +54,33 @@ export function applyReelChanges(kit: ReelEditKit, changes: ReelChange[], pool: 
       const drop = new Set(k.segments.map((s, j) => (st[j] >= c.start - 0.05 && st[j] + s.seconds <= c.end + 0.05 ? j : -1)).filter((j) => j >= 0));
       const cut = [...drop].reduce((n, j) => n + k.segments[j].seconds, 0);
       k = {
+        ...k,
         segments: k.segments.filter((_, j) => !drop.has(j)),
         cards: k.cards.filter((_, j) => j !== i).map((x) => (x.start >= c.end - 0.05 ? { ...x, start: +(x.start - cut).toFixed(2), end: +(x.end - cut).toFixed(2) } : x)),
       };
       done.push(`הורדתי את כרטיס ${i + 1}`);
-    } else if (ch.action === "timing") {
+    } else if (ch.action === "timing" || (ch.action === "other" && /בורח|מהר מדי|לא רואים|לא מספיק|לקרוא|להאט|לאט|איטי/.test(`${ch.detail} ${message}`))) {
       const text = `${ch.detail} ${message}`;
-      const faster = /מהיר|קצר|לקצר|זריז|קצב/.test(text) && !/איטי|לאט|ארוך/.test(text);
+      // לאט יותר (כתוביות שבורחות, אי אפשר לקרוא): כל כרטיס נשאר יותר זמן, והסרטון מתנגן בהילוך קצת איטי
+      const slower = /בורח|מהר מדי|לא רואים|לא מספיק|לקרוא|להאט|לאט|איטי|ארוך יותר|יותר זמן/.test(text);
+      if (slower) {
+        const f = 1.3;
+        if (k.sound) { left.push(ch); continue; } // בסרטון דיבור הקול היה נמתח: לא משנים
+        if (k.segments.some((s) => (s.speed ?? 1) / f < 0.55)) { left.push(ch); continue; }
+        k = {
+          ...k,
+          segments: k.segments.map((s) => ({ ...s, seconds: +(s.seconds * f).toFixed(2), speed: +((s.speed ?? 1) / f).toFixed(3) })),
+          cards: k.cards.map((c) => ({ ...c, start: +(c.start * f).toFixed(2), end: +(c.end * f).toFixed(2) })),
+        };
+        done.push("האטתי: כל כרטיס נשאר יותר זמן על המסך, והסרטונים מתנגנים קצת יותר לאט");
+        continue;
+      }
+      const faster = /מהיר|קצר|לקצר|זריז|קצב/.test(text);
       if (!faster) { left.push(ch); continue; }
       // קצב מהיר יותר: כל קטע מתקצר, והכרטיסים מתכווצים איתו
       const f = 0.8;
       k = {
+        ...k,
         segments: k.segments.map((s) => ({ ...s, seconds: +(s.seconds * f).toFixed(2) })),
         cards: k.cards.map((c) => ({ ...c, start: +(c.start * f).toFixed(2), end: +(c.end * f).toFixed(2) })),
       };

@@ -400,8 +400,11 @@ export function buildReelTimeline(kit: ReelEditKit, style: CaptionStyleId = "pop
   const clips: Clip[] = kit.segments.map((s, i) => {
     const id = `seg-${i + 1}`;
     const from = s.from ?? 0;
-    assets[id] = { id, name: `קטע ${i + 1}`, url: "", thumbnailUrl: null, duration: from + s.seconds, width: s.width, height: s.height, origin: "library", storagePath: s.path };
-    return { id: uid("clip"), sourceAssetId: id, assetId: id, in: from, out: from + s.seconds, look: NEUTRAL_LOOK, activeVariantId: null, volume: kit.sound ? 1 : 0 };
+    // בהילוך איטי לוקחים פחות מהמקור, והוא נמתח לאורך של הקטע בריל
+    const speed = s.speed && s.speed > 0 ? s.speed : 1;
+    const span = +(s.seconds * speed).toFixed(3);
+    assets[id] = { id, name: `קטע ${i + 1}`, url: "", thumbnailUrl: null, duration: from + span, width: s.width, height: s.height, origin: "library", storagePath: s.path };
+    return { id: uid("clip"), sourceAssetId: id, assetId: id, in: from, out: from + span, ...(speed !== 1 ? { speed } : {}), look: NEUTRAL_LOOK, activeVariantId: null, volume: kit.sound ? 1 : 0 };
   });
   // מעבר בין הקטעים: בלי בחירה, מעבר רך קצר, כדי שהחיתוכים לא ייראו קטועים
   const tr = design.transition ?? "fade";

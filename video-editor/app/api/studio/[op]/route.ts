@@ -133,8 +133,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
           const { kit, done, left } = applyReelChanges(draft.data.edit, changes, pool, message);
           const at = new Date().toISOString();
           const text = done.length
-            ? `${done.join(". ")}.${left.length ? " את השאר אני לא יכולה לשנות לבד, אז זה בתור לעיבוד הבא." : ""}`
-            : `${reply} את זה אני לא יכולה לשנות לבד, אז זה בתור לעיבוד הבא.`;
+            ? `${done.join(". ")}.${left.length ? " את השאר עוד אין לי איך לשנות מכאן. אפשר בכפתורים שמעל: גרסה, עיצוב, וכל כרטיס בנפרד." : ""}`
+            : `${reply} את זה עוד אין לי איך לשנות מכאן. אפשר בכפתורים שמעל: גרסה, עיצוב, וכל כרטיס בנפרד.`;
           const requests = left.length ? [...(draft.data.requests ?? []), { text: message, changes: left, status: "pending" as const, at }] : draft.data.requests;
           const history = done.length ? [draft.data.edit, ...(draft.data.edit_history ?? [])].slice(0, 6) : draft.data.edit_history;
           return NextResponse.json({ draft: await saveDraft(draft.id, { ...draft.data, edit: done.length ? kit : draft.data.edit, edit_history: history, requests, chat: [...chat, { role: "designer", text, at }] }) });
