@@ -110,8 +110,8 @@ export function DesignPanel({ account, theme, onChange, brandMode = false }: { a
         <Range label="גודל טקסט" value={t.bodyScale} min={0.7} max={1.4} step={0.05} onChange={(v) => set({ bodyScale: v })} fmt={(v) => `${Math.round(v * 100)}%`} />
         <Range label="החשכת התמונה" value={t.overlay} min={0} max={0.8} step={0.05} onChange={(v) => set({ overlay: v })} fmt={(v) => (v === 0 ? "בלי" : `${Math.round(v * 100)}%`)} />
         <div className="flex flex-wrap gap-4">
-          <Choice label="יישור" value={t.align} options={[["right", "לימין"], ["center", "למרכז"]] as const} onChange={(v) => set({ align: v })} />
-          <Choice label="מיקום הטקסט" value={t.position} options={[["top", "למעלה"], ["center", "באמצע"], ["bottom", "למטה"]] as const} onChange={(v) => set({ position: v })} />
+          <Choice label="יישור (כל השקופיות)" value={t.align} options={[["right", "לימין"], ["center", "למרכז"]] as const} onChange={(v) => set({ align: v })} />
+          <Choice label="מיקום (כל השקופיות)" value={t.position} options={[["top", "למעלה"], ["center", "באמצע"], ["bottom", "למטה"]] as const} onChange={(v) => set({ position: v })} />
         </div>
       </div>
       <div>

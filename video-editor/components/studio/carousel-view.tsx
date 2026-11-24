@@ -227,7 +227,7 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
               <Btn busy={busy === "send"} onClick={sendToInstagram}><Send className="size-4" />לשלוח לאינסטגרם</Btn>
               <Btn variant="line" busy={busy === "zip"} onClick={async () => { setBusy("zip"); try { await downloadZip(shown ?? c, draft.idea, photos); } finally { setBusy(""); } }}><Download className="size-4" />להוריד</Btn>
               <span className="mx-1 hidden h-6 w-px bg-[#E3D9CC] sm:block" />
-              <Btn variant="line" onClick={() => setEdit(structuredClone(c))}><Pencil className="size-4" />לערוך טקסט</Btn>
+              <Btn variant="line" onClick={() => setEdit(structuredClone(c))}><Pencil className="size-4" />לערוך שקופיות</Btn>
               <Btn variant="line" busy={busy === "regen"} onClick={regen}><Sparkles className="size-4" />לכתוב מחדש</Btn>
               {history.length > 0 && <Btn variant="line" busy={busy === "revert"} onClick={revert}><Undo2 className="size-4" />לגרסה הקודמת</Btn>}
             </>
@@ -396,6 +396,11 @@ function SlideEditor({ edit, setEdit, images, account }: { edit: Carousel; setEd
                 <input className={inputCls} value={s.headline} placeholder="כותרת" onChange={(e) => setSlide(i, { headline: e.target.value })} />
                 <textarea rows={s.kind === "recap" ? 5 : 2} className={`${inputCls} mt-1.5`} value={s.body} placeholder={s.kind === "recap" ? "שורה לכל נקודה" : "טקסט (לא חובה)"} onChange={(e) => setSlide(i, { body: e.target.value })} />
                 <div className="mt-1.5"><RewriteChips account={account} headline={s.headline} body={s.body} onDone={(headline, body) => setSlide(i, { headline, body })} /></div>
+                {/* מיקום ויישור לשקופית הזאת בלבד */}
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                  <SlideChoice label="מיקום" value={s.pos} onChange={(pos) => setSlide(i, { pos })} options={[["top", "למעלה"], ["center", "באמצע"], ["bottom", "למטה"]]} />
+                  <SlideChoice label="יישור" value={s.align} onChange={(align) => setSlide(i, { align })} options={[["right", "לימין"], ["center", "למרכז"]]} />
+                </div>
                 <div className="mt-1.5 flex flex-wrap items-center gap-2">
                   <Btn variant="ghost" className="px-1.5 text-[12px]" busy={uploading === i} onClick={() => { target.current = i; fileRef.current?.click(); }}>
                     <ImagePlus className="size-4" />{s.image ? "להעלות תמונה אחרת" : "להעלות תמונה"}
@@ -478,6 +483,18 @@ function DrivePicker({ onPick, onClose }: { onPick: (id: string) => void; onClos
         </div>
         <p className="mt-2 text-[11px] text-[#9A8C85]">מסרטון: נלקח הפריים שהדרייב שומר לסרטון.</p>
       </div>
+    </div>
+  );
+}
+
+/** בחירה קטנה לשקופית אחת: "כמו בכולן" או ערך משלה */
+function SlideChoice<T extends string>({ label, value, onChange, options }: { label: string; value: T | undefined; onChange: (v: T | undefined) => void; options: [T, string][] }) {
+  const chip = (on: boolean) => `min-h-[30px] rounded-lg px-2 text-[12px] font-bold transition ${on ? "bg-[#5E1D1D] text-[#FAF6F1]" : "text-[#5E1D1D] hover:bg-[#F2ECE4]"}`;
+  return (
+    <div className="flex items-center gap-1 rounded-xl border border-[#E3D9CC] bg-white/80 p-1" role="radiogroup" aria-label={label}>
+      <span className="px-1 text-[11px] font-bold text-[#9A8C85]">{label}</span>
+      <button type="button" role="radio" aria-checked={!value} onClick={() => onChange(undefined)} className={chip(!value)}>כמו בכולן</button>
+      {options.map(([v, l]) => <button key={v} type="button" role="radio" aria-checked={value === v} onClick={() => onChange(v)} className={chip(value === v)}>{l}</button>)}
     </div>
   );
 }

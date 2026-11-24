@@ -191,7 +191,9 @@ export async function renderSlide(c0: Carousel, index: number, images: Record<nu
  * כותרת מודגשת בוורוד בהיר ושורת המשך בכתב יד לבן. שקופית בלי תמונה מקבלת רקע כהה חם.
  */
 async function renderPhotoSlide(c: Carousel, index: number, images: Record<number, string>): Promise<HTMLCanvasElement> {
-  const t = { ...PHOTO_DEFAULT, ...(c.theme ?? {}) };
+  const sl = c.slides[index];
+  // מיקום ויישור של השקופית עצמה גוברים על אלה של כל הקרוסלה
+  const t = { ...PHOTO_DEFAULT, ...(c.theme ?? {}), ...(sl.align ? { align: sl.align } : {}), ...(sl.pos ? { position: sl.pos } : {}) };
   const HEAD = fontStack(t.headFont, SANS), BODY = fontStack(t.bodyFont, HAND);
   const hw = boldOf(t.headFont), bw = t.bodyFont === "Amatic SC" ? 700 : regularOf(t.bodyFont) >= 500 ? regularOf(t.bodyFont) : 600;
   await fontCssReady();
@@ -222,7 +224,7 @@ async function renderPhotoSlide(c: Carousel, index: number, images: Record<numbe
   ctx.shadowColor = photo ? "rgba(0,0,0,0.45)" : "transparent";
   ctx.shadowBlur = 18;
   const P = 100;
-  const pos = slide.kind === "cover" || slide.kind === "cta" ? "center" : t.position;
+  const pos = slide.pos ?? (slide.kind === "cover" || slide.kind === "cta" ? "center" : t.position);
   const headSize = Math.round((slide.kind === "cover" ? 112 : 84) * t.headScale);
   const recap = slide.kind === "recap";
   // כתב יד נראה קטן יותר באותו גודל, אז מגדילים אותו
@@ -300,7 +302,7 @@ function drawFramed(ctx: CanvasRenderingContext2D, c: Carousel, index: number, p
   const textH = head.length * hl + (body.length ? 26 + body.length * bl : 0);
   const photoH = kind === "polaroid" ? (photo ? 640 : 0) : 0;
   const CH = kind === "polaroid" ? 44 + photoH + 40 + textH + 70 : Math.max(textH + PAD * 2, kind === "note" ? CW * 0.62 : 0);
-  const pos = big || kind === "polaroid" ? "center" : t.position;
+  const pos = slide.pos ?? (big || kind === "polaroid" ? "center" : t.position);
   const cx = W / 2;
   const top = pos === "top" ? 150 : pos === "bottom" ? H - 150 - CH : (H - CH) / 2;
   const cy = top + CH / 2;
