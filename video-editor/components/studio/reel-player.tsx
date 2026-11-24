@@ -234,8 +234,16 @@ function ReelPlayerInner({ draft, onChange }: { draft: Draft; onChange: (d: Draf
     if (!assets) throw new Error("הריל עוד נטען");
     const { renderToMp4 } = await import("@/lib/export/render-video");
     abort.current = new AbortController();
-    const phone = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
-    return renderToMp4(full.timeline, full.assets!, { quality: phone ? "720p" : "1080p", signal: abort.current.signal, onProgress: setProgress });
+    // תמיד 1080 על 1920, כמו שאינסטגרם מצפה (720 נראה מטושטש אחרי הדחיסה של אינסטגרם).
+    // רק אם הטלפון לא מצליח לרנדר ב-1080, מנסים שוב ב-720
+    try {
+      return await renderToMp4(full.timeline, full.assets!, { quality: "1080p", signal: abort.current.signal, onProgress: setProgress });
+    } catch (e) {
+      if (abort.current.signal.aborted) throw e;
+      toast("הטלפון לא הצליח ב-1080, מייצאת שוב באיכות קצת נמוכה יותר");
+      abort.current = new AbortController();
+      return renderToMp4(full.timeline, full.assets!, { quality: "720p", signal: abort.current.signal, onProgress: setProgress });
+    }
   };
   const save = (blob: Blob) => {
     const a = document.createElement("a");

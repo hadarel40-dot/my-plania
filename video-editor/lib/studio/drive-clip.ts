@@ -1,5 +1,5 @@
 "use client";
-import { ALL_FORMATS, BufferTarget, CanvasSink, Conversion, CustomSource, EncodedPacketSink, Input, Mp4OutputFormat, Output, QUALITY_HIGH, type InputVideoTrack } from "mediabunny";
+import { ALL_FORMATS, BufferTarget, CanvasSink, Conversion, CustomSource, EncodedPacketSink, Input, Mp4OutputFormat, Output, type InputVideoTrack } from "mediabunny";
 import { db } from "./client";
 import { MEDIA_BUCKET } from "@/lib/supabase/env";
 
@@ -109,7 +109,7 @@ export async function driveClip(id: string, opts: { from?: number; seconds?: num
       input, output,
       trim: { start: from, end: from + seconds },
       video: {
-        codec: "avc", quality: QUALITY_HIGH, frameRate: 30, allowTransformationMetadata: false, keyFrameInterval: 1,
+        codec: "avc", bitrate: 10_000_000, frameRate: 30, allowTransformationMetadata: false, keyFrameInterval: 1,
         // ציור על קנבס רגיל: הדפדפן ממיר HDR לצבעים רגילים, ומסובב לפי הסרטון
         process: (sample) => { sample.drawWithFit(ctx, { fit: "cover" }); return canvas; },
         processedWidth: w, processedHeight: h,

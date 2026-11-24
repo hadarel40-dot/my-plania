@@ -56,7 +56,8 @@ export async function renderToMp4(
     container: "mp4",
     videoCodec: "h264",
     audioCodec: "aac",
-    videoBitrate: "high",
+    // קצב גבוה: אינסטגרם דוחס שוב, וכמה שהמקור נקי יותר, התוצאה אחרי הדחיסה חדה יותר
+    videoBitrate: quality === "720p" ? 6_000_000 : 12_000_000,
     signal,
     onProgress: (p) => onProgress(Math.round(p.progress * 100)),
     licenseKey: process.env.NEXT_PUBLIC_REMOTION_LICENSE_KEY || null,
