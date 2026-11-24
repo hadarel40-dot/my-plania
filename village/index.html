@@ -1,0 +1,381 @@
+<title>הכפר של הדראל</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Secular+One&family=Assistant:wght@400;600;700&display=swap">
+<style>
+/* Layout: one pixel-art village map (canvas) as the hero, a detail card for the chosen resident beside it, then the weekly route. */
+:root {
+  --bg: #FBF4F2;
+  --surface: #FFFFFF;
+  --ink: #3A1414;
+  --muted: #7C5A5E;
+  --line: #EAD7D7;
+  --brand: #5E1D1D;
+  --rose: #B5848E;
+  --pink: #F7C9D6;
+  --chip: #F6E6E8;
+  --display: "Secular One", "Assistant", "Arial Hebrew", sans-serif;
+  --body: "Assistant", "Arial Hebrew", "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #170E12; --surface: #221519; --ink: #F6E8EA; --muted: #C2A3A8; --line: #3A2429;
+    --brand: #F7C9D6; --rose: #C99AA4; --pink: #5E1D1D; --chip: #2E1C21; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #170E12; --surface: #221519; --ink: #F6E8EA; --muted: #C2A3A8; --line: #3A2429;
+  --brand: #F7C9D6; --rose: #C99AA4; --pink: #5E1D1D; --chip: #2E1C21; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 28px; }
+header { display: grid; gap: 6px; }
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(30px, 5vw, 46px); line-height: 1.1; margin: 0; color: var(--brand); text-wrap: balance; }
+.lede { margin: 0; color: var(--muted); max-width: 62ch; }
+h2 { font-family: var(--display); font-weight: 400; font-size: 26px; margin: 0; color: var(--brand); }
+
+.main { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 22px; align-items: start; }
+@media (max-width: 860px) { .main { grid-template-columns: minmax(0, 1fr); } }
+
+.map { position: relative; border-radius: 6px; overflow: hidden; border: 3px solid var(--brand); background: #6FAF5B; }
+.map canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; }
+.tag {
+  position: absolute; transform: translate(-50%, 0); font: 700 13px/1 var(--body); white-space: nowrap;
+  background: #FFF8EE; color: #3A1414; border: 2px solid #3A1414; padding: 4px 7px 5px; border-radius: 3px;
+  cursor: pointer; box-shadow: 0 2px 0 #3A1414;
+}
+.tag:hover, .tag[aria-pressed="true"] { background: #F7C9D6; }
+.tag:focus-visible { outline: 3px solid #FFF; outline-offset: 2px; }
+.tag .dot { display: inline-block; width: 8px; height: 8px; margin-inline-start: 5px; vertical-align: 0; border: 1px solid #3A1414; }
+@media (max-width: 520px) { .tag { font-size: 11px; padding: 3px 5px 4px; } }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 22px; display: grid; gap: 14px; min-width: 0; }
+.card-head { display: flex; gap: 14px; align-items: center; }
+.sprite { width: 44px; height: 56px; flex: none; image-rendering: pixelated; }
+.card-head h2 { line-height: 1.1; }
+.role { margin: 2px 0 0; color: var(--muted); font-size: 15px; }
+.id { font-family: var(--mono); font-size: 13px; color: var(--muted); direction: ltr; unicode-bidi: isolate; }
+.label { font-size: 13px; font-weight: 700; letter-spacing: .02em; color: var(--rose); margin: 0 0 4px; }
+.card ul { margin: 0; padding-inline-start: 20px; display: grid; gap: 3px; }
+.card p { margin: 0; }
+.prompts { display: grid; gap: 8px; }
+.prompt { display: flex; gap: 10px; align-items: flex-start; background: var(--chip); border-radius: 8px; padding: 10px 12px; }
+.prompt span { flex: 1; min-width: 0; }
+.copy {
+  flex: none; font: 600 13px var(--body); color: var(--brand); background: transparent; border: 1px solid var(--rose);
+  border-radius: 6px; padding: 3px 10px; cursor: pointer;
+}
+.copy:hover { background: var(--surface); }
+.copy:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: .86em; direction: ltr; unicode-bidi: isolate; }
+
+.route { display: grid; gap: 14px; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; counter-reset: s; }
+@media (max-width: 860px) { .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.steps li { counter-increment: s; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 4px; align-content: start; }
+.steps li::before { content: counter(s); font-family: var(--display); font-size: 22px; line-height: 1; color: var(--rose); }
+.steps b { font-size: 16px; }
+.steps small { color: var(--muted); font-size: 14px; line-height: 1.4; }
+.note { color: var(--muted); font-size: 15px; margin: 0; max-width: 70ch; }
+@media (prefers-reduced-motion: reduce) { .tag { transition: none; } }
+</style>
+
+<div class="wrap" dir="rtl" lang="he">
+  <header>
+    <h1>הכפר של הדראל</h1>
+    <p class="lede">שבע סוכנות שעובדות על העסק, וספרייה אחת שכולן קוראות ממנה. לחצי על בית כדי לראות מי גרה בו, מה היא עושה ומה אפשר לבקש ממנה.</p>
+  </header>
+
+  <section class="main">
+    <div class="map" id="map">
+      <canvas id="cv" width="192" height="124" aria-label="מפת הכפר: בתים של הסוכנות, הספרייה במרכז והבית של הדראל למעלה" role="img"></canvas>
+    </div>
+    <article class="card" id="card" aria-live="polite"></article>
+  </section>
+
+  <section class="route">
+    <h2>ככה עובר שבוע בכפר</h2>
+    <ol class="steps">
+      <li><b>החוקרת</b><small>מביאה טרנדים ומה ויראלי בתחום, עם מקורות</small></li>
+      <li><b>המתכננת</b><small>4 פוסטים: סיפור, ערך, ויראלי, אמון</small></li>
+      <li><b>הכותבת</b><small>כותבת כל פוסט בקול שלך</small></li>
+      <li><b>העורכת</b><small>בודקת מול 15 הכללים ומנקה סימנים של AI</small></li>
+      <li><b>את</b><small>מאשרת, מתקנת או אומרת מה לא אהבת</small></li>
+      <li><b>הספרנית</b><small>רושמת מה למדנו, כדי שבשבוע הבא יהיה טוב יותר</small></li>
+    </ol>
+    <p class="note">לא צריך לזכור מי עושה מה. כותבים לקלוד בקשה רגילה, והסוכנת הראשית שולחת אותה לסוכנות המתאימות. כשרוצים מישהי מסוימת, פשוט אומרים "תני לחוקרת..." או "שהעורכת תבדוק".</p>
+  </section>
+</div>
+
+<script>
+(() => {
+  const W = 192, H = 124;
+  const SKIN = '#F1C6A8', HAIR = '#4A2A1E', OUT = '#2A1414';
+
+  const RES = {
+    hadarel: { x: 96, y: 17, roof: '#5E1D1D', home: true, name: 'את', id: 'hadarel',
+      role: 'הבית של הדראל. לכאן מגיע כל מה שמוכן לאישור.',
+      does: ['מאשרת טיוטות לפני שהן עולות', 'אומרת מה אהבת ומה פחות', 'עונה על שאלות פתוחות כשיש לך רגע'],
+      reads: ['הכפר לא מפרסם ולא שולח כלום בלעדייך'],
+      prompts: ['מה מחכה לאישור שלי השבוע?', 'אילו שאלות פתוחות יש לכם אליי?', 'לא אהבתי את השער של הקרוסלה, הוא ארוך מדי'] },
+    researcher: { x: 28, y: 36, roof: '#4A7FC1', name: 'החוקרת', id: 'researcher',
+      role: 'מביאה מידע מהעולם: טרנדים, מתחרים, ומה נשים בקהל שלך אומרות.',
+      does: ['טרנדים והוקים שעובדים עכשיו בתחום', 'מחקר מתחרים: אפליקציות ארוחות ונותני שירותי אתרים', 'המילים שהקהל משתמש בהן כדי לתאר את הבעיה'],
+      reads: ['כל ממצא עם מקור, בלי מספרים מומצאים'],
+      prompts: ['תני לחוקרת למצוא 5 ריילס ויראליים על תכנון ארוחות מהחודש האחרון', 'מי המתחרות של Plania ומה הן מבטיחות?', 'איך אמהות עם הפרעת קשב מתארות את הבלגן של הערב?'] },
+    planner: { x: 164, y: 36, roof: '#8A5CC2', name: 'המתכננת', id: 'planner',
+      role: 'מחליטה מה עולה, מתי ובאיזה פורמט, לפי מה שלמדנו.',
+      does: ['שבוע ל-@plania.il: סיפור, ערך, ויראלי ואמון', 'מעלה שוב מה שעבד, ולא חוזרת על מה שלא', 'תוכנית לעמוד האישי כשמבקשים'],
+      reads: ['עובדת עם התהליך השבועי הקיים במוצאי שבת'],
+      prompts: ['תתכנני לי את השבוע הבא ל-@plania.il', 'תני לי חודש של רעיונות לעמוד האישי', 'מה כדאי להעלות ביום חמישי?'] },
+    writer: { x: 24, y: 84, roof: '#D9668F', name: 'הכותבת', id: 'writer',
+      role: 'כותבת בקול שלך: ריל, קרוסלה, כיתוב, סטורי ודפים.',
+      does: ['טקסט לריל, מילה אחת גדולה בכל פעם', 'שקופיות לקרוסלה: כותרת ועוד שורה קצרה', 'כיתוב עם שורה ראשונה שמושכת וקריאה אחת לפעולה'],
+      reads: ['Plania תמיד באנגלית, ובלי טענות על טיפול'],
+      prompts: ['תכתבי ריל על "שש בערב ואני נזכרת להפשיר"', 'תהפכי את הסיפור של Plania לקרוסלה של 6 שקופיות', 'תכתבי כיתוב לריל של יום ראשון'] },
+    editor: { x: 168, y: 84, roof: '#D98A3D', name: 'העורכת', id: 'editor',
+      role: 'שום דבר לא מגיע אלייך בלי לעבור דרכה.',
+      does: ['בודקת כל טיוטה מול 15 הכללים', 'מנקה סימנים של AI ומקפים ארוכים', 'מוודאה שאין מספרים או ציטוטים מומצאים'],
+      reads: ['מחזירה "עבר" או "לתקן" עם תיקון לכל שורה'],
+      prompts: ['שהעורכת תבדוק את הכיתוב הזה', 'זה נשמע כמוני או כמו ChatGPT?', 'תעברי על כל הפוסטים של השבוע לפני שאני רואה'] },
+    community: { x: 54, y: 108, roof: '#4E9A5B', name: 'מנהלת הקהילה', id: 'community',
+      role: 'מנסחת תשובות לתגובות ולהודעות. את שולחת.',
+      does: ['תשובות לתגובות על הפוסטים', 'הודעות DM, כולל פנייה לשיתופי פעולה', 'תגובות אצל יוצרות אחרות בתחום'],
+      reads: ['טיוטות בלבד, אף פעם לא שולחת בשמך'],
+      prompts: ['מישהי שאלה בתגובות אם Plania עובדת גם לצמחוניות, מה עונים?', 'תכתבי לי 5 תגובות לפוסטים של יוצרות בתחום', 'איך פונים ליוצרת לשיתוף פעולה?'] },
+    sales: { x: 138, y: 108, roof: '#D4B23A', name: 'אשת המכירות', id: 'sales',
+      role: 'הופכת התעניינות ללקוחות, בלי לחץ ובלי שפה מנופחת.',
+      does: ['הצעת מחיר לאתר לעסק קטן', 'הצעות לתכנון טיולים', 'דפי נחיתה, מבצעים ומעקב אחרי לידים'],
+      reads: ['מחירים רק ממה שכתוב בספרייה'],
+      prompts: ['פנתה אליי בעלת קונדיטוריה שרוצה אתר, תכיני הצעה', 'תכתבי לי מסר למבצע של Plania', 'מה לשלוח לליד שלא ענה כבר שבוע?'] },
+    librarian: { x: 96, y: 68, roof: '#3A9DA8', library: true, name: 'הספרנית', id: 'librarian',
+      role: 'גרה בספרייה. שומרת שהידע של העסק יהיה מדויק ומעודכן.',
+      does: ['רושמת כל משוב שלך ומה למדנו', 'מעבירה תשובות שלך למקום הנכון', 'מנהלת את יומן הכפר'],
+      reads: ['knowledge/', 'voice.md', 'feedback.md'],
+      prompts: ['המנוי של Plania עולה {{המחיר}} לחודש, תשמרי', 'מה למדנו עד עכשיו?', 'מה עוד חסר לכם לדעת עליי?'] },
+  };
+  const ORDER = ['hadarel', 'researcher', 'planner', 'writer', 'librarian', 'editor', 'community', 'sales'];
+  const LIB = { x: 96, y: 68, w: 34, h: 24 };
+  const ROAD_Y = 68;
+
+  // ---------- theme
+  const isDark = () => {
+    const t = document.documentElement.getAttribute('data-theme');
+    if (t) return t === 'dark';
+    return matchMedia('(prefers-color-scheme: dark)').matches;
+  };
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------- paths: waypoints from a house to the library side (or to the home's door)
+  function pathFor(k) {
+    const r = RES[k];
+    if (r.home) return [[96, r.y + 8], [96, LIB.y - LIB.h / 2 - 1]];
+    const side = r.x < 96 ? LIB.x - LIB.w / 2 - 1 : LIB.x + LIB.w / 2;
+    const startY = r.y < ROAD_Y ? r.y + 8 : r.y - 9;
+    return [[r.x, startY], [r.x, ROAD_Y], [side, ROAD_Y]];
+  }
+
+  // ---------- scene
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const R = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); };
+
+  // fixed pseudo-random grass speckles and flowers
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const speck = Array.from({ length: 260 }, () => [rnd() * W | 0, rnd() * H | 0, rnd()]);
+  const flowers = Array.from({ length: 26 }, () => [rnd() * W | 0, rnd() * H | 0, ['#F7C9D6', '#FFF3B0', '#FFFFFF'][rnd() * 3 | 0]]);
+  const stars = Array.from({ length: 30 }, () => [rnd() * W | 0, rnd() * 10 | 0]);
+
+  function road(a, b, c) {
+    const [x1, y1] = a, [x2, y2] = b;
+    if (x1 === x2) R(x1 - 2, Math.min(y1, y2), 4, Math.abs(y2 - y1) + 1, c);
+    else R(Math.min(x1, x2), y1 - 2, Math.abs(x2 - x1) + 1, 4, c);
+  }
+
+  function house(r, k, night, sel, t) {
+    const x = r.x - 10, y = r.y - 6;
+    R(x + 1, y + 15, 20, 2, 'rgba(0,0,0,.18)');            // shadow
+    R(x, y, 20, 14, night ? '#C9B8A8' : '#F3E3CF');          // walls
+    R(x, y + 13, 20, 1, '#B79F86');
+    for (let i = 0; i < 7; i++) R(x - 2 + i, y - i, 24 - i * 2, 1, r.roof); // roof
+    R(x - 2, y, 24, 1, OUT);
+    R(x + 15, y - 8, 3, 5, '#8A6A5A');                       // chimney
+    const lit = night ? '#FFD86B' : '#9FD3E6';
+    R(x + 3, y + 4, 4, 4, lit); R(x + 13, y + 4, 4, 4, lit);
+    R(x + 5, y + 4, 1, 4, OUT); R(x + 15, y + 4, 1, 4, OUT);
+    const doorTop = r.y < ROAD_Y;
+    R(x + 8, y + 7, 4, 7, '#6B3A2A'); R(x + 11, y + 10, 1, 1, '#F2C14E');
+    if (!doorTop) R(x + 8, y - 1, 4, 1, r.roof);
+    if (r.home) { // heart sign on Hadarel's house
+      const hx = x + 8, hy = y - 4;
+      R(hx, hy, 2, 1, '#F7C9D6'); R(hx + 3, hy, 2, 1, '#F7C9D6'); R(hx, hy + 1, 5, 1, '#F7C9D6'); R(hx + 1, hy + 2, 3, 1, '#F7C9D6'); R(hx + 2, hy + 3, 1, 1, '#F7C9D6');
+    }
+    if (!reduce && !night) { // chimney smoke
+      const p = (t / 900) % 1;
+      ctx.globalAlpha = 1 - p; R(x + 16 + Math.sin(t / 300) , y - 10 - p * 8, 2, 2, '#FFFFFF'); ctx.globalAlpha = 1;
+    }
+    if (sel) outline(x - 3, y - 9, 26, 26, t);
+  }
+
+  function library(night, sel, t) {
+    const x = LIB.x - LIB.w / 2, y = LIB.y - LIB.h / 2;
+    R(x + 1, y + LIB.h + 1, LIB.w, 2, 'rgba(0,0,0,.18)');
+    R(x, y + 6, LIB.w, LIB.h - 6, night ? '#B9C4C9' : '#E6EEF0');
+    for (let i = 0; i < 6; i++) R(x - 2 + i * 2, y + 6 - i, LIB.w + 4 - i * 4, 1, '#3A9DA8');
+    R(x - 2, y + 6, LIB.w + 4, 1, OUT);
+    for (let c = 0; c < 4; c++) R(x + 3 + c * 8, y + 8, 3, LIB.h - 9, night ? '#A3AFB5' : '#FFFFFF'); // columns
+    R(x + 13, y + 13, 8, 11, '#2D5F66');                                      // big door
+    R(x + 14, y + 15, 2, 3, '#E8B84A'); R(x + 18, y + 15, 2, 3, '#4A7FC1');   // books in the door
+    R(x + 16, y + 15, 2, 3, '#D9668F');
+    R(x, y + LIB.h - 1, LIB.w, 1, '#8FA0A6');
+    if (sel) outline(x - 4, y - 2, LIB.w + 8, LIB.h + 6, t);
+  }
+
+  function outline(x, y, w, h, t) {
+    const on = reduce || Math.floor(t / 400) % 2 === 0;
+    const c = on ? '#FFFFFF' : '#F7C9D6';
+    for (let i = 0; i < w; i += 2) { R(x + i, y, 1, 1, c); R(x + i, y + h, 1, 1, c); }
+    for (let i = 0; i < h; i += 2) { R(x, y + i, 1, 1, c); R(x + w, y + i, 1, 1, c); }
+  }
+
+  function person(px, py, color, step, carrying) {
+    const x = Math.round(px) - 2, y = Math.round(py) - 8;
+    R(x, y + 8, 5, 1, 'rgba(0,0,0,.2)');
+    R(x + 1, y, 3, 1, HAIR); R(x, y + 1, 5, 1, HAIR);
+    R(x + 1, y + 2, 3, 2, SKIN); R(x, y + 2, 1, 3, HAIR); R(x + 4, y + 2, 1, 2, HAIR);
+    R(x, y + 4, 5, 3, color);
+    if (step) { R(x + 1, y + 7, 1, 1, OUT); R(x + 3, y + 7, 1, 1, OUT); }
+    else { R(x + 2, y + 7, 1, 1, OUT); }
+    if (carrying) { R(x + 4, y + 4, 3, 2, '#FFFFFF'); R(x + 4, y + 4, 3, 1, '#D9D0C4'); }
+  }
+
+  // walkers: each resident walks its path to the library and back, the editor also delivers to Hadarel
+  const walkers = ['researcher', 'planner', 'writer', 'editor', 'community', 'sales'].map((k, i) => {
+    let pts = pathFor(k);
+    if (k === 'editor') pts = pts.concat([[LIB.x + LIB.w / 2, ROAD_Y], [LIB.x + LIB.w / 2 + 3, ROAD_Y], [LIB.x + LIB.w / 2 + 3, LIB.y - LIB.h / 2 - 3], [99, LIB.y - LIB.h / 2 - 3], [99, RES.hadarel.y + 9]]);
+    const loop = pts.concat(pts.slice(0, -1).reverse());
+    return { k, loop, seg: 0, f: 0, wait: 800 + i * 900, color: RES[k].roof };
+  });
+  const lib = { x: LIB.x - 8, dir: 1 };
+  const SPEED = 0.014; // logical px per ms
+
+  function stepWalker(w, dt) {
+    if (w.wait > 0) { w.wait -= dt; return; }
+    const a = w.loop[w.seg], b = w.loop[w.seg + 1];
+    const len = Math.abs(b[0] - a[0]) + Math.abs(b[1] - a[1]) || 1;
+    w.f += (SPEED * dt) / len;
+    if (w.f >= 1) {
+      w.f = 0; w.seg++;
+      const atEnd = w.seg >= w.loop.length - 1;
+      const mid = Math.floor((w.loop.length - 1) / 2);
+      if (atEnd) { w.seg = 0; w.wait = 2500 + Math.random() * 4000; }
+      else if (w.seg === mid) w.wait = 1200 + Math.random() * 1500;
+    }
+  }
+  function walkerPos(w) {
+    const a = w.loop[w.seg], b = w.loop[w.seg + 1];
+    return [a[0] + (b[0] - a[0]) * w.f, a[1] + (b[1] - a[1]) * w.f];
+  }
+
+  let selected = 'librarian';
+  let last = performance.now();
+  function draw(t) {
+    const dt = Math.min(64, t - last); last = t;
+    const night = isDark();
+    R(0, 0, W, H, night ? '#2F4A3A' : '#79B862');
+    for (const [x, y, v] of speck) R(x, y, 1, 1, night ? (v > .5 ? '#365442' : '#2A4234') : (v > .5 ? '#86C46E' : '#6BA857'));
+    if (night) for (const [x, y] of stars) R(x, y, 1, 1, '#E8E4FF');
+    const dirt = night ? '#7A6A55' : '#D9BE8C';
+    for (const k of ORDER) { const p = pathFor(k); for (let i = 0; i < p.length - 1; i++) road(p[i], p[i + 1], dirt); }
+    road([LIB.x - 40, ROAD_Y], [LIB.x + 40, ROAD_Y], dirt);
+    for (const [x, y, c] of flowers) {
+      const onRoad = Math.abs(y - ROAD_Y) < 4;
+      if (!onRoad) R(x, y, 1, 1, night ? '#C7A9B9' : c);
+    }
+    // trees
+    for (const [tx, ty] of [[8, 10], [184, 12], [62, 8], [130, 6], [6, 58], [186, 58], [96, 112], [184, 118], [10, 118]]) {
+      R(tx - 1, ty + 3, 2, 3, '#6B4A2E'); R(tx - 3, ty - 2, 6, 5, night ? '#24402F' : '#3F8A44'); R(tx - 2, ty - 3, 4, 1, night ? '#2C4D38' : '#55A456');
+    }
+    // pond
+    R(145, 86, 14, 6, night ? '#2B4E73' : '#6FB7E0'); R(147, 85, 10, 1, night ? '#2B4E73' : '#6FB7E0'); R(148, 87, 4, 1, '#FFFFFF');
+
+    library(night, selected === 'librarian', t);
+    for (const k of ORDER) if (k !== 'librarian') house(RES[k], k, night, selected === k, t);
+
+    // librarian paces in front of the library
+    if (!reduce) { lib.x += lib.dir * SPEED * dt * .6; if (lib.x > LIB.x + 8 || lib.x < LIB.x - 8) lib.dir *= -1; }
+    person(lib.x, LIB.y + LIB.h / 2 + 9, RES.librarian.roof, Math.floor(t / 220) % 2, false);
+    // Hadarel at her door
+    person(RES.hadarel.x - 13, RES.hadarel.y + 10, '#F7C9D6', 0, false);
+
+    for (const w of walkers) {
+      if (!reduce) stepWalker(w, dt);
+      const [x, y] = walkerPos(w);
+      const moving = w.wait <= 0;
+      const goingBack = w.seg >= (w.loop.length - 1) / 2;
+      person(x, y, w.color, moving ? Math.floor(t / 180) % 2 : 0, w.k === 'editor' && !goingBack);
+    }
+    if (!reduce) requestAnimationFrame(draw);
+  }
+
+  // ---------- name tags as accessible buttons over the map
+  const map = document.getElementById('map');
+  for (const k of ORDER) {
+    const r = RES[k];
+    const b = document.createElement('button');
+    b.className = 'tag'; b.type = 'button'; b.dataset.k = k;
+    const ty = r.library ? LIB.y + LIB.h / 2 + 2 : r.y + 10;
+    b.style.left = (r.x / W * 100) + '%';
+    b.style.top = (Math.min(ty, H - 13) / H * 100) + '%';
+    b.innerHTML = `${r.name}<span class="dot" style="background:${r.home ? '#F7C9D6' : r.roof}"></span>`;
+    b.addEventListener('click', () => select(k));
+    map.appendChild(b);
+  }
+  cv.addEventListener('click', (e) => {
+    const rect = cv.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width * W, y = (e.clientY - rect.top) / rect.height * H;
+    let best = null, bd = 1e9;
+    for (const k of ORDER) { const r = RES[k]; const d = Math.hypot(r.x - x, r.y - y); if (d < bd) { bd = d; best = k; } }
+    if (bd < 22) select(best);
+  });
+
+  // ---------- detail card
+  const card = document.getElementById('card');
+  function spriteSVG(color) {
+    const px = [[1,0,3,1,HAIR],[0,1,5,1,HAIR],[1,2,3,2,SKIN],[0,2,1,3,HAIR],[4,2,1,2,HAIR],[0,4,5,3,color],[1,7,1,1,OUT],[3,7,1,1,OUT]];
+    return `<svg class="sprite" viewBox="0 0 5 8" shape-rendering="crispEdges" aria-hidden="true">${px.map(([x,y,w,h,c]) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${c}"/>`).join('')}</svg>`;
+  }
+  const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  function select(k) {
+    selected = k;
+    const r = RES[k];
+    document.querySelectorAll('.tag').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.k === k)));
+    card.innerHTML = `
+      <div class="card-head">${spriteSVG(r.home ? '#F7C9D6' : r.roof)}
+        <div><h2>${r.name}</h2><p class="role">${r.role}</p>${r.home ? '' : `<span class="id">.claude/agents/${r.id}.md</span>`}</div>
+      </div>
+      <div><p class="label">מה היא עושה</p><ul>${r.does.map((d) => `<li>${esc(d)}</li>`).join('')}</ul></div>
+      <div><p class="label">${r.library ? 'מה יש בספרייה' : 'חשוב לדעת'}</p><p>${r.reads.map((d) => /[a-z]/i.test(d) ? `<code>${esc(d)}</code>` : esc(d)).join(' · ')}</p></div>
+      <div class="prompts"><p class="label">אפשר לכתוב לקלוד</p>
+        ${r.prompts.map((p, i) => `<div class="prompt"><span>${esc(p)}</span><button class="copy" type="button" id="copy-${k}-${i}" data-t="${esc(p)}">העתקה</button></div>`).join('')}
+      </div>`;
+    card.querySelectorAll('.copy').forEach((btn) => btn.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(btn.dataset.t); btn.textContent = 'הועתק'; }
+      catch { const s = btn.previousElementSibling; const rg = document.createRange(); rg.selectNodeContents(s); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(rg); btn.textContent = 'מסומן'; }
+      setTimeout(() => (btn.textContent = 'העתקה'), 1600);
+    }));
+    if (reduce) draw(performance.now());
+  }
+
+  select('librarian');
+  requestAnimationFrame(draw);
+  new MutationObserver(() => reduce && draw(performance.now())).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+})();
+</script>
