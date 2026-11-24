@@ -3,7 +3,7 @@ import { ShareHint } from "./share-hint";
 import { HookLab, RewriteChips } from "./hook-lab";
 import { LOOKS, PHOTO_DEFAULT } from "@/lib/studio/brand";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Download, FolderOpen, ImagePlus, Palette, Pencil, Plus, Send, Sparkles, Trash2, Undo2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Download, FolderOpen, ImagePlus, Palette, Pencil, Plus, Send, Sparkles, Trash2, Undo2, X } from "lucide-react";
 import type { Carousel, Draft, Slide } from "@/lib/studio/config";
 import { NEW_SLIDE } from "@/lib/studio/carousel-blank";
 import { downloadZip, renderAll, renderSlide } from "@/lib/studio/carousel-render";
@@ -75,7 +75,12 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
   const [themeLocal, setThemeLocal] = useState<Theme | undefined>(undefined);
   const [designOpen, setDesignOpen] = useState(false);
   const themeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const shown = edit ?? (c && themeLocal !== undefined ? { ...c, theme: themeLocal } : c);
+  // עריכה של שקופית אחת מתוך הגלילה: התצוגה מתעדכנת מיד, ונשמר לבד רגע אחרי שמפסיקים
+  const [liveCar, setLiveCar] = useState<Carousel | null>(null);
+  const liveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [cur, setCur] = useState(0);
+  const stripRef = useRef<HTMLDivElement>(null);
+  const shown = edit ?? liveCar ?? (c && themeLocal !== undefined ? { ...c, theme: themeLocal } : c);
   const storageUrls = useStorageUrls(shown);
 
   // תמונה לכל שקופית: מה שהיא בחרה לשקופית קודם, ואם אין, ההתאמה מהדרייב
@@ -101,9 +106,9 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
     let live = true;
     const t = setTimeout(() => {
       if (shown) renderAll(shown, JSON.parse(photoKey)).then((imgs) => live && setImages(imgs)).catch(() => live && setImages([]));
-    }, edit ? 350 : 0);
+    }, edit || liveCar ? 350 : 0);
     return () => { live = false; clearTimeout(t); };
-  }, [shown, photoKey, edit]);
+  }, [shown, photoKey, edit]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const persist = async (carousel: Carousel) => {
     const { data, error } = await db().from("studio_drafts").update({ data: { ...draft.data, carousel } }).eq("id", draft.id).select("*").single();
@@ -111,6 +116,43 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
     // סנכרון ללוח: הכיתוב והשער
     await db().from("studio_items").update({ caption: carousel.caption, hook: carousel.slides[0]?.headline ?? "" }).eq("draft_id", draft.id);
     onChange(data as Draft);
+  };
+
+  // שינוי בשקופית אחת (או בסדר השקופיות): נראה מיד, ונשמר אחרי שנייה בלי שינוי
+  const liveSave = (next: Carousel) => {
+    setLiveCar(next);
+    if (liveTimer.current) clearTimeout(liveTimer.current);
+    liveTimer.current = setTimeout(() => {
+      persist(next).then(() => setLiveCar((x) => (x === next ? null : x))).catch((e) => toast((e as Error).message, true));
+    }, 900);
+  };
+  const baseCar = () => liveCar ?? (c && themeLocal !== undefined ? { ...c, theme: themeLocal } : c)!;
+  const patchSlide = (i: number, patch: Partial<Slide>) => { const b = baseCar(); liveSave({ ...b, slides: b.slides.map((x, j) => (j === i ? { ...x, ...patch } : x)) }); };
+  const moveSlide = (i: number, d: -1 | 1) => {
+    const b = baseCar(); const j = i + d;
+    if (j < 0 || j >= b.slides.length) return;
+    const next = [...b.slides]; [next[i], next[j]] = [next[j], next[i]];
+    liveSave({ ...b, slides: next }); setCur(j); scrollTo(j);
+  };
+  const removeSlide = (i: number) => {
+    const b = baseCar(); if (b.slides.length <= 1) return;
+    if (!window.confirm(`למחוק את שקופית ${i + 1}?`)) return;
+    liveSave({ ...b, slides: b.slides.filter((_, j) => j !== i) }); setCur(Math.max(0, i - 1));
+  };
+  const addSlideAfter = (i: number) => {
+    const b = baseCar();
+    liveSave({ ...b, slides: [...b.slides.slice(0, i + 1), { ...NEW_SLIDE, ...(b.slides[i]?.image ? { image: b.slides[i].image } : {}) }, ...b.slides.slice(i + 1)] });
+    setCur(i + 1); setTimeout(() => scrollTo(i + 1), 400);
+  };
+  // השקופית שעוצרים עליה בגלילה היא זו שנערכת
+  const scrollTo = (i: number) => (stripRef.current?.children[i] as HTMLElement | undefined)?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  const onStripScroll = () => {
+    const el = stripRef.current;
+    if (!el || el.scrollWidth <= el.clientWidth + 4) return;
+    const mid = el.getBoundingClientRect().left + el.clientWidth / 2;
+    let best = 0, dist = Infinity;
+    [...el.children].forEach((ch, i) => { const r = ch.getBoundingClientRect(); const d = Math.abs(r.left + r.width / 2 - mid); if (d < dist) { dist = d; best = i; } });
+    setCur(best);
   };
 
   const regen = async () => {
@@ -181,12 +223,15 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
   const applyLook = async (theme: Theme) => {
     if (edit) return setEdit({ ...edit, style: "photo", theme });
     if (!c) return;
+    // אם יש שינוי בשקופית שעוד לא נשמר, המראה נכנס עליו (ולא דורס אותו)
+    if (liveCar) return liveSave({ ...liveCar, style: "photo", theme });
     setThemeLocal(theme);
     try { await persist({ ...c, style: "photo", theme }); } catch (e) { toast((e as Error).message, true); }
   };
   const setStyle = async (style: NonNullable<Carousel["style"]>) => {
     if (edit) return setEdit({ ...edit, style });
     if (!c) return;
+    if (liveCar) return liveSave({ ...liveCar, style });
     try { await persist({ ...c, style }); } catch (e) { toast((e as Error).message, true); }
   };
 
@@ -207,12 +252,21 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
         aside={edit ? <Tag>מצב עריכה</Tag> : undefined}>
         {!images ? <Loading>מכינה את השקופיות...</Loading> : (
           // בטלפון מחליקים הצידה, במחשב כל השקופיות ברשת (גלגלת העכבר לא גוללת הצידה)
-          <div className="flex gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-[repeat(auto-fill,minmax(170px,1fr))] md:overflow-visible">
+          <div ref={stripRef} onScroll={onStripScroll} className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] md:overflow-visible">
             {images.map((src, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={src} alt={i === 0 ? shown!.alt : `שקופית ${i + 1}`} className="h-[300px] w-[240px] shrink-0 rounded-xl border border-[#E3D9CC] object-cover shadow-[0_1px_2px_rgba(31,27,22,0.08)] md:aspect-[4/5] md:h-auto md:w-full" />
+              <button key={i} type="button" onClick={() => { setCur(i); scrollTo(i); }} aria-label={`לערוך את שקופית ${i + 1}`} aria-pressed={!edit && cur === i}
+                className={`relative shrink-0 snap-center overflow-hidden rounded-xl border-2 transition ${!edit && cur === i ? "border-[#5E1D1D] shadow-[0_10px_24px_-14px_rgba(94,29,29,0.9)]" : "border-transparent"}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt={i === 0 ? shown!.alt : `שקופית ${i + 1}`} className="block h-[300px] w-[240px] object-cover md:aspect-[4/5] md:h-auto md:w-full" />
+              </button>
             ))}
           </div>
+        )}
+        {/* העריכה של השקופית שעוצרים עליה (או לוחצים עליה), מיד מתחת */}
+        {!edit && shown && shown.slides[cur] && (
+          <SlideInline key={cur} index={cur} total={shown.slides.length} slide={shown.slides[cur]} account={draft.account} saving={!!liveCar}
+            onPatch={(p) => patchSlide(cur, p)} onMove={(d) => moveSlide(cur, d)} onRemove={() => removeSlide(cur)} onAdd={() => addSlideAfter(cur)}
+            onGo={(i) => { setCur(i); scrollTo(i); }} />
         )}
         {/* כל הפעולות בשורה אחת מסודרת: שליחה והורדה קודם, עריכה אחריהן */}
         <div className="mt-3 flex flex-wrap items-center gap-2 border-y border-[#E3D9CC] py-3">
@@ -227,7 +281,7 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
               <Btn busy={busy === "send"} onClick={sendToInstagram}><Send className="size-4" />לשלוח לאינסטגרם</Btn>
               <Btn variant="line" busy={busy === "zip"} onClick={async () => { setBusy("zip"); try { await downloadZip(shown ?? c, draft.idea, photos); } finally { setBusy(""); } }}><Download className="size-4" />להוריד</Btn>
               <span className="mx-1 hidden h-6 w-px bg-[#E3D9CC] sm:block" />
-              <Btn variant="line" onClick={() => setEdit(structuredClone(c))}><Pencil className="size-4" />לערוך שקופיות</Btn>
+              <Btn variant="line" onClick={() => setEdit(structuredClone(c))}><Pencil className="size-4" />עריכה מלאה וכיתוב</Btn>
               <Btn variant="line" busy={busy === "regen"} onClick={regen}><Sparkles className="size-4" />לכתוב מחדש</Btn>
               {history.length > 0 && <Btn variant="line" busy={busy === "revert"} onClick={revert}><Undo2 className="size-4" />לגרסה הקודמת</Btn>}
             </>
@@ -495,6 +549,68 @@ function SlideChoice<T extends string>({ label, value, onChange, options }: { la
       <span className="px-1 text-[11px] font-bold text-[#9A8C85]">{label}</span>
       <button type="button" role="radio" aria-checked={!value} onClick={() => onChange(undefined)} className={chip(!value)}>כמו בכולן</button>
       {options.map(([v, l]) => <button key={v} type="button" role="radio" aria-checked={value === v} onClick={() => onChange(v)} className={chip(value === v)}>{l}</button>)}
+    </div>
+  );
+}
+
+/**
+ * עריכה של שקופית אחת, מתחת לגלילה: כותרת, טקסט, שכתוב מהיר, מיקום ויישור, תמונה (מהדרייב או מהטלפון),
+ * סוג השקופית וסידור. נשמר לבד.
+ */
+function SlideInline({ index, total, slide, account, saving, onPatch, onMove, onRemove, onAdd, onGo }: {
+  index: number; total: number; slide: Slide; account: string; saving: boolean;
+  onPatch: (p: Partial<Slide>) => void; onMove: (d: -1 | 1) => void; onRemove: () => void; onAdd: () => void; onGo: (i: number) => void;
+}) {
+  const [head, setHead] = useState(slide.headline);
+  const [body, setBody] = useState(slide.body);
+  const [picking, setPicking] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const upload = async (file: File) => {
+    if (!file.type.startsWith("image/")) return toast("אפשר להעלות רק תמונה", true);
+    setUploading(true);
+    try {
+      const { data: { user } } = await db().auth.getUser();
+      if (!user) throw new Error("צריך להתחבר מחדש");
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const path = `${user.id}/studio/${crypto.randomUUID()}.${ext}`;
+      const { error } = await db().storage.from(MEDIA_BUCKET).upload(path, file, { contentType: file.type, upsert: false });
+      if (error) throw new Error(error.message);
+      onPatch({ image: { kind: "storage", path } });
+    } catch (e) { toast((e as Error).message, true); }
+    finally { setUploading(false); }
+  };
+  return (
+    <div className="mt-3 rounded-2xl border border-[#5E1D1D]/30 bg-[#FFFDFB] p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1">
+          <IconBtn label="השקופית הקודמת" disabled={index === 0} onClick={() => onGo(index - 1)}><ChevronRight className="size-4" /></IconBtn>
+          <span className="px-1 text-[14px] font-bold text-[#5E1D1D]">שקופית {index + 1} מתוך {total}</span>
+          <IconBtn label="השקופית הבאה" disabled={index === total - 1} onClick={() => onGo(index + 1)}><ChevronLeft className="size-4" /></IconBtn>
+        </div>
+        <span className="text-[11px] text-[#9A8C85]">{saving ? "שומרת..." : "נשמר"}</span>
+      </div>
+      <input className={inputCls} value={head} placeholder="כותרת" onChange={(e) => { setHead(e.target.value); onPatch({ headline: e.target.value }); }} />
+      <textarea rows={slide.kind === "recap" ? 4 : 2} className={`${inputCls} mt-1.5`} value={body} placeholder={slide.kind === "recap" ? "שורה לכל נקודה" : "טקסט (לא חובה)"} onChange={(e) => { setBody(e.target.value); onPatch({ body: e.target.value }); }} />
+      <div className="mt-1.5"><RewriteChips account={account} headline={head} body={body} onDone={(h, b) => { setHead(h); setBody(b); onPatch({ headline: h, body: b }); }} /></div>
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <SlideChoice label="מיקום" value={slide.pos} onChange={(pos) => onPatch({ pos })} options={[["top", "למעלה"], ["center", "באמצע"], ["bottom", "למטה"]]} />
+        <SlideChoice label="יישור" value={slide.align} onChange={(align) => onPatch({ align })} options={[["right", "לימין"], ["center", "למרכז"]]} />
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void upload(f); }} />
+      <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-[#E3D9CC] pt-2">
+        <Btn variant="line" className="min-h-[36px] px-3 text-[13px]" onClick={() => setPicking(true)}><FolderOpen className="size-4" />תמונה מהדרייב</Btn>
+        <Btn variant="line" className="min-h-[36px] px-3 text-[13px]" busy={uploading} onClick={() => fileRef.current?.click()}><ImagePlus className="size-4" />מהטלפון</Btn>
+        {slide.image && <Btn variant="ghost" className="px-1.5 text-[12px]" onClick={() => onPatch({ image: undefined })}><X className="size-4" />בלי תמונה</Btn>}
+        <Select className="ms-auto w-auto" value={slide.kind} onChange={(kind) => onPatch({ kind })} options={KIND_OPTIONS} />
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-1">
+        <IconBtn label="להזיז ימינה (קודם)" disabled={index === 0} onClick={() => onMove(-1)}><ArrowUp className="size-4 -rotate-90" /></IconBtn>
+        <IconBtn label="להזיז שמאלה (אחרי)" disabled={index === total - 1} onClick={() => onMove(1)}><ArrowDown className="size-4 -rotate-90" /></IconBtn>
+        <Btn variant="ghost" className="px-1.5 text-[12px]" onClick={onAdd}><Plus className="size-4" />שקופית אחרי</Btn>
+        <Btn variant="ghost" className="ms-auto px-1.5 text-[12px] text-[#B5484B]" disabled={total <= 1} onClick={onRemove}><Trash2 className="size-4" />למחוק שקופית</Btn>
+      </div>
+      {picking && <DrivePicker onClose={() => setPicking(false)} onPick={(id) => { onPatch({ image: { kind: "drive", id } }); setPicking(false); }} />}
     </div>
   );
 }
