@@ -207,10 +207,20 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
   const pullPhotos = async () => {
     setBusy("photos");
     try {
-      const fresh = (await studioCall<{ draft: Draft }>("drive-match", { draftId: draft.id })).draft;
+      // בחירה מחדש: מה שכבר נבחר (מהדרייב) נשלח כ"לא לחזור עליו", והתמונות מהדרייב בשקופיות מתפנות
+      // כדי שהבחירה החדשה תיכנס. תמונה שהיא העלתה בעצמה נשארת
+      if (liveTimer.current) clearTimeout(liveTimer.current);
+      const base = liveCar ?? c;
+      const redo = !!(draft.data.materials?.matches.length || base?.slides.some((x) => x.image?.kind === "drive"));
+      const avoid = [...new Set([...(draft.data.materials?.matches ?? []).map((m) => m.file_id), ...(base?.slides ?? []).flatMap((x) => (x.image?.kind === "drive" ? [x.image.id] : []))])];
+      const fresh = (await studioCall<{ draft: Draft }>("drive-match", { draftId: draft.id, redo, avoid })).draft;
       onChange(fresh);
-      if (c && (c.style ?? "cream") !== "photo") await persistOn(fresh, { ...c, style: "photo" });
-      toast("התמונות מהדרייב בפנים");
+      if (base) {
+        const slides = base.slides.map((x) => (x.image?.kind === "drive" ? { ...x, image: undefined } : x));
+        await persistOn(fresh, { ...base, slides, style: "photo" });
+        setLiveCar(null);
+      }
+      toast(redo ? "בחרתי תמונות חדשות לכל שקופית" : "התמונות מהדרייב בפנים");
     } catch (e) { toast((e as Error).message, true); }
     finally { setBusy(""); }
   };
@@ -328,7 +338,7 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
             })}
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Btn variant="line" busy={busy === "photos"} onClick={pullPhotos}><ImagePlus className="size-4" />{busy === "photos" ? "מחפשת בדרייב..." : draft.data.materials?.matches.length ? "תמונות אחרות מהדרייב" : "תמונות מהדרייב"}</Btn>
+            <Btn variant="line" busy={busy === "photos"} onClick={pullPhotos}><ImagePlus className="size-4" />{busy === "photos" ? "בוחרת תמונות..." : draft.data.materials?.matches.length || shown?.slides.some((x) => x.image?.kind === "drive") ? "לבחור תמונות מחדש" : "תמונות מהדרייב"}</Btn>
             <Btn variant={designOpen ? "solid" : "line"} onClick={() => setDesignOpen(!designOpen)}><Palette className="size-4" />{designOpen ? "לסגור" : "פונטים וצבעים"}</Btn>
             <div className="flex items-center gap-1 rounded-xl border border-[#E3D9CC] bg-white/70 p-1" role="radiogroup" aria-label="סגנון בלי תמונות">
               <span className="px-1.5 text-[12px] font-bold text-[#6A6158]">בלי תמונות</span>

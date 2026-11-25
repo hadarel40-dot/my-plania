@@ -317,10 +317,10 @@ const MatchSchema = z.object({
 });
 
 /** מתאים לכל שוט (או שקופית) קובץ מהדרייב, לפי שם, תאריך, תיקייה ותמונה ממוזערת. מה שאין, נכתב כ"חסר לצלם" */
-export async function matchMaterials(draft: Draft, files: DriveFile[], thumbs: (string | null)[]): Promise<Materials> {
+export async function matchMaterials(draft: Draft, files: DriveFile[], thumbs: (string | null)[], opts: { redo?: boolean; avoid?: string[] } = {}): Promise<Materials> {
   const d = draft.data;
   const targets = draft.mode === "carousel"
-    ? (d.carousel?.slides ?? []).map((sl, i) => `שקופית ${i + 1} (${sl.kind}): ${sl.headline}`)
+    ? (d.carousel?.slides ?? []).map((sl, i) => `שקופית ${i + 1} (${sl.kind}): ${sl.headline}${sl.body ? ` | ${sl.body.replace(/\n/g, " / ")}` : ""}`)
     : (d.shots ?? []).map((sh) => `שוט ${sh.n}: ${sh.frame} | בלי פנים: ${sh.faceless}`);
   if (!targets.length) throw new Error("קודם צריך תסריט עם שוטים, או קרוסלה");
   const list = files.map((f, i) => {
@@ -340,7 +340,9 @@ ${list}
 תהיי יצירתית: אם אין צילום מדויק, בוחרים את הכי קרוב באווירה, בפעולה או בנושא. למשל ידיים במטבח במקום ידיים כותבות, סיר מבעבע במקום "מה מכינים היום", שולחן עם מחשב במקום תכנון, נוף או שקיעה לשקופית רגשית או לסוף.
 reason במשפט קצר ואמיתי: מה רואים בקובץ ולמה הוא עובד כאן. בתחליף כותבים שזה תחליף ("תחליף: ...").
 לא לחזור על אותו קובץ אם יש מספיק קבצים שונים.
-missing לא חובה: רק אם צילום חדש ספציפי ישפר מאוד, הצעה קצרה. זה בנוסף לבחירה, לא במקומה.` }];
+missing לא חובה: רק אם צילום חדש ספציפי ישפר מאוד, הצעה קצרה. זה בנוסף לבחירה, לא במקומה.${draft.mode === "carousel" ? `
+בקרוסלה: התמונה צריכה להראות את מה שכתוב בשקופית שלה (למשל שקופית על קניות: סופר או רשימה, על בישול: מטבח וסיר). לשער: התמונה הכי חזקה, עדיף איתה בפריים. לשקופית אישית: רגע אמיתי שלה. להעדיף תמונות על פני סרטונים.` : ""}${opts.redo ? `
+חשוב: היא ביקשה לבחור מחדש, כי הבחירה הקודמת לא התאימה (תמונות לא מתאימות לטקסט, או במקום הלא נכון). תבחרי מחדש מאפס, שקופית אחרי שקופית, לפי מה שכתוב בה.${opts.avoid?.length ? ` אל תבחרי את הקבצים שכבר היו (${opts.avoid.length}), אלא אם אין שום חלופה.` : ""}` : ""}` }];
   thumbs.forEach((t, i) => { if (t) parts.push({ text: `#${i}` }, { image: t }); });
   const raw = cleanDeep(await askBrain({ prefer: "claude", schema: MatchSchema, system: "את עורכת וידאו שמכירה את הארכיון של היוצרת ומוצאת לכל שוט את הצילום שמתאים לו.", parts }));
   const matches = raw.matches
@@ -351,7 +353,9 @@ missing לא חובה: רק אם צילום חדש ספציפי ישפר מאו�
   const covered = new Set(matches.map((m) => key(m.target)));
   const taken = new Set(matches.map((m) => m.file_id));
   const wantVideo = draft.mode !== "carousel";
-  const pool = [...files.filter((f) => f.mimeType.startsWith(wantVideo ? "video/" : "image/")), ...files.filter((f) => !f.mimeType.startsWith(wantVideo ? "video/" : "image/"))];
+  const avoid = new Set(opts.avoid ?? []);
+  const pool = [...files.filter((f) => f.mimeType.startsWith(wantVideo ? "video/" : "image/")), ...files.filter((f) => !f.mimeType.startsWith(wantVideo ? "video/" : "image/"))]
+    .sort((a, b) => Number(avoid.has(a.id)) - Number(avoid.has(b.id)));
   for (const t of targets) {
     const k = key(t);
     if (covered.has(k)) continue;

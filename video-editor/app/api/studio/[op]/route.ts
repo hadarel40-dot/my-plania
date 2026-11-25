@@ -207,14 +207,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ op:
         return NextResponse.json({ draft: await saveDraft(draft.id, { ...draft.data, edit: prev, edit_history: rest, chat }) });
       }
       case "drive-match": {
-        const { draftId, folder } = z.object({ draftId: uuid, folder: z.string().max(300).optional() }).parse(body);
+        const { draftId, folder, redo, avoid } = z.object({ draftId: uuid, folder: z.string().max(300).optional(), redo: z.boolean().optional(), avoid: z.array(z.string().max(100)).max(60).optional() }).parse(body);
         if (!driveConfigured()) throw new StudioError("דרייב עוד לא מחובר. ההוראות בעמוד הקול שלי, בחלק של דרייב.", 400);
         const draft = await loadDraft(draftId);
-        const files = await listDriveMedia(folder, 80);
-        if (!files.length) throw new StudioError("לא מצאתי סרטונים או תמונות בתיקייה. בדקי שהיא משותפת עם חשבון השירות.", 404);
+        const all = await listDriveMedia(folder, 120);
+        if (!all.length) throw new StudioError("לא מצאתי סרטונים או תמונות בתיקייה. בדקי שהיא משותפת עם חשבון השירות.", 404);
+        // בבחירה מחדש: קבצים שכבר היו עוברים לסוף, כדי שהתמונות הממוזערות (שהמודל רואה) יהיו של חלופות.
+        // בקרוסלה: תמונות לפני סרטונים
+        const skip = new Set(avoid ?? []);
+        const files = [...all].sort((a, b) => Number(skip.has(a.id)) - Number(skip.has(b.id))
+          || (draft.mode === "carousel" ? Number(b.mimeType.startsWith("image/")) - Number(a.mimeType.startsWith("image/")) : 0)).slice(0, 80);
         // יותר תמונות ממוזערות, כדי שהבחירה תהיה לפי מה שרואים ולא רק לפי שם הקובץ
         const thumbs = await Promise.all(files.map((f, i) => (i < 40 ? driveThumb(f) : Promise.resolve(null))));
-        const materials = await matchMaterials(draft, files, thumbs);
+        const materials = await matchMaterials(draft, files, thumbs, { redo, avoid });
         return NextResponse.json({ draft: await saveDraft(draft.id, { ...draft.data, materials }) });
       }
       case "drive-pick": {
