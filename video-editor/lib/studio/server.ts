@@ -1,4 +1,5 @@
 import "server-only";
+import { principlesBlock } from "./knowledge";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getUser } from "@/lib/supabase/server";
 import { ACCOUNTS, DEFAULT_VOICE, type Account, type VoiceProfile } from "./config";
@@ -45,6 +46,7 @@ export function voiceBlock(v: VoiceProfile, account: Account) {
     v.learnings?.works.length ? `מה עבד אצלה בפועל (מהמספרים של אינסטגרם, ${v.learnings.posts} פוסטים): ${v.learnings.works.join(" | ")}` : "",
     v.learnings?.stop.length ? `מה לא עבד: ${v.learnings.stop.join(" | ")}` : "",
     v.learnings?.try_next.length ? `לנסות עכשיו: ${v.learnings.try_next.join(" | ")}` : "",
+    principlesBlock(),
     "תמיד: עברית מדוברת, בלי אימוג'י, בלי מקפים ארוכים, בלי קלישאות ובלי שפה שיווקית מנופחת.",
   ].filter(Boolean).join("\n");
 }
