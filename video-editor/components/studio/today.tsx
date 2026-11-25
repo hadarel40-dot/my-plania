@@ -8,8 +8,9 @@ import { Btn, Label, Loading, Note, Panel, Tag, toast } from "./ui";
 import { cn } from "@/lib/utils";
 import { variantLabel } from "@/lib/studio/reel-timeline";
 import { ItemActions } from "./item-actions";
+import { CalendarConnect } from "./calendar-connect";
 
-interface Item { id: string; title: string; account: string; format: string; stage: string; planned_date: string | null; hook: string; caption: string; notes?: string | null; content_type?: string | null; draft_id: string | null }
+interface Item { id: string; title: string; account: string; format: string; stage: string; planned_date: string | null; post_time?: string | null; hook: string; caption: string; notes?: string | null; content_type?: string | null; draft_id: string | null }
 
 const DAY = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"];
 const addDays = (iso: string, n: number) => { const d = new Date(`${iso}T12:00:00`); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
@@ -217,7 +218,8 @@ export function WeekBoard({ today }: { today: string }) {
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href="/studio/replan" className="inline-flex min-h-[40px] items-center rounded-xl border border-[#5E1D1D]/40 bg-white px-4 text-[13px] font-bold text-[#5E1D1D] hover:border-[#5E1D1D]">ליצור את השבוע</Link>
+<CalendarConnect className="min-h-[40px] rounded-xl px-3 text-[13px]" />
+                    <Link href="/studio/replan" className="inline-flex min-h-[40px] items-center rounded-xl border border-[#5E1D1D]/40 bg-white px-4 text-[13px] font-bold text-[#5E1D1D] hover:border-[#5E1D1D]">ליצור את השבוע</Link>
           <Link href="/studio/own-video" className="inline-flex min-h-[40px] items-center rounded-xl bg-[#5E1D1D] px-4 text-[13px] font-bold text-[#FAF6F1] shadow-[0_6px_16px_-10px_rgba(94,29,29,0.9)]">+ ריל מהסרטונים שלי</Link>
         </div>
       </div>
@@ -247,6 +249,7 @@ export function WeekBoard({ today }: { today: string }) {
                       <span className="absolute bottom-2 right-2 rounded-full px-2 py-0.5 text-[11px] font-black text-[#2A2622] shadow-sm" style={{ background: ({ reel: "#F6E7A6", carousel: "#E4DCF5", story: "#F7D3DC", image: "#D8E6F3" } as Record<string, string>)[x.format] ?? "#ECE7DE" }}>{FORMAT[x.format] ?? x.format}</span>
                       {x.stage === "published" ? <span className="absolute right-2 top-2 rounded-full bg-[#3E6B4F] px-2 py-0.5 text-[10px] font-bold text-white">פורסם</span>
                         : dr && isReady(dr) ? <span className="absolute right-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur">מוכן</span> : null}
+                      {x.post_time && <span dir="ltr" className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-black text-white backdrop-blur">{x.post_time}</span>}
                     </div>
                     <div className="p-2.5">
                       <p className="line-clamp-2 text-[13px] font-bold leading-snug text-[#2A2622]">{x.title}</p>

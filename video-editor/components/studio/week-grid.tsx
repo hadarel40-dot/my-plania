@@ -8,8 +8,9 @@ import { Label, Title } from "./ui";
 import { cn } from "@/lib/utils";
 import { isReady, signThumbs, thumbPath } from "./today";
 import { ItemActions } from "./item-actions";
+import { CalendarConnect } from "./calendar-connect";
 
-interface Item { id: string; title: string; account: string; format: string; stage: string; planned_date: string | null; hook: string; notes?: string | null; content_type?: string | null; draft_id: string | null }
+interface Item { id: string; title: string; account: string; format: string; stage: string; planned_date: string | null; post_time?: string | null; hook: string; notes?: string | null; content_type?: string | null; draft_id: string | null }
 
 const ROWS = [
   { format: "reel", label: "ריל", icon: PlaySquare },
@@ -69,6 +70,7 @@ export function WeekGrid({ account = "all" }: { account?: string }) {
         <div className="flex items-center gap-2">
           {items && <span className="rounded-full border border-[#E3D9CC] bg-white/70 px-3 py-1 text-[12px] font-bold">{items.length} פוסטים משובצים{items.length ? ` · ${withMedia} מוכנים` : ""}</span>}
           <button type="button" aria-label="השבוע הקודם" onClick={() => setStart(addDays(start, -7))} className="rounded-lg border border-[#E3D9CC] bg-white/70 p-1.5"><ChevronRight className="size-4" /></button>
+          <CalendarConnect />
           <Link href="/studio/replan" className="rounded-lg bg-[#5E1D1D] px-2.5 py-1 text-[12px] font-bold text-[#FAF6F1]">ליצור את השבוע</Link>
           <button type="button" onClick={() => setStart(sundayOf(today))} className="rounded-lg border border-[#E3D9CC] bg-white/70 px-2.5 py-1 text-[12px] font-bold">השבוע</button>
           <button type="button" aria-label="השבוע הבא" onClick={() => setStart(addDays(start, 7))} className="rounded-lg border border-[#E3D9CC] bg-white/70 p-1.5"><ChevronLeft className="size-4" /></button>
@@ -86,7 +88,7 @@ export function WeekGrid({ account = "all" }: { account?: string }) {
           {rows.map((r) => (
             <Row key={r.format} label={r.label} Icon={r.icon}>
               {days.map((d) => {
-                const cell = (items ?? []).filter((i) => i.planned_date === d && i.format === r.format);
+                const cell = (items ?? []).filter((i) => i.planned_date === d && i.format === r.format).sort((a, b) => (a.post_time ?? "99").localeCompare(b.post_time ?? "99"));
                 return (
                   <div key={d} className={cn("min-h-[150px] space-y-2 rounded-xl p-1", d === today && "bg-[#EFD9DD]/50 ring-1 ring-[#E3C3CA]")}>
                     {cell.map((i) => <Cell key={i.id} item={i} draft={i.draft_id ? drafts[i.draft_id] : undefined} thumb={thumbs[thumbPath(i.draft_id ? drafts[i.draft_id] : undefined) ?? ""]} onChange={(x) => (x ? (x.draft_id !== i.draft_id ? load() : setItems((all) => (all ?? []).map((y) => (y.id === x.id ? x : y)))) : setItems((all) => (all ?? []).filter((y) => y.id !== i.id)))} />)}
@@ -129,7 +131,8 @@ function Cell({ item, draft, thumb, onChange }: { item: Item; draft?: Draft; thu
         {item.stage === "published" ? <span className="absolute right-1.5 top-1.5 rounded-md bg-[#3E6B4F] px-1.5 py-0.5 text-[10px] font-bold text-white">פורסם</span>
           : draft && isReady(draft) ? <span className="absolute right-1.5 top-1.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur">מוכן</span>
           : <span className="absolute right-1.5 top-1.5 rounded-md bg-white/85 px-1.5 py-0.5 text-[10px] font-bold text-[#6A6158]">רעיון</span>}
-        {variants > 1 && <span className="absolute left-1.5 top-1.5 rounded-md bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-[#2A2622]">{variants} גרסאות</span>}
+        {item.post_time ? <span dir="ltr" className="absolute left-1.5 top-1.5 rounded-md bg-black/60 px-1.5 py-0.5 text-[11px] font-black text-white backdrop-blur">{item.post_time}</span>
+          : variants > 1 && <span className="absolute left-1.5 top-1.5 rounded-md bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-[#2A2622]">{variants} גרסאות</span>}
         <span className="absolute bottom-1.5 right-1.5 rounded-full px-2 py-0.5 text-[11px] font-black text-[#2A2622] shadow-sm" style={{ background: FORMAT_TONE[item.format] ?? "#ECE7DE" }}>
           {item.format === "carousel" ? "קרוסלה" : item.format === "reel" ? "ריל" : item.format === "story" ? "סטורי" : "תמונה"}
         </span>

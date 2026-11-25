@@ -1,13 +1,13 @@
 "use client";
 import { useState } from "react";
-import { CheckCircle2, Circle, Loader2, Trash2, Wand2 } from "lucide-react";
+import { CheckCircle2, Circle, Clock, Loader2, Trash2, Wand2 } from "lucide-react";
 import { db } from "@/lib/studio/client";
 import { buildDriveReel } from "@/lib/studio/drive-reel";
 import type { ContentType } from "@/lib/studio/config";
 import { toast } from "./ui";
 import { cn } from "@/lib/utils";
 
-export interface ActionItem { id: string; title: string; account: string; format: string; stage: string; planned_date: string | null; hook: string; notes?: string | null; content_type?: string | null; draft_id: string | null }
+export interface ActionItem { id: string; title: string; account: string; format: string; stage: string; planned_date: string | null; post_time?: string | null; hook: string; notes?: string | null; content_type?: string | null; draft_id: string | null }
 
 /**
  * הפעולות על פוסט בלוח, בלחיצה אחת:
@@ -27,6 +27,14 @@ export function ItemActions({ item, onChange, compact = false }: { item: ActionI
     if (error) return toast(error.message, true);
     onChange(data as ActionItem);
     toast(published ? "הסימון בוטל" : "סומן שפורסם");
+  };
+
+  // שעת פרסום: נשמרת מיד, ומופיעה ביומן עם תזכורת
+  const setTime = async (v: string) => {
+    const post_time = v || null;
+    const { data, error } = await db().from("studio_items").update({ post_time }).eq("id", item.id).select("*").single();
+    if (error) return toast(error.message, true);
+    onChange(data as ActionItem);
   };
 
   const remove = async () => {
@@ -71,6 +79,14 @@ export function ItemActions({ item, onChange, compact = false }: { item: ActionI
             <Wand2 className="size-3.5" />לבנות ריל
           </button>
         )
+      )}
+      {item.planned_date && (
+        <label className="flex min-h-[32px] items-center gap-1.5 rounded-full border border-[#E3D9CC] bg-white px-2.5 text-[12px] font-bold text-[#5E1D1D]">
+          <Clock className="size-3.5 shrink-0" />
+          <input type="time" value={item.post_time ?? ""} onChange={(e) => void setTime(e.target.value)} aria-label="שעת פרסום"
+            className="min-w-0 flex-1 bg-transparent text-[12px] font-bold outline-none [&::-webkit-calendar-picker-indicator]:opacity-50" />
+          {!item.post_time && <span className="text-[11px] font-semibold text-[#9A8C85]">שעה</span>}
+        </label>
       )}
       <div className="flex items-center gap-1.5">
         <button type="button" disabled={!!busy} onClick={togglePublished} aria-pressed={published} title={published ? "לבטל את הסימון" : "לסמן שפורסם באינסטגרם"}
