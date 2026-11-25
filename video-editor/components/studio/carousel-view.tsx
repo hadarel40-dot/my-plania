@@ -248,6 +248,7 @@ export function CarouselView({ draft, onChange }: { draft: Draft; onChange: (d: 
 
   return (
     <>
+      {draft.data.from_reel && <FromReel reelId={draft.data.from_reel} slides={shown!.slides.length} />}
       <Panel label={`${shown!.slides.length} שקופיות · 1080x1350`} title="הקרוסלה" accent="שלך"
         aside={edit ? <Tag>מצב עריכה</Tag> : undefined}>
         {!images ? <Loading>מכינה את השקופיות...</Loading> : (
@@ -612,5 +613,31 @@ function SlideInline({ index, total, slide, account, saving, onPatch, onMove, on
       </div>
       {picking && <DrivePicker onClose={() => setPicking(false)} onPick={(id) => { onPatch({ image: { kind: "drive", id } }); setPicking(false); }} />}
     </div>
+  );
+}
+
+/** כותרת לקרוסלה שנוצרה מריל: התמונה של הריל, השם שלו, וקישור חזרה */
+function FromReel({ reelId, slides }: { reelId: string; slides: number }) {
+  const [reel, setReel] = useState<{ idea: string; thumb: string | null } | null>(null);
+  useEffect(() => {
+    db().from("studio_drafts").select("idea, data").eq("id", reelId).maybeSingle().then(({ data }) => {
+      if (!data) return;
+      const seg = (data.data as Draft["data"])?.edit?.segments?.[0]?.path ?? "";
+      const id = seg.match(/\/studio\/drive\/([\w-]+?)-\d+-\d+\.mp4$/)?.[1] ?? (seg.startsWith("drive:") ? seg.slice(6) : null);
+      setReel({ idea: data.idea as string, thumb: id ? `/api/studio/drive-thumb?id=${id}&size=300` : null });
+    });
+  }, [reelId]);
+  return (
+    <a href={`/studio/reel?id=${reelId}`} className="flex items-center gap-3 rounded-2xl border border-[#E3D9CC] bg-[#FFFDFB] p-3 transition hover:border-[#5E1D1D]">
+      <span className="relative block h-[72px] w-[48px] shrink-0 overflow-hidden rounded-lg bg-[#2A2622]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {reel?.thumb && <img src={reel.thumb} alt="" className="size-full object-cover" />}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="inline-block rounded-full bg-[#F7E4E7] px-2 py-0.5 text-[11px] font-bold text-[#5E1D1D]">מהריל שלך</span>
+        <span className="s-serif mt-1 block truncate text-[18px] text-[#2A2622]">{reel?.idea ?? "..."}</span>
+      </span>
+      <span className="shrink-0 rounded-full bg-[#2A2622] px-3 py-1 text-[12px] font-bold text-white">{slides} שקופיות</span>
+    </a>
   );
 }

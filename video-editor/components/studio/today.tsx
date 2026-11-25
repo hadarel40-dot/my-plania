@@ -25,6 +25,9 @@ export function thumbPath(d?: Draft): string | null {
   // ריל שמתנגן מהדרייב: התמונה של הסרטון הראשון
   const seg = d.data.edit?.segments?.[0]?.path;
   if (seg?.startsWith("drive:")) return seg;
+  // קטע שהוכן מסרטון בדרייב: התמונה של הסרטון המקורי
+  const fromDrive = seg?.match(/\/studio\/drive\/([\w-]+?)-\d+-\d+\.mp4$/)?.[1];
+  if (fromDrive) return `drive:${fromDrive}`;
   const slides = (v?.carousel ?? d.data.carousel)?.slides ?? [];
   const img = slides.find((s) => s.image?.kind === "storage")?.image;
   if (img?.kind === "storage") return img.path;
@@ -241,8 +244,9 @@ export function WeekBoard({ today }: { today: string }) {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       {t ? <img src={t} alt="" className="size-full object-cover transition duration-500 group-hover:scale-[1.04]" />
                         : <p className="flex size-full items-center justify-center p-3 text-center text-[13px] font-bold leading-snug text-[#5E1D1D]" style={{ background: "linear-gradient(160deg,#F7E4E7,#EFD9DD)" }}>{x.hook || x.title}</p>}
-                      <span className="absolute right-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold text-[#5E1D1D] backdrop-blur">{FORMAT[x.format] ?? x.format}</span>
-                      {x.stage === "published" && <span className="absolute left-2 top-2 rounded-full bg-[#3E6B4F] px-2 py-0.5 text-[10px] font-bold text-white">פורסם</span>}
+                      <span className="absolute bottom-2 right-2 rounded-full px-2 py-0.5 text-[11px] font-black text-[#2A2622] shadow-sm" style={{ background: ({ reel: "#F6E7A6", carousel: "#E4DCF5", story: "#F7D3DC", image: "#D8E6F3" } as Record<string, string>)[x.format] ?? "#ECE7DE" }}>{FORMAT[x.format] ?? x.format}</span>
+                      {x.stage === "published" ? <span className="absolute right-2 top-2 rounded-full bg-[#3E6B4F] px-2 py-0.5 text-[10px] font-bold text-white">פורסם</span>
+                        : dr && isReady(dr) ? <span className="absolute right-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur">מוכן</span> : null}
                     </div>
                     <div className="p-2.5">
                       <p className="line-clamp-2 text-[13px] font-bold leading-snug text-[#2A2622]">{x.title}</p>

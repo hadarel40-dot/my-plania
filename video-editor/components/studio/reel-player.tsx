@@ -290,6 +290,8 @@ function ReelPlayerInner({ draft, onChange }: { draft: Draft; onChange: (d: Draf
         </div>
 
         <div className="min-w-0 space-y-5">
+          <EditsDone draft={draft} style={style} design={design} />
+          <ReelStrip kit={kit} assets={assets} playerRef={playerRef} fps={timeline.fps} />
           <div>
             <div className="mb-2 flex items-center justify-between">
               <p className="text-[13px] font-bold text-[#5E1D1D]">ערכות עיצוב מוכנות</p>
@@ -833,5 +835,81 @@ function StylePreview({ id, design }: { id: CaptionStyleId; design: ReelDesign }
         </span>
       )}
     </span>
+  );
+}
+
+/** מה נעשה בריל, ברשימה קצרה עם וי: כמה קטעים ומאיפה, הכתוביות, המעבר, הקריינות והייצוא */
+function EditsDone({ draft, style, design }: { draft: Draft; style: CaptionStyleId; design: ReelDesign }) {
+  const kit = draft.data.edit!;
+  const fromDrive = kit.segments.some((x) => x.path.includes("/studio/drive/"));
+  const secs = Math.round(kit.segments.reduce((n, x) => n + x.seconds, 0));
+  const slow = kit.segments.some((x) => (x.speed ?? 1) < 1);
+  const items: [boolean, string][] = [
+    [true, `${kit.segments.length} קטעים, ${secs} שניות${fromDrive ? ", הרגע הכי טוב מכל סרטון בדרייב" : kit.sound ? ", מהסרטון שלך עם הקול" : ""}`],
+    [true, `כתוביות: ${REEL_STYLES.find((x) => x.id === style)?.label ?? "בסגנון שנבחר"}`],
+    [true, `מעבר: ${TRANSITIONS.find((t) => t.id === (design.transition ?? "fade"))?.label ?? "רך"}${slow ? ", הילוך קצת איטי" : ""}`],
+    [!!draft.data.voiceover, draft.data.voiceover ? "קריינות שלך" : "בלי קריינות (אפשר להוסיף למטה)"],
+    [true, "ייצוא ב-1080 על 1920"],
+  ];
+  return (
+    <div className="rounded-2xl border border-[#E3D9CC] bg-white/80 p-3">
+      <p className="mb-1.5 text-[11px] font-black tracking-wide text-[#9A8C85]">מה נעשה בריל</p>
+      <ul className="space-y-1">
+        {items.map(([on, t]) => (
+          <li key={t} className="flex items-start gap-2 text-[13px] text-[#2A2622]">
+            <span className={cn("mt-0.5 grid size-[18px] shrink-0 place-items-center rounded-full text-[11px] font-black", on ? "bg-[#3E6B4F] text-white" : "border border-[#D9CFC4] text-transparent")}>✓</span>{t}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * ציר הזמן של הריל, כמו בעורך: פס של הקטעים (תמונה מכל קטע, לפי האורך שלו) ומתחתיו הכתוביות.
+ * לחיצה על כתובית קופצת אליה בנגן, וקו מראה איפה הנגן עכשיו.
+ */
+function ReelStrip({ kit, assets, playerRef, fps }: { kit: NonNullable<Draft["data"]["edit"]>; assets: Record<string, MediaAsset> | null; playerRef: React.RefObject<PlayerRef | null>; fps: number }) {
+  const total = Math.max(0.1, kit.segments.reduce((n, x) => n + x.seconds, 0));
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    const p = playerRef.current;
+    if (!p) return;
+    const on = (e: { detail: { frame: number } }) => setNow(e.detail.frame / fps);
+    p.addEventListener("frameupdate", on);
+    return () => p.removeEventListener("frameupdate", on);
+  }, [playerRef, fps, assets]);
+  const seek = (t: number) => { playerRef.current?.seekTo(Math.round(t * fps)); playerRef.current?.play(); };
+  let acc = 0;
+  return (
+    <div className="rounded-2xl bg-[#2A2622] p-3 text-white">
+      <div className="mb-2 flex items-center justify-between text-[11px] font-bold text-white/70">
+        <span>ציר הזמן</span><span dir="ltr">{now.toFixed(1)}s / {total.toFixed(1)}s</span>
+      </div>
+      <div dir="ltr" className="relative">
+        <div className="flex h-[54px] gap-[2px] overflow-hidden rounded-lg">
+          {kit.segments.map((x, i) => {
+            const url = assets?.[`seg-${i + 1}`]?.url;
+            const start = acc; acc += x.seconds;
+            return (
+              <button key={i} type="button" onClick={() => seek(start)} title={`קטע ${i + 1}`} className="relative h-full overflow-hidden rounded-md bg-white/10 ring-[#F6E7A6] hover:ring-2" style={{ width: `${(x.seconds / total) * 100}%` }}>
+                {url && <video src={`${url}#t=${((x.from ?? 0) + 0.2).toFixed(2)}`} muted playsInline preload="metadata" className="pointer-events-none size-full object-cover" />}
+                <span className="absolute bottom-0.5 left-1 text-[9px] font-black text-white drop-shadow">{i + 1}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="relative mt-1.5 h-[26px]">
+          {kit.cards.map((c, i) => (
+            <button key={i} type="button" onClick={() => seek(c.start + 0.05)} dir="rtl" title={c.text}
+              className="absolute top-0 h-full truncate rounded-md bg-[#F6E7A6] px-1.5 text-[11px] font-bold leading-[26px] text-[#2A2622] hover:bg-white"
+              style={{ left: `${(c.start / total) * 100}%`, width: `calc(${((c.end - c.start) / total) * 100}% - 2px)` }}>
+              {c.headline ?? c.text}
+            </button>
+          ))}
+        </div>
+        <span className="pointer-events-none absolute -top-1 bottom-0 w-[2px] rounded bg-white" style={{ left: `${Math.min(100, (now / total) * 100)}%` }} />
+      </div>
+    </div>
   );
 }

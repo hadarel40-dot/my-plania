@@ -154,6 +154,8 @@ export interface DraftData {
   content_type?: ContentType;
   /** המטרה של השבוע שבו הפוסט נוצר (לגדול, סמכות, למכור, להשקה): משנה את הסוף ואת הקריאה לפעולה */
   goal?: WeekGoal;
+  /** קרוסלה שנוצרה מריל: הטיוטה של הריל, כדי לחזור אליו */
+  from_reel?: string;
   /** תבנית מוכנה (lib/studio/templates.ts) */
   template?: string;
   carousel?: Carousel;

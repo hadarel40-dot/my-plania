@@ -181,6 +181,36 @@ function HookCard({ hook, chosen, onPick }: { hook: Hook; chosen: boolean; onPic
   );
 }
 
+/**
+ * מריל לקרוסלה: אותו רעיון ואותו טקסט, נכתב מחדש לשקופיות. התמונות הן הפריימים של הסרטונים מהדרייב שבריל
+ * (ואם הריל לא מהדרייב, בחירה מהדרייב לפי הטקסט). הקרוסלה נכנסת לרעיונות, בלי יום.
+ */
+async function reelToCarousel(reel: Draft) {
+  const cards = (reel.data.edit?.cards ?? []).map((c) => c.headline ?? c.text).filter(Boolean);
+  const idea = `${reel.idea}${cards.length ? `\n\nמה שנאמר בריל, לפי הסדר: ${cards.join(" | ")}` : ""}`.slice(0, 1800);
+  const { data: dr, error } = await db().from("studio_drafts").insert({
+    idea, account: reel.account, niche: reel.niche, mode: "carousel", facts: reel.facts ?? "",
+    data: { content_type: reel.data.content_type, from_reel: reel.id, ...(reel.data.goal ? { goal: reel.data.goal } : {}) },
+  }).select("*").single();
+  if (error || !dr) throw new Error(error?.message ?? "לא נשמר");
+  let draft = (await studioCall<{ draft: Draft }>("carousel", { draftId: dr.id })).draft;
+  // הסרטונים של הריל (מהדרייב): הפריים של כל אחד הופך לתמונה של שקופית
+  const driveIds = (reel.data.edit?.segments ?? []).map((x) => x.path.match(/\/studio\/drive\/([\w-]+?)-\d+-\d+\.mp4$/)?.[1]).filter((x): x is string => !!x);
+  if (driveIds.length && draft.data.carousel) {
+    const carousel = { ...draft.data.carousel, slides: draft.data.carousel.slides.map((sl, i) => ({ ...sl, image: { kind: "drive" as const, id: driveIds[i % driveIds.length] } })) };
+    const { data } = await db().from("studio_drafts").update({ data: { ...draft.data, carousel } }).eq("id", draft.id).select("*").single();
+    if (data) draft = data as Draft;
+  } else {
+    draft = await studioCall<{ draft: Draft }>("drive-match", { draftId: draft.id }).then((r) => r.draft).catch(() => draft);
+  }
+  await db().from("studio_items").insert({
+    title: reel.idea.slice(0, 80), account: reel.account, niche: reel.niche, format: "carousel", stage: "draft",
+    content_type: reel.data.content_type ?? null, draft_id: draft.id, caption: draft.data.carousel?.caption ?? "",
+    hook: draft.data.carousel?.slides[0]?.headline ?? "", notes: "קרוסלה מהריל",
+  });
+  return draft.id;
+}
+
 function DraftView({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => void }) {
   const router = useRouter();
   const d = draft.data;
@@ -237,6 +267,15 @@ function DraftView({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => 
         <p className="text-xs text-[#6A6158]">{labelOf(ACCOUNTS, draft.account)} · {labelOf(NICHES, draft.niche)}{draft.facts ? ` · עובדות: ${draft.facts}` : " · לא הוזנו מספרים"}</p>
       </Panel>
       {d.edit ? <ReelPlayer draft={draft} onChange={onChange} /> : <><VariantSwitch draft={draft} onChange={onChange} /><ReadyVideo draft={draft} /></>}
+      {d.edit && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-[#E3D9CC] bg-[#FFFDFB] p-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-[14px] font-bold text-[#5E1D1D]">להפוך את הריל לקרוסלה</p>
+            <p className="text-[12px] text-[#6A6158]">אותו רעיון, כתוב לשקופיות, עם תמונות מהסרטונים של הריל. נכנס לרעיונות, ומשם משבצים ביום.</p>
+          </div>
+          <Btn busy={busy === "toCarousel"} onClick={() => run("toCarousel", async () => { const id = await reelToCarousel(draft); router.push(`/studio/reel?id=${id}`); })}>{busy === "toCarousel" ? "כותבת קרוסלה..." : "להפוך לקרוסלה"}</Btn>
+        </div>
+      )}
       {(d.video || d.edit) && <DesignerChat draft={draft} onChange={onChange} />}
 
       {(!d.video || !!d.hooks?.length) && <Panel title="שלושה הוקים" aside={<Btn variant="ghost" busy={busy === "hooks"} onClick={rehook}>הוקים חדשים</Btn>}>

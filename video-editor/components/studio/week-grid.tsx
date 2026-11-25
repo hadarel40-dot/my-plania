@@ -18,8 +18,8 @@ const ROWS = [
   { format: "image", label: "תמונה", icon: ImageIcon },
 ] as const;
 const DAY = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"];
-const STAGE_TONE: Record<string, string> = { idea: "#F0E8DF", draft: "#EFD9DD", review: "#F4E1D2", approved: "#E2ECDF", published: "#CFE3D3" };
-const STAGE_LABEL: Record<string, string> = { idea: "רעיון", draft: "טיוטה", review: "ממתין לאישור", approved: "מאושר", published: "פורסם" };
+/** צבע לכל פורמט, כמו בלוח שנה: ריל צהוב, קרוסלה סגול, סטורי ורוד, תמונה כחול */
+const FORMAT_TONE: Record<string, string> = { reel: "#F6E7A6", carousel: "#E4DCF5", story: "#F7D3DC", image: "#D8E6F3" };
 
 /** יום ראשון של השבוע של תאריך (YYYY-MM-DD), בשעון ישראל */
 function sundayOf(iso: string) {
@@ -88,7 +88,7 @@ export function WeekGrid({ account = "all" }: { account?: string }) {
               {days.map((d) => {
                 const cell = (items ?? []).filter((i) => i.planned_date === d && i.format === r.format);
                 return (
-                  <div key={d} className={cn("min-h-[150px] space-y-2 rounded-xl p-1", d === today && "bg-[#EFD9DD]/30")}>
+                  <div key={d} className={cn("min-h-[150px] space-y-2 rounded-xl p-1", d === today && "bg-[#EFD9DD]/50 ring-1 ring-[#E3C3CA]")}>
                     {cell.map((i) => <Cell key={i.id} item={i} draft={i.draft_id ? drafts[i.draft_id] : undefined} thumb={thumbs[thumbPath(i.draft_id ? drafts[i.draft_id] : undefined) ?? ""]} onChange={(x) => (x ? (x.draft_id !== i.draft_id ? load() : setItems((all) => (all ?? []).map((y) => (y.id === x.id ? x : y)))) : setItems((all) => (all ?? []).filter((y) => y.id !== i.id)))} />)}
                     {!cell.length && <div className="h-full min-h-[140px] rounded-xl border border-dashed border-[#E3D9CC]" />}
                   </div>
@@ -119,26 +119,25 @@ function Cell({ item, draft, thumb, onChange }: { item: Item; draft?: Draft; thu
   return (
     <div className={cn("overflow-hidden rounded-xl border bg-[#FAF6F1] shadow-[0_1px_2px_rgba(31,27,22,0.12)]", item.stage === "published" ? "border-[#3E6B4F]" : "border-[#E3D9CC]")}>
     <Link href={href} className="group relative block bg-[#2A2622]">
-      <div className={cn("relative w-full", item.format === "carousel" ? "aspect-[4/5]" : "aspect-[9/16] max-h-[190px]")}>
+      {/* כמו לוח שנה: תמונה מלאה בגודל אחיד, תג פורמט צבעוני למטה, ומצב למעלה */}
+      <div className="relative aspect-[3/4] w-full overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        {thumb ? <img src={thumb} alt="" className="absolute inset-0 size-full object-cover" /> : (
-          <div className="absolute inset-0 flex items-center bg-[#F2ECE4] p-2 text-[11px] font-bold leading-snug text-[#2A2622]">{item.hook || item.title}</div>
+        {thumb ? <img src={thumb} alt="" className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-[1.04]" /> : (
+          <div className="absolute inset-0 flex items-center justify-center p-2 text-center text-[11px] font-bold leading-snug text-[#5E1D1D]" style={{ background: "linear-gradient(160deg,#F7E4E7,#EFD9DD)" }}>{item.hook || item.title}</div>
         )}
-        {/* תג שלב רק כשהוא אומר משהו: טיוטה ורעיון הם ברירת המחדל */}
-        {/* מוכן לצילום: יש תסריט ורשימת שוטים, ועוד לא נפתח בעורך. מופיע גם ברשימת הצילום */}
-        {["idea", "draft"].includes(item.stage) && !!draft?.data.shots?.length && !draft.project_id && !draft.data.video && (
-          <span className="absolute right-1.5 top-1.5 rounded-md bg-[#3E6B4F] px-1.5 py-0.5 text-[10px] font-bold text-white">מוכן לצילום</span>
-        )}
-        {["idea", "draft"].includes(item.stage) && !!draft?.data.video && (
-          <span className="absolute right-1.5 top-1.5 rounded-md bg-[#5E1D1D] px-1.5 py-0.5 text-[10px] font-bold text-[#FAF6F1]">מוכן להעלאה</span>
-        )}
-        {!["idea", "draft"].includes(item.stage) && <span className="absolute right-1.5 top-1.5 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-[#2A2622]" style={{ background: STAGE_TONE[item.stage] ?? "#ECE7DE" }}>{STAGE_LABEL[item.stage] ?? item.stage}</span>}
+        <span className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/45 to-transparent" />
+        {item.stage === "published" ? <span className="absolute right-1.5 top-1.5 rounded-md bg-[#3E6B4F] px-1.5 py-0.5 text-[10px] font-bold text-white">פורסם</span>
+          : draft && isReady(draft) ? <span className="absolute right-1.5 top-1.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur">מוכן</span>
+          : <span className="absolute right-1.5 top-1.5 rounded-md bg-white/85 px-1.5 py-0.5 text-[10px] font-bold text-[#6A6158]">רעיון</span>}
         {variants > 1 && <span className="absolute left-1.5 top-1.5 rounded-md bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-[#2A2622]">{variants} גרסאות</span>}
-        <span className="absolute bottom-1.5 right-1.5 rounded-md bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-[#2A2622]">
-          {item.format === "carousel" ? "קרוסלה" : item.format === "reel" ? "ריל" : item.format === "story" ? "סטורי" : "תמונה"}{type ? ` · ${labelOf(CONTENT_TYPES, type)}` : ""}
+        <span className="absolute bottom-1.5 right-1.5 rounded-full px-2 py-0.5 text-[11px] font-black text-[#2A2622] shadow-sm" style={{ background: FORMAT_TONE[item.format] ?? "#ECE7DE" }}>
+          {item.format === "carousel" ? "קרוסלה" : item.format === "reel" ? "ריל" : item.format === "story" ? "סטורי" : "תמונה"}
         </span>
       </div>
-      <p className="truncate bg-[#FAF6F1] px-2 py-1 text-[11px] font-semibold text-[#2A2622]" title={item.title}>{item.title}</p>
+      <div className="bg-[#FAF6F1] px-2 py-1">
+        <p className="truncate text-[11px] font-semibold text-[#2A2622]" title={item.title}>{item.title}</p>
+        {type && <p className="truncate text-[10px] font-bold text-[#B5848E]">{labelOf(CONTENT_TYPES, type)}</p>}
+      </div>
     </Link>
     <ItemActions item={item} onChange={(x) => onChange(x as Item | null)} compact />
     </div>
