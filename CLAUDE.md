@@ -13,3 +13,16 @@ the repo copy directly). Write any voice updates back to the repo copy, and do t
 `swipe.md` and other files the skills keep under `~/.claude/instagram/`.
 
 All Instagram output is in Hebrew.
+
+## OpenMontage (video production)
+
+The OpenMontage repo is a git submodule at `vendor/OpenMontage`, and its 49 Claude skills are copied
+into `.claude/skills/`. After a fresh clone, run `git submodule update --init --depth 1`.
+For full video pipelines, read `vendor/OpenMontage/AGENT_GUIDE.md` first and run `make setup`
+inside `vendor/OpenMontage` (needs Python 3.10+, FFmpeg, Node 22+). Skills that mention `tools/`,
+`pipeline_defs/` or `AGENT_GUIDE.md` mean paths inside `vendor/OpenMontage`.
+
+## Video editing for plania
+
+Before editing any video for @plania.il, read `.claude/instagram/video-style.md` (brand, on-screen text,
+color, pacing, sound rules, and the best shots from the Drive folder). Write updates back to that file.
